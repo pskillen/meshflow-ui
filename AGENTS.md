@@ -1,4 +1,4 @@
-# Meshtastic Bot UI – Agent Context
+# Meshflow UI – Agent Context
 
 React SPA frontend for the Meshflow system. Displays and manages a country-wide mesh of Meshtastic nodes. Works with the meshflow-api Django backend.
 
