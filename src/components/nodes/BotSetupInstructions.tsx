@@ -51,9 +51,9 @@ function generateDockerComposeEmbedded(apiBaseUrl: string, apiKey: string, botDe
   const botEnvBlock = botEnvLines.length > 0 ? '\n' + botEnvLines.join('\n') : '';
   return `---
 services:
-  meshtastic-bot:
-    image: ghcr.io/pskillen/meshtastic-bot:latest
-    container_name: meshtastic-bot
+  meshflow-bot:
+    image: ghcr.io/pskillen/meshflow-bot:latest
+    container_name: meshflow-bot
     restart: unless-stopped
     environment:
       - MESHTASTIC_IP=meshtastic.local   # Use hostname (e.g. meshtastic.local) or IP if your node has WiFi
@@ -73,7 +73,7 @@ services:
     restart: unless-stopped
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-    command: --interval 3600 meshtastic-bot
+    command: --interval 3600 meshflow-bot
 `;
 }
 
@@ -81,9 +81,9 @@ function generateDockerComposeSeparate(): string {
   return `---
 # Place .env in this directory with STORAGE_API_ROOT, STORAGE_API_TOKEN, etc.
 services:
-  meshtastic-bot:
-    image: ghcr.io/pskillen/meshtastic-bot:latest
-    container_name: meshtastic-bot
+  meshflow-bot:
+    image: ghcr.io/pskillen/meshflow-bot:latest
+    container_name: meshflow-bot
     restart: unless-stopped
     env_file: .env
     volumes:
@@ -97,7 +97,7 @@ services:
     restart: unless-stopped
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-    command: --interval 3600 meshtastic-bot
+    command: --interval 3600 meshflow-bot
 `;
 }
 
@@ -105,7 +105,7 @@ function generateEnvFile(apiBaseUrl: string, apiKey: string, botDefaults?: BotDe
   const wsUrl = deriveWsUrl(apiBaseUrl);
   const botEnvLines = buildBotEnvVarsForEnvFile(botDefaults);
   const botEnvBlock = botEnvLines.length > 0 ? '\n\n' + botEnvLines.join('\n') : '';
-  return `# Meshtastic Bot configuration
+  return `# Meshflow Bot configuration
 # Copy this file to .env in the same directory as docker-compose.yaml
 
 MESHTASTIC_IP=meshtastic.local
@@ -245,13 +245,13 @@ export function BotSetupInstructions({ apiKey, apiBaseUrl, botDefaults }: BotSet
 
       <div className="pt-2">
         <a
-          href="https://github.com/pskillen/meshtastic-bot"
+          href="https://github.com/pskillen/meshflow-bot"
           target="_blank"
           rel="noopener noreferrer"
           className="inline-flex items-center text-sm text-primary hover:underline"
         >
           <ExternalLink className="h-4 w-4 mr-1" />
-          Meshtastic Bot on GitHub
+          Meshflow Bot on GitHub
         </a>
       </div>
     </div>

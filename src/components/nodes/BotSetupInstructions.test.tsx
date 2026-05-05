@@ -6,7 +6,7 @@ function getEmbeddedDockerComposeContent(container: HTMLElement): string {
   const pres = container.querySelectorAll('pre');
   for (const pre of pres) {
     const text = pre.textContent || '';
-    if (text.includes('STORAGE_API_TOKEN=test-key') && text.includes('meshtastic-bot:')) {
+    if (text.includes('STORAGE_API_TOKEN=test-key') && text.includes('meshflow-bot:')) {
       return text;
     }
   }

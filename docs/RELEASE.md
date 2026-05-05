@@ -1,6 +1,6 @@
 # Release Process
 
-This document describes how Docker images are built and pushed to GitHub Container Registry (ghcr.io) for the Meshtastic Bot UI.
+This document describes how Docker images are built and pushed to GitHub Container Registry (ghcr.io) for Meshflow UI.
 
 ## Release Triggers
 
@@ -71,14 +71,14 @@ Use this to build and push from the current `main` branch without merging new co
 
 ```bash
 # Latest production
-docker pull ghcr.io/pskillen/meshtastic-bot-ui:latest
+docker pull ghcr.io/pskillen/meshflow-ui:latest
 
 # Specific version
-docker pull ghcr.io/pskillen/meshtastic-bot-ui:1.2.3
+docker pull ghcr.io/pskillen/meshflow-ui:1.2.3
 
 # Latest dev build
-docker pull ghcr.io/pskillen/meshtastic-bot-ui:latest-dev
+docker pull ghcr.io/pskillen/meshflow-ui:latest-dev
 
 # Latest release candidate
-docker pull ghcr.io/pskillen/meshtastic-bot-ui:latest-rc
+docker pull ghcr.io/pskillen/meshflow-ui:latest-rc
 ```

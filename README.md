@@ -1,6 +1,6 @@
-# MeshtasticBotUI
+# Meshflow UI
 
-A React-based user interface for the MeshtasticBot project.
+A React-based user interface for the Meshflow system.
 
 ## Development
 
@@ -113,7 +113,7 @@ Images are automatically built and pushed to GitHub Container Registry (ghcr.io)
 ## Project Structure
 
 ```
-MeshtasticBotUI/
+MeshflowUI/
 ├── src/                # Source code
 │   ├── components/     # React components
 │   ├── types/         # TypeScript type definitions
