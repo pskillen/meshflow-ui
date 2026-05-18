@@ -31,6 +31,7 @@ import {
   DxNodeExclusionResponse,
   DxNotificationSettings,
   DxNotificationSettingsWrite,
+  MeshCorePacketListItem,
 } from '../models';
 import {
   ApiConfig,
@@ -119,12 +120,17 @@ export class MeshtasticApi extends BaseApi {
   /**
    * Get a paginated list of observed nodes
    */
-  async getNodes(params?: PaginationParams): Promise<PaginatedResponse<ObservedNode>> {
+  async getNodes(
+    params?: PaginationParams & { protocol?: 'meshtastic' | 'meshcore' }
+  ): Promise<PaginatedResponse<ObservedNode>> {
     const searchParams = new URLSearchParams();
     if (params?.page) searchParams.append('page', params.page.toString());
     if (params?.page_size) searchParams.append('page_size', params.page_size.toString());
     if (params?.last_heard_after) {
       searchParams.append('last_heard_after', params.last_heard_after.toISOString());
+    }
+    if (params?.protocol) {
+      searchParams.append('protocol', params.protocol);
     }
 
     const response = await this.get<PaginatedResponse<ObservedNode>>('/nodes/observed-nodes/', searchParams);
@@ -431,6 +437,33 @@ export class MeshtasticApi extends BaseApi {
   /**
    * Get a paginated list of managed nodes
    */
+  async getMeshCoreNodes(
+    params?: PaginationParams & { last_heard_after?: Date }
+  ): Promise<PaginatedResponse<ObservedNode>> {
+    return this.getNodes({ ...params, protocol: 'meshcore' });
+  }
+
+  async getMeshCoreManagedNodes(
+    params?: PaginationParams & { includeStatus?: boolean }
+  ): Promise<PaginatedResponse<ManagedNode>> {
+    const response = await this.getManagedNodes(params);
+    return {
+      ...response,
+      results: response.results.filter((n) => n.protocol === 2),
+    };
+  }
+
+  async getMeshCorePackets(
+    params?: PaginationParams & { payload_type?: number; from_pubkey_prefix?: string }
+  ): Promise<PaginatedResponse<MeshCorePacketListItem>> {
+    const searchParams = new URLSearchParams();
+    if (params?.page) searchParams.append('page', params.page.toString());
+    if (params?.page_size) searchParams.append('page_size', params.page_size.toString());
+    if (params?.payload_type != null) searchParams.append('payload_type', String(params.payload_type));
+    if (params?.from_pubkey_prefix) searchParams.append('from_pubkey_prefix', params.from_pubkey_prefix);
+    return this.get('/meshcore/packets/', searchParams);
+  }
+
   async getManagedNodes(
     params?: PaginationParams & {
       includeStatus?: boolean;
