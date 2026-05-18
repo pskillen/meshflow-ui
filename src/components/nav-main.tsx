@@ -99,6 +99,15 @@ export function NavMain() {
         { title: 'Mesh infra', url: '/nodes/infrastructure', icon: ServerIcon },
       ],
     },
+    {
+      title: 'MeshCore',
+      url: '/meshcore/map',
+      icon: RadioIcon,
+      children: [
+        { title: 'Map', url: '/meshcore/map', icon: MapIcon },
+        { title: 'Nodes', url: '/meshcore/nodes', icon: ListIcon },
+      ],
+    },
     { title: 'Weather', url: '/weather', icon: CloudRainIcon },
     {
       title: 'Traceroutes',
