@@ -81,23 +81,23 @@ export function SetupManagedNode({ node, isOpen, onClose }: SetupManagedNodeProp
 
   // Channel mappings state
   const [channelMappings, setChannelMappings] = useState<{
-    channel_0: number | null;
-    channel_1: number | null;
-    channel_2: number | null;
-    channel_3: number | null;
-    channel_4: number | null;
-    channel_5: number | null;
-    channel_6: number | null;
-    channel_7: number | null;
+    meshtastic_channel_0: number | null;
+    meshtastic_channel_1: number | null;
+    meshtastic_channel_2: number | null;
+    meshtastic_channel_3: number | null;
+    meshtastic_channel_4: number | null;
+    meshtastic_channel_5: number | null;
+    meshtastic_channel_6: number | null;
+    meshtastic_channel_7: number | null;
   }>({
-    channel_0: null,
-    channel_1: null,
-    channel_2: null,
-    channel_3: null,
-    channel_4: null,
-    channel_5: null,
-    channel_6: null,
-    channel_7: null,
+    meshtastic_channel_0: null,
+    meshtastic_channel_1: null,
+    meshtastic_channel_2: null,
+    meshtastic_channel_3: null,
+    meshtastic_channel_4: null,
+    meshtastic_channel_5: null,
+    meshtastic_channel_6: null,
+    meshtastic_channel_7: null,
   });
 
   // Fetch constellations using the custom hook
@@ -128,14 +128,14 @@ export function SetupManagedNode({ node, isOpen, onClose }: SetupManagedNodeProp
       // Reset location and channel mappings
       setNodeLocation(null);
       setChannelMappings({
-        channel_0: null,
-        channel_1: null,
-        channel_2: null,
-        channel_3: null,
-        channel_4: null,
-        channel_5: null,
-        channel_6: null,
-        channel_7: null,
+        meshtastic_channel_0: null,
+        meshtastic_channel_1: null,
+        meshtastic_channel_2: null,
+        meshtastic_channel_3: null,
+        meshtastic_channel_4: null,
+        meshtastic_channel_5: null,
+        meshtastic_channel_6: null,
+        meshtastic_channel_7: null,
       });
 
       // Clean up map if it exists
@@ -604,8 +604,8 @@ export function SetupManagedNode({ node, isOpen, onClose }: SetupManagedNodeProp
                     const c = constellations.find((x) => x.id === selectedConstellation);
                     return c
                       ? {
-                          ignorePortnums: c.bot_default_ignore_portnums ?? undefined,
-                          hopLimit: c.bot_default_hop_limit ?? undefined,
+                          ignorePortnums: c.bot_default_ignore_meshtastic_portnums ?? undefined,
+                          hopLimit: c.bot_default_meshtastic_hop_limit ?? undefined,
                         }
                       : undefined;
                   })()
@@ -634,7 +634,7 @@ export function SetupManagedNode({ node, isOpen, onClose }: SetupManagedNodeProp
         <Button variant="outline" onClick={onClose}>
           Close
         </Button>
-        <Button onClick={() => navigate(`/nodes/${node.meshtastic_node_id}`)}>Go to Node Details</Button>
+        <Button onClick={() => navigate(`/nodes/${node.internal_id}`)}>Go to Node Details</Button>
       </DialogFooter>
     </>
   );

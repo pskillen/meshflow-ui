@@ -440,14 +440,14 @@ function NodeSettingsContent() {
 
 function channelMappingsFromNode(node: OwnedManagedNode) {
   return {
-    channel_0: node.channel_0?.id ?? null,
-    channel_1: node.channel_1?.id ?? null,
-    channel_2: node.channel_2?.id ?? null,
-    channel_3: node.channel_3?.id ?? null,
-    channel_4: node.channel_4?.id ?? null,
-    channel_5: node.channel_5?.id ?? null,
-    channel_6: node.channel_6?.id ?? null,
-    channel_7: node.channel_7?.id ?? null,
+    meshtastic_channel_0: node.meshtastic_channel_0?.id ?? null,
+    meshtastic_channel_1: node.meshtastic_channel_1?.id ?? null,
+    meshtastic_channel_2: node.meshtastic_channel_2?.id ?? null,
+    meshtastic_channel_3: node.meshtastic_channel_3?.id ?? null,
+    meshtastic_channel_4: node.meshtastic_channel_4?.id ?? null,
+    meshtastic_channel_5: node.meshtastic_channel_5?.id ?? null,
+    meshtastic_channel_6: node.meshtastic_channel_6?.id ?? null,
+    meshtastic_channel_7: node.meshtastic_channel_7?.id ?? null,
   };
 }
 
@@ -456,12 +456,14 @@ type ChannelMappings = ReturnType<typeof channelMappingsFromNode>;
 const CHANNEL_SLOT_INDEXES = [0, 1, 2, 3, 4, 5, 6, 7] as const;
 
 function countMappedSlots(mappings: ChannelMappings): number {
-  return CHANNEL_SLOT_INDEXES.filter((i) => mappings[`channel_${i}` as keyof ChannelMappings] != null).length;
+  return CHANNEL_SLOT_INDEXES.filter(
+    (i) => mappings[`meshtastic_meshtastic_channel_${i}` as keyof ChannelMappings] != null
+  ).length;
 }
 
 function channelMappingsEqual(a: ChannelMappings, b: ChannelMappings): boolean {
   return CHANNEL_SLOT_INDEXES.every((i) => {
-    const k = `channel_${i}` as keyof ChannelMappings;
+    const k = `meshtastic_meshtastic_channel_${i}` as keyof ChannelMappings;
     return a[k] === b[k];
   });
 }
@@ -507,14 +509,14 @@ function ManagedNodeSettings({
   const saveChannels = useMutation({
     mutationFn: () =>
       api.patchManagedNode(node.meshtastic_node_id, {
-        channel_0: mappings.channel_0,
-        channel_1: mappings.channel_1,
-        channel_2: mappings.channel_2,
-        channel_3: mappings.channel_3,
-        channel_4: mappings.channel_4,
-        channel_5: mappings.channel_5,
-        channel_6: mappings.channel_6,
-        channel_7: mappings.channel_7,
+        meshtastic_channel_0: mappings.meshtastic_channel_0,
+        meshtastic_channel_1: mappings.meshtastic_channel_1,
+        meshtastic_channel_2: mappings.meshtastic_channel_2,
+        meshtastic_channel_3: mappings.meshtastic_channel_3,
+        meshtastic_channel_4: mappings.meshtastic_channel_4,
+        meshtastic_channel_5: mappings.meshtastic_channel_5,
+        meshtastic_channel_6: mappings.meshtastic_channel_6,
+        meshtastic_channel_7: mappings.meshtastic_channel_7,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['managed-nodes', 'mine'] });
@@ -524,7 +526,7 @@ function ManagedNodeSettings({
 
   const setSlot = (index: number, raw: string) => {
     const v = raw === 'none' ? null : Number(raw);
-    setMappings((prev) => ({ ...prev, [`channel_${index}`]: v }) as ChannelMappings);
+    setMappings((prev) => ({ ...prev, [`meshtastic_channel_${index}`]: v }) as ChannelMappings);
   };
 
   return (
@@ -592,7 +594,7 @@ function ManagedNodeSettings({
               <>
                 <div className="space-y-2">
                   {CHANNEL_SLOT_INDEXES.map((i) => {
-                    const slotKey = `channel_${i}` as keyof ChannelMappings;
+                    const slotKey = `meshtastic_meshtastic_channel_${i}` as keyof ChannelMappings;
                     const cur = mappings[slotKey];
                     return (
                       <div key={i} className="flex items-center gap-2">
@@ -700,8 +702,9 @@ function ManagedNodeSettings({
                             nodeShortName: node.short_name || node.node_id_str,
                             botDefaults: node.constellation
                               ? {
-                                  ignorePortnums: node.constellation.bot_default_ignore_portnums ?? undefined,
-                                  hopLimit: node.constellation.bot_default_hop_limit ?? undefined,
+                                  ignorePortnums:
+                                    node.constellation.bot_default_ignore_meshtastic_portnums ?? undefined,
+                                  hopLimit: node.constellation.bot_default_meshtastic_hop_limit ?? undefined,
                                 }
                               : undefined,
                           })

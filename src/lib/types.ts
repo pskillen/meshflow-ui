@@ -67,6 +67,8 @@ export interface AppConfig {
   version: string;
   mapboxToken?: string; // For Mapbox GL; injected at runtime in Docker
   apis: {
+    /** Preferred key for the Meshflow REST API (falls back to meshBot when omitted). */
+    meshflow?: ApiConfig;
     meshBot: ApiConfig;
   };
   map: {
