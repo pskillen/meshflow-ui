@@ -10,12 +10,12 @@ export const INFRASTRUCTURE_ROLE_IDS: ReadonlySet<number> = new Set([2, 3, 4, 11
 
 /** Matches mesh monitoring `user_can_watch` for UI gating (claim owner or infra role). */
 export function userCanMeshWatchNode(
-  node: { role?: number | null; owner?: { id: number } | null },
+  node: { meshtastic_role?: number | null; owner?: { id: number } | null },
   currentUserId: number | null | undefined
 ): boolean {
   if (currentUserId == null) return false;
   if (node.owner?.id === currentUserId) return true;
-  if (node.role != null && INFRASTRUCTURE_ROLE_IDS.has(node.role)) return true;
+  if (node.meshtastic_role != null && INFRASTRUCTURE_ROLE_IDS.has(node.meshtastic_role)) return true;
   return false;
 }
 

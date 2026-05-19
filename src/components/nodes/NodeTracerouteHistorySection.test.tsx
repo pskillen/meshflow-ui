@@ -74,8 +74,8 @@ function makeObservedNode(overrides: Partial<ObservedNode> = {}): ObservedNode {
     mac_addr: null,
     long_name: 'Target node',
     short_name: 'TGT',
-    hw_model: null,
-    public_key: null,
+    meshtastic_hw_model: null,
+    meshtastic_public_key: null,
     ...overrides,
   };
 }

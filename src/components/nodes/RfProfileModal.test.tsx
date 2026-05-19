@@ -35,9 +35,9 @@ function makeNode(overrides: Partial<ObservedNode> = {}): ObservedNode {
     mac_addr: null,
     long_name: 'N',
     short_name: 'N',
-    hw_model: null,
-    public_key: null,
-    role: 2,
+    meshtastic_hw_model: null,
+    meshtastic_public_key: null,
+    meshtastic_role: 2,
     last_heard: null,
     latest_position: {
       latitude: 12.34,

@@ -13,8 +13,8 @@ describe('observedNodesToCoverageGhosts', () => {
         mac_addr: null,
         long_name: 'A',
         short_name: 'A',
-        hw_model: null,
-        public_key: null,
+        meshtastic_hw_model: null,
+        meshtastic_public_key: null,
         latest_position: { latitude: 1, longitude: 2, reported_time: null, logged_time: null, altitude: null, location_source: 'gps' },
       },
       {
@@ -24,8 +24,8 @@ describe('observedNodesToCoverageGhosts', () => {
         mac_addr: null,
         long_name: null,
         short_name: 'B',
-        hw_model: null,
-        public_key: null,
+        meshtastic_hw_model: null,
+        meshtastic_public_key: null,
         latest_position: null,
       },
     ];
@@ -42,8 +42,8 @@ describe('observedNodesToCoverageGhosts', () => {
         mac_addr: null,
         long_name: 'Ghost',
         short_name: 'G',
-        hw_model: null,
-        public_key: null,
+        meshtastic_hw_model: null,
+        meshtastic_public_key: null,
         latest_position: { latitude: 55.1, longitude: -4.1, reported_time: null, logged_time: null, altitude: null, location_source: 'gps' },
       },
     ];

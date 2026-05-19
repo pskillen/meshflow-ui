@@ -265,13 +265,14 @@ export function NodeDetailContent({ nodeId, compact = false, activeTab, onTabCha
   }, [nodeId, addRecentNode, node]);
 
   const currentUser = authService.getCurrentUser();
-  const roleLabel = getRoleLabel(node.role);
+  const roleLabel = getRoleLabel(node.meshtastic_role);
   const hasPendingClaim = node.claim && !node.claim.accepted_at;
   const hasApprovedClaim =
     (node.claim && node.claim.accepted_at) || (node.owner && currentUser && node.owner.id === currentUser.id);
 
   const fullPageTabs = !compact && activeTab !== undefined && onTabChange !== undefined;
-  const showRfPropagation = !compact && node.role != null && INFRASTRUCTURE_ROLE_IDS.has(node.role);
+  const showRfPropagation =
+    !compact && node.meshtastic_role != null && INFRASTRUCTURE_ROLE_IDS.has(node.meshtastic_role);
 
   useEffect(() => {
     if (fullPageTabs && activeTab === 'monitoring' && !currentUser) {
@@ -297,7 +298,7 @@ export function NodeDetailContent({ nodeId, compact = false, activeTab, onTabCha
               <span className="font-medium">Node ID:</span> <span className="font-mono">{node.node_id_str}</span>
             </p>
             <p>
-              <span className="font-medium">Hardware Model:</span> {node.hw_model ?? '—'}
+              <span className="font-medium">Hardware Model:</span> {node.meshtastic_hw_model ?? '—'}
             </p>
             {roleLabel && (
               <p>
@@ -309,15 +310,15 @@ export function NodeDetailContent({ nodeId, compact = false, activeTab, onTabCha
                 <span className="font-medium">MAC Address:</span> <span className="font-mono">{node.mac_addr}</span>
               </p>
             )}
-            {node.public_key && (
+            {node.meshtastic_public_key && (
               <p className="flex flex-wrap items-center gap-2">
                 <span className="shrink-0 font-medium">Public Key:</span>
-                <span className="break-all font-mono text-sm">{node.public_key}</span>
+                <span className="break-all font-mono text-sm">{node.meshtastic_public_key}</span>
                 <Button
                   variant="ghost"
                   size="sm"
                   className="h-7 shrink-0 px-2"
-                  onClick={() => handleCopyToClipboard(node.public_key!)}
+                  onClick={() => handleCopyToClipboard(node.meshtastic_public_key!)}
                   title="Copy public key"
                 >
                   <Copy className="mr-1 h-3 w-3" />
@@ -325,14 +326,14 @@ export function NodeDetailContent({ nodeId, compact = false, activeTab, onTabCha
                 </Button>
               </p>
             )}
-            {(node.is_licensed === true || node.is_licensed === false) && (
+            {(node.meshtastic_is_licensed === true || node.meshtastic_is_licensed === false) && (
               <p>
-                <span className="font-medium">Licensed Operator:</span> {node.is_licensed ? 'Yes' : 'No'}
+                <span className="font-medium">Licensed Operator:</span> {node.meshtastic_is_licensed ? 'Yes' : 'No'}
               </p>
             )}
-            {(node.is_unmessagable === true || node.is_unmessagable === false) && (
+            {(node.meshtastic_is_unmessagable === true || node.meshtastic_is_unmessagable === false) && (
               <p>
-                <span className="font-medium">Messagable:</span> {node.is_unmessagable ? 'No' : 'Yes'}
+                <span className="font-medium">Messagable:</span> {node.meshtastic_is_unmessagable ? 'No' : 'Yes'}
               </p>
             )}
             <p>

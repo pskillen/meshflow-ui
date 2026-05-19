@@ -63,8 +63,8 @@ function makeTraceroute(overrides: Partial<AutoTraceRoute> = {}): AutoTraceRoute
       mac_addr: null,
       long_name: 'Target',
       short_name: 'TGT',
-      hw_model: null,
-      public_key: null,
+      meshtastic_hw_model: null,
+      meshtastic_public_key: null,
     } as ObservedNode,
     trigger_type: 1,
     trigger_type_label: 'User',
@@ -103,8 +103,8 @@ function makeObservedNode(overrides: Partial<ObservedNode> = {}): ObservedNode {
     mac_addr: null,
     long_name: 'Target',
     short_name: 'TGT',
-    hw_model: null,
-    public_key: null,
+    meshtastic_hw_model: null,
+    meshtastic_public_key: null,
     ...overrides,
   } as ObservedNode;
 }

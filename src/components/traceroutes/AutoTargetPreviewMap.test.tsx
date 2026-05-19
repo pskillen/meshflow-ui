@@ -50,8 +50,8 @@ const candidate: ObservedNode = {
   mac_addr: null,
   long_name: 'Obs',
   short_name: 'O',
-  hw_model: null,
-  public_key: null,
+  meshtastic_hw_model: null,
+  meshtastic_public_key: null,
   last_heard: now,
   latest_position: {
     latitude: 55.05,

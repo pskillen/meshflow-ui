@@ -41,7 +41,7 @@ function BatteryIndicator({ level }: { level: number }) {
 
 export function NodeCard({ node }: NodeCardProps) {
   const batteryLevel = node.latest_device_metrics?.battery_level ?? null;
-  const roleLabel = getRoleLabel(node.role);
+  const roleLabel = getRoleLabel(node.meshtastic_role);
 
   return (
     <Link
@@ -66,7 +66,7 @@ export function NodeCard({ node }: NodeCardProps) {
         {node.owner && <span>Owner: {node.owner.username}</span>}
       </div>
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 text-sm text-slate-600 dark:text-slate-400">
-        {node.hw_model && <span>{node.hw_model}</span>}
+        {node.meshtastic_hw_model && <span>{node.meshtastic_hw_model}</span>}
         {batteryLevel != null && <BatteryIndicator level={batteryLevel} />}
       </div>
     </Link>
