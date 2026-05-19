@@ -5,7 +5,7 @@ import type { Layer, PickingInfo } from '@deck.gl/core';
 import { DeckGL } from 'deck.gl';
 import type { DeckGLProps } from 'deck.gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
-import { Map } from 'react-map-gl';
+import { Map } from 'react-map-gl/mapbox';
 
 import { useConfig } from '@/providers/ConfigProvider';
 import { useMapboxStyle } from '@/hooks/useMapboxStyle';

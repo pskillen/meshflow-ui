@@ -5,8 +5,8 @@ import { render, screen } from '@testing-library/react';
 import type { NodeTracerouteLinkEdge, NodeTracerouteLinkNode } from '@/hooks/api/useNodeTracerouteLinks';
 import { NodeTracerouteLinksMap } from './NodeTracerouteLinksMap';
 
-vi.mock('react-map-gl', async (importOriginal) => {
-  const mod = await importOriginal<typeof import('react-map-gl')>();
+vi.mock('react-map-gl/mapbox', async (importOriginal) => {
+  const mod = await importOriginal<typeof import('react-map-gl/mapbox')>();
   return {
     ...mod,
     Popup: ({ children }: { children?: React.ReactNode }) => <div data-testid="popup-mock">{children}</div>,

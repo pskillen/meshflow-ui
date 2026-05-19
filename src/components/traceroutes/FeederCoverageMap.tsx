@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import { Popup } from 'react-map-gl';
+import { Popup } from 'react-map-gl/mapbox';
 import { PolygonLayer, ScatterplotLayer } from '@deck.gl/layers';
 import { H3HexagonLayer } from '@deck.gl/geo-layers';
 import type { Layer, PickingInfo } from '@deck.gl/core';

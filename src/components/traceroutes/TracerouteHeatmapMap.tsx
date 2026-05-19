@@ -1,5 +1,5 @@
 import { useMemo, useCallback, useState } from 'react';
-import { Popup } from 'react-map-gl';
+import { Popup } from 'react-map-gl/mapbox';
 import type { Layer, PickingInfo } from '@deck.gl/core';
 import { PathStyleExtension } from '@deck.gl/extensions';
 import { ArcLayer, PathLayer, ScatterplotLayer, TextLayer } from '@deck.gl/layers';
