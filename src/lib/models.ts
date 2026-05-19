@@ -82,22 +82,32 @@ export function isRfPropagationNone(r: RfPropagationPollResult): r is { status: 
   return r.status === 'none';
 }
 
-// ObservedNode from Meshflow API v2
+/**
+ * Observed node from Meshflow API (Meshtastic and MeshCore in one list resource).
+ * Use `protocol` on list queries to filter; detail by numeric `node_id` is Meshtastic-only today.
+ */
 export interface ObservedNode {
+  /** Stable UUID primary key (API returns string; parsed in api-utils). */
   internal_id: number;
   protocol?: MeshProtocol;
+  /** Meshtastic numeric node id; null/absent for MeshCore (use node_id_str / mc_pubkey*). */
   node_id: number;
+  /** Canonical display id: `!hex8` (Meshtastic) or `mc:prefix12` (MeshCore). */
   node_id_str: string;
   mc_pubkey?: string | null;
   mc_pubkey_prefix?: string | null;
+  /** Meshtastic nodeinfo MAC; usually null for MeshCore. */
   mac_addr: string | null;
   long_name: string | null;
   short_name: string | null;
   hw_model: string | null;
+  /** Meshtastic device public key (PKI); null for MeshCore. */
   public_key: string | null;
+  /** Meshtastic RoleSource enum integer; null for MeshCore. */
   role?: number | null;
   is_licensed?: boolean | null;
   is_unmessagable?: boolean | null;
+  /** Meshtastic-only: inferred max hops from hop_start; null for MeshCore. */
   inferred_max_hops?: number | null;
   environment_exposure?: EnvironmentExposureSlug;
   weather_use?: WeatherUseSlug;
@@ -110,11 +120,14 @@ export interface ObservedNode {
   /** True when battery alerting is enabled and a low-battery episode is confirmed (mesh monitoring). */
   battery_alert_active?: boolean;
   battery_alert_confirmed_at?: Date | string | null;
-  // Additional fields for UI compatibility
   last_heard?: Date | null;
+  /** Meshtastic protobuf-shaped telemetry; typically null for MeshCore nodes. */
   latest_device_metrics?: DeviceMetrics | null;
+  /** Meshtastic environment telemetry from NodeLatestStatus. */
   latest_environment_metrics?: LatestEnvironmentMetrics | null;
+  /** Meshtastic power telemetry from NodeLatestStatus. */
   latest_power_metrics?: LatestPowerMetrics | null;
+  /** Meshtastic position snapshot from NodeLatestStatus. */
   latest_position?: Position | null;
   owner?: NodeOwnerInfo | null;
   /** Current user's claim for this node, if any. Present when authenticated. */
@@ -302,6 +315,7 @@ export interface TextMessageResponse {
   results: TextMessage[];
 }
 
+/** Meshtastic device telemetry (nested under ObservedNode.latest_device_metrics). */
 export interface DeviceMetrics {
   reported_time: Date | null;
   logged_time: Date | null;

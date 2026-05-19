@@ -118,7 +118,9 @@ export class MeshtasticApi extends BaseApi {
   // ===== Observed Nodes API =====
 
   /**
-   * Get a paginated list of observed nodes
+   * List observed nodes (`GET /nodes/observed-nodes/`) — mixed Meshtastic and MeshCore.
+   * Pass `protocol` to filter; nested `latest_*` metrics are Meshtastic-shaped when present.
+   * Detail by numeric id via {@link getNode} is Meshtastic-only (MeshCore: filter list/search).
    */
   async getNodes(
     params?: PaginationParams & { protocol?: 'meshtastic' | 'meshcore' }
@@ -155,7 +157,9 @@ export class MeshtasticApi extends BaseApi {
   }
 
   /**
-   * Get a single observed node by ID
+   * Get one observed node by Meshtastic numeric `node_id` (path `/nodes/observed-nodes/{id}/`).
+   * Not valid for MeshCore nodes until internal_id lookup exists — use {@link getNodes} with
+   * `protocol: 'meshcore'` or search instead.
    */
   async getNode(id: number): Promise<ObservedNode> {
     const node = await this.get<ObservedNode>(`/nodes/observed-nodes/${id}/`);
