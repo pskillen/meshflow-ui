@@ -225,7 +225,7 @@ export function MyNodeCard({
           />
         </div>
         <Button asChild className="w-full">
-          <Link to={`/nodes/${node.meshtastic_node_id}`} className="inline-flex items-center justify-center gap-1.5">
+          <Link to={`/nodes/${node.internal_id}`} className="inline-flex items-center justify-center gap-1.5">
             <Settings className="h-4 w-4 shrink-0" aria-hidden />
             Node details
             <ChevronRight className="h-4 w-4 shrink-0 opacity-70" aria-hidden />

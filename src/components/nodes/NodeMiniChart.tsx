@@ -13,7 +13,7 @@ interface NodeMiniChartProps {
 
 const chartConfig: ChartConfig = {
   battery_level: { color: '#76d9c4', label: 'Battery %' },
-  channel_utilization: { color: '#ff7b72', label: 'Ch. util %' },
+  meshtastic_channel_utilization: { color: '#ff7b72', label: 'Ch. util %' },
 };
 
 export function NodeMiniChart({ metrics, dateRange, lines = 'all' }: NodeMiniChartProps) {
@@ -23,7 +23,7 @@ export function NodeMiniChart({ metrics, dateRange, lines = 'all' }: NodeMiniCha
       .map((m) => ({
         timestamp: new Date(m.reported_time!).getTime(),
         battery_level: m.battery_level,
-        channel_utilization: m.channel_utilization,
+        meshtastic_channel_utilization: m.meshtastic_channel_utilization,
       }))
       .sort((a, b) => a.timestamp - b.timestamp);
   }, [metrics]);
@@ -86,7 +86,7 @@ export function NodeMiniChart({ metrics, dateRange, lines = 'all' }: NodeMiniCha
         {lines === 'all' ? (
           <Line
             type="monotone"
-            dataKey="channel_utilization"
+            dataKey="meshtastic_channel_utilization"
             stroke="#ff7b72"
             strokeWidth={1.5}
             dot={false}

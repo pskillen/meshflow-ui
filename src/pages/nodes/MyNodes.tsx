@@ -135,8 +135,8 @@ function MyNodesContent() {
                   if (c && typeof c === 'object') {
                     const obj = c as NodeApiKeyConstellation;
                     return {
-                      ignorePortnums: obj.bot_default_ignore_portnums ?? undefined,
-                      hopLimit: obj.bot_default_hop_limit ?? undefined,
+                      ignorePortnums: obj.bot_default_ignore_meshtastic_portnums ?? undefined,
+                      hopLimit: obj.bot_default_meshtastic_hop_limit ?? undefined,
                     } as BotDefaults;
                   }
                   return undefined;
@@ -164,9 +164,7 @@ function MyNodesContent() {
             <Button variant="outline" onClick={() => setInstructionsModalOpen(false)}>
               Close
             </Button>
-            <Button onClick={() => navigate(`/nodes/${showInstructionsNode.meshtastic_node_id}`)}>
-              Go to Node Details
-            </Button>
+            <Button onClick={() => navigate(`/nodes/${showInstructionsNode.internal_id}`)}>Go to Node Details</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -219,7 +217,7 @@ function MyNodesContent() {
               disabled={cancelClaimMutation.isPending}
               onClick={() => {
                 if (!unclaimTarget) return;
-                cancelClaimMutation.mutate(unclaimTarget.meshtastic_node_id, {
+                cancelClaimMutation.mutate(unclaimTarget.internal_id, {
                   onSuccess: () => setUnclaimTarget(null),
                 });
               }}

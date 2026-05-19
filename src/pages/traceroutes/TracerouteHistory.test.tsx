@@ -57,7 +57,7 @@ function makeTraceroute(overrides: Partial<AutoTraceRoute> = {}): AutoTraceRoute
     id: 1,
     source_node: makeManagedNode(),
     target_node: {
-      internal_id: 1,
+      internal_id: '00000000-0000-4000-8000-000000000001',
       meshtastic_node_id: 100,
       node_id_str: '!00000064',
       mac_addr: null,
@@ -97,7 +97,7 @@ interface InfiniteOptions {
 
 function makeObservedNode(overrides: Partial<ObservedNode> = {}): ObservedNode {
   return {
-    internal_id: 1,
+    internal_id: '00000000-0000-4000-8000-000000000001',
     meshtastic_node_id: 100,
     node_id_str: '!00000064',
     mac_addr: null,

@@ -13,7 +13,7 @@ function makeWatch(overrides: {
   node?: Partial<ObservedNodeWatchSummary>;
 }): NodeWatch {
   const node: ObservedNodeWatchSummary = {
-    internal_id: 1,
+    internal_id: '00000000-0000-4000-8000-000000000001',
     meshtastic_node_id: 42,
     node_id_str: '!0000002a',
     mac_addr: null,

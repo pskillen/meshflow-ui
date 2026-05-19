@@ -18,7 +18,7 @@ import {
   smoothedRate,
 } from '@/components/map/coverageStyling';
 import { DeckMapboxMap } from '@/components/map/DeckMapboxMap';
-import type { FeederReachFeeder, FeederReachTarget } from '@/lib/api/meshtastic-api';
+import type { FeederReachFeeder, FeederReachTarget } from '@/lib/api/meshflow-api';
 import type { CoverageHeardGhost } from '@/lib/coverageHeardGhosts';
 
 export type CoverageLayerKey = 'dots' | 'hex' | 'polygon' | 'heard';

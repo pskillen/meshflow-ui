@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { useMeshtasticApi } from './useApi';
+import { useMeshflowApi } from './useApi';
 
 export interface NodeTracerouteLinkEdge {
   from_node_id: number;
@@ -39,16 +39,16 @@ export interface UseNodeTracerouteLinksParams {
   triggeredAtAfter?: Date;
 }
 
-export function useNodeTracerouteLinks(nodeId: number, params?: UseNodeTracerouteLinksParams) {
-  const api = useMeshtasticApi();
+export function useNodeTracerouteLinks(internalId: string, params?: UseNodeTracerouteLinksParams) {
+  const api = useMeshflowApi();
   const triggeredAtAfter = params?.triggeredAtAfter?.toISOString();
 
   return useQuery({
-    queryKey: ['node-traceroute-links', nodeId, { triggeredAtAfter }],
+    queryKey: ['node-traceroute-links', internalId, { triggeredAtAfter }],
     queryFn: () =>
-      api.getNodeTracerouteLinks(nodeId, {
+      api.getNodeTracerouteLinks(internalId, {
         triggered_at_after: triggeredAtAfter,
       }),
-    enabled: nodeId > 0,
+    enabled: internalId.length > 0,
   });
 }

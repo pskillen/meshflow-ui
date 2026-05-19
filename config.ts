@@ -39,14 +39,18 @@ async function fetchConfig(): Promise<AppConfig> {
     const remoteConfig = response.data;
 
     // Deep merge the configs, with remote config taking precedence
+    const meshBot = {
+      ...defaultConfig.apis.meshBot,
+      ...remoteConfig.apis?.meshBot,
+    };
+    const meshflow = remoteConfig.apis?.meshflow ? { ...meshBot, ...remoteConfig.apis.meshflow } : meshBot;
+
     return {
       version: VERSION,
       mapboxToken: remoteConfig.mapboxToken ?? defaultConfig.mapboxToken,
       apis: {
-        meshBot: {
-          ...defaultConfig.apis.meshBot,
-          ...remoteConfig.apis?.meshBot,
-        },
+        meshBot,
+        meshflow,
       },
       map: {
         ...defaultConfig.map,

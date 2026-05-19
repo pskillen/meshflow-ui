@@ -36,6 +36,9 @@ vi.mock('@/hooks/api/useNodeWatches', () => ({
 }));
 
 vi.mock('@/hooks/api/useApi', () => ({
+  useMeshflowApi: () => ({
+    getApiKeys: vi.fn(),
+  }),
   useMeshtasticApi: () => ({
     getApiKeys: vi.fn(),
   }),
@@ -57,7 +60,7 @@ const NOW = new Date('2026-04-21T12:00:00.000Z');
 
 function makeObserved(overrides: Partial<ObservedNode> = {}): ObservedNode {
   return {
-    internal_id: 1,
+    internal_id: '00000000-0000-4000-8000-000000000001',
     meshtastic_node_id: 100,
     node_id_str: '!00000064',
     mac_addr: null,

@@ -123,8 +123,8 @@ function InfrastructureNodeCardInner({
             </span>
             <span>
               Ch. util:{' '}
-              {node.latest_device_metrics.channel_utilization != null
-                ? `${node.latest_device_metrics.channel_utilization.toFixed(1)}%`
+              {node.latest_device_metrics.meshtastic_channel_utilization != null
+                ? `${node.latest_device_metrics.meshtastic_channel_utilization.toFixed(1)}%`
                 : '—'}
             </span>
             <span>
@@ -176,13 +176,13 @@ function InfrastructureNodeCardInner({
             <RfPropagationMapModal
               open={propagationMapOpen}
               onOpenChange={setPropagationMapOpen}
-              nodeId={node.meshtastic_node_id}
+              internalId={node.internal_id}
               shortLabel={node.short_name}
             />
           </>
         )}
         <Link
-          to={`/nodes/${node.meshtastic_node_id}`}
+          to={`/nodes/${node.internal_id}`}
           className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
         >
           Open node details

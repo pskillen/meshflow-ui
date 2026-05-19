@@ -7,7 +7,7 @@ describe('observedNodesToCoverageGhosts', () => {
   it('drops represented ids and nodes without position', () => {
     const nodes: ObservedNode[] = [
       {
-        internal_id: 1,
+        internal_id: '00000000-0000-4000-8000-000000000001',
         meshtastic_node_id: 10,
         node_id_str: '!a',
         mac_addr: null,
@@ -15,10 +15,10 @@ describe('observedNodesToCoverageGhosts', () => {
         short_name: 'A',
         meshtastic_hw_model: null,
         meshtastic_public_key: null,
-        latest_position: { latitude: 1, longitude: 2, reported_time: null, logged_time: null, altitude: null, location_source: 'gps' },
+        latest_position: { latitude: 1, longitude: 2, reported_time: null, logged_time: null, altitude: null, meshtastic_location_source: 'gps' },
       },
       {
-        internal_id: 2,
+        internal_id: '00000000-0000-4000-8000-000000000001',
         meshtastic_node_id: 20,
         node_id_str: '!b',
         mac_addr: null,
@@ -36,7 +36,7 @@ describe('observedNodesToCoverageGhosts', () => {
   it('keeps unrepresented nodes with coordinates', () => {
     const nodes: ObservedNode[] = [
       {
-        internal_id: 3,
+        internal_id: '00000000-0000-4000-8000-000000000001',
         meshtastic_node_id: 30,
         node_id_str: '!c',
         mac_addr: null,
@@ -44,7 +44,7 @@ describe('observedNodesToCoverageGhosts', () => {
         short_name: 'G',
         meshtastic_hw_model: null,
         meshtastic_public_key: null,
-        latest_position: { latitude: 55.1, longitude: -4.1, reported_time: null, logged_time: null, altitude: null, location_source: 'gps' },
+        latest_position: { latitude: 55.1, longitude: -4.1, reported_time: null, logged_time: null, altitude: null, meshtastic_location_source: 'gps' },
       },
     ];
     const g = observedNodesToCoverageGhosts(nodes, new Set());

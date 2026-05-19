@@ -26,7 +26,7 @@ export type RfPropagationMapModalProps = {
   assetUrl?: string | null;
   bounds?: RfPropagationMapBounds | null;
   /** When not using inline `assetUrl` + `bounds`, fetch propagation for this node while open. */
-  nodeId?: number;
+  internalId?: string;
   shortLabel?: string | null;
   /** Larger dialog for node-details maximise. */
   layout?: RfPropagationMapModalLayout;
@@ -35,15 +35,15 @@ export type RfPropagationMapModalProps = {
 export function RfPropagationMapModal({
   open,
   onOpenChange,
-  nodeId,
+  internalId,
   assetUrl,
   bounds,
   shortLabel,
   layout = 'default',
 }: RfPropagationMapModalProps) {
   const hasInlineRender = Boolean(assetUrl && bounds);
-  const fetchEnabled = open && nodeId != null && nodeId > 0 && !hasInlineRender;
-  const { data, isLoading } = useRfPropagation(nodeId ?? 0, { enabled: fetchEnabled });
+  const fetchEnabled = open && internalId != null && internalId.length > 0 && !hasInlineRender;
+  const { data, isLoading } = useRfPropagation(internalId ?? '', { enabled: fetchEnabled });
 
   const readyFromQuery = data && !isRfPropagationNone(data) && data.status === 'ready' ? data : null;
   const mapAsset = hasInlineRender ? assetUrl! : readyFromQuery?.asset_url;

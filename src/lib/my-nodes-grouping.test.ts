@@ -19,7 +19,7 @@ const NOW = new Date('2026-04-21T12:00:00.000Z');
 
 function makeObserved(overrides: Partial<ObservedNode> = {}): ObservedNode {
   return {
-    internal_id: 1,
+    internal_id: '00000000-0000-4000-8000-000000000001',
     meshtastic_node_id: 100,
     node_id_str: '!00000064',
     mac_addr: null,
@@ -247,7 +247,7 @@ describe('getPositionHint', () => {
         reported_time: old,
         logged_time: null,
         altitude: null,
-        location_source: 'gps',
+        meshtastic_location_source: 'gps',
       },
     });
     const h = getPositionHint(n, NOW);
@@ -263,7 +263,7 @@ describe('getPositionHint', () => {
         reported_time: new Date(NOW.getTime() - 60_000),
         logged_time: null,
         altitude: null,
-        location_source: 'gps',
+        meshtastic_location_source: 'gps',
       },
     });
     expect(getPositionHint(n, NOW).treatment).toBe('ok');
@@ -295,7 +295,7 @@ describe('buildNodesForMap and merge', () => {
         reported_time: null,
         logged_time: null,
         altitude: null,
-        location_source: 'gps',
+        meshtastic_location_source: 'gps',
       },
     });
     const managed = makeManaged({

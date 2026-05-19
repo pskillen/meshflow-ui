@@ -214,7 +214,11 @@ function NodeMapContent() {
           )}
 
           <NodeDetailSheet
-            nodeId={selectedNode?.meshtastic_node_id ?? null}
+            internalId={
+              selectedNode && 'internal_id' in selectedNode && typeof selectedNode.internal_id === 'string'
+                ? selectedNode.internal_id
+                : null
+            }
             open={selectedNode != null}
             onOpenChange={(open) => !open && setSelectedNode(null)}
           />

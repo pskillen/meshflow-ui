@@ -1,22 +1,22 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useMeshtasticApi } from './useApi';
+import { useMeshflowApi } from './useApi';
 import type { RfProfileUpdateBody } from '@/lib/models';
 
-export function useRfProfile(nodeId: number | null, options?: { enabled?: boolean }) {
-  const api = useMeshtasticApi();
+export function useRfProfile(internalId: string | null, options?: { enabled?: boolean }) {
+  const api = useMeshflowApi();
   return useQuery({
-    queryKey: ['rf-profile', nodeId],
-    queryFn: () => api.getRfProfile(nodeId!),
-    enabled: nodeId != null && (options?.enabled ?? true),
+    queryKey: ['rf-profile', internalId],
+    queryFn: () => api.getRfProfile(internalId!),
+    enabled: internalId != null && (options?.enabled ?? true),
   });
 }
 
-export function useRfPropagation(nodeId: number | null, options?: { enabled?: boolean }) {
-  const api = useMeshtasticApi();
+export function useRfPropagation(internalId: string | null, options?: { enabled?: boolean }) {
+  const api = useMeshflowApi();
   return useQuery({
-    queryKey: ['rf-propagation', nodeId],
-    queryFn: () => api.getRfPropagation(nodeId!),
-    enabled: nodeId != null && (options?.enabled ?? true),
+    queryKey: ['rf-propagation', internalId],
+    queryFn: () => api.getRfPropagation(internalId!),
+    enabled: internalId != null && (options?.enabled ?? true),
     refetchInterval: (q) => {
       const d = q.state.data;
       if (!d || d.status === 'none') return false;
@@ -26,38 +26,38 @@ export function useRfPropagation(nodeId: number | null, options?: { enabled?: bo
   });
 }
 
-export function useUpdateRfProfile(nodeId: number) {
-  const api = useMeshtasticApi();
+export function useUpdateRfProfile(internalId: string) {
+  const api = useMeshflowApi();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (body: RfProfileUpdateBody) => api.updateRfProfile(nodeId, body),
+    mutationFn: (body: RfProfileUpdateBody) => api.updateRfProfile(internalId, body),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['nodes', nodeId] });
-      void queryClient.invalidateQueries({ queryKey: ['rf-profile', nodeId] });
+      void queryClient.invalidateQueries({ queryKey: ['nodes', internalId] });
+      void queryClient.invalidateQueries({ queryKey: ['rf-profile', internalId] });
     },
   });
 }
 
-export function useRecomputeRfPropagation(nodeId: number) {
-  const api = useMeshtasticApi();
+export function useRecomputeRfPropagation(internalId: string) {
+  const api = useMeshflowApi();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: () => api.recomputeRfPropagation(nodeId),
+    mutationFn: () => api.recomputeRfPropagation(internalId),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['rf-propagation', nodeId] });
-      void queryClient.invalidateQueries({ queryKey: ['nodes', nodeId] });
+      void queryClient.invalidateQueries({ queryKey: ['rf-propagation', internalId] });
+      void queryClient.invalidateQueries({ queryKey: ['nodes', internalId] });
     },
   });
 }
 
-export function useDismissRfPropagation(nodeId: number) {
-  const api = useMeshtasticApi();
+export function useDismissRfPropagation(internalId: string) {
+  const api = useMeshflowApi();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: () => api.dismissRfPropagation(nodeId),
+    mutationFn: () => api.dismissRfPropagation(internalId),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['rf-propagation', nodeId] });
-      void queryClient.invalidateQueries({ queryKey: ['nodes', nodeId] });
+      void queryClient.invalidateQueries({ queryKey: ['rf-propagation', internalId] });
+      void queryClient.invalidateQueries({ queryKey: ['nodes', internalId] });
     },
   });
 }

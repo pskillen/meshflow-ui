@@ -51,12 +51,13 @@ vi.mock('@/lib/auth/authService', () => ({
 }));
 
 import { useNodeSuspense, useManagedNodesSuspense } from '@/hooks/api/useNodes';
+import { TEST_OBSERVED_INTERNAL_ID } from '@/test/test-node-ids';
 
 const mockedUseNodeSuspense = vi.mocked(useNodeSuspense);
 const mockedUseManagedNodesSuspense = vi.mocked(useManagedNodesSuspense);
 
 const minimalNode: ObservedNode = {
-  internal_id: 1,
+  internal_id: '00000000-0000-4000-8000-000000000001',
   meshtastic_node_id: 100,
   node_id_str: '!00000064',
   mac_addr: null,
@@ -79,11 +80,11 @@ const minimalNode: ObservedNode = {
 
 function NodeDetailTabbedPage() {
   const { id } = useParams<{ id: string }>();
-  const nodeId = parseInt(id || '0', 10);
+  const internalId = id ?? TEST_OBSERVED_INTERNAL_ID;
   const { activeTab, onTabChange } = useNodeDetailPageTabs();
   return (
     <Suspense fallback={null}>
-      <NodeDetailContent nodeId={nodeId} activeTab={activeTab} onTabChange={onTabChange} />
+      <NodeDetailContent internalId={internalId} activeTab={activeTab} onTabChange={onTabChange} />
     </Suspense>
   );
 }
@@ -111,7 +112,7 @@ describe('NodeDetailContent tabbed layout', () => {
 
   it('shows statistics panel when URL has tab=statistics', () => {
     render(
-      <MemoryRouter initialEntries={['/nodes/100?tab=statistics']}>
+      <MemoryRouter initialEntries={[`/nodes/${TEST_OBSERVED_INTERNAL_ID}?tab=statistics`]}>
         <Routes>
           <Route path="/nodes/:id" element={<PageWithSearchEcho />} />
         </Routes>
@@ -125,7 +126,7 @@ describe('NodeDetailContent tabbed layout', () => {
   it('switching tab updates the URL', async () => {
     const user = userEvent.setup();
     render(
-      <MemoryRouter initialEntries={['/nodes/100']}>
+      <MemoryRouter initialEntries={[`/nodes/${TEST_OBSERVED_INTERNAL_ID}`]}>
         <Routes>
           <Route path="/nodes/:id" element={<PageWithSearchEcho />} />
         </Routes>

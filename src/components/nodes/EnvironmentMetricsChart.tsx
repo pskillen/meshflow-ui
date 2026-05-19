@@ -35,7 +35,7 @@ export interface DateRangeProp {
 const X_AXIS_TICK_COUNT = 8;
 
 interface EnvironmentMetricsChartProps {
-  nodeId: number;
+  internalId: string;
   timeRangeOptions?: TimeRangeOption[];
   defaultTimeRange?: string;
   /** When provided, use this date range instead of internal state (controlled mode). Hides the time range selector. */
@@ -129,7 +129,7 @@ function SingleMetricChart({
 }
 
 export function EnvironmentMetricsChart({
-  nodeId,
+  internalId,
   timeRangeOptions = [
     { key: '24h', label: '24 hours' },
     { key: '48h', label: '48 hours' },
@@ -154,7 +154,7 @@ export function EnvironmentMetricsChart({
   const dateRange = controlledDateRange ?? internalDateRange;
   const isControlled = controlledDateRange != null;
 
-  const { metrics } = useNodeEnvironmentMetricsSuspense(nodeId, dateRange);
+  const { metrics } = useNodeEnvironmentMetricsSuspense(internalId, dateRange);
 
   const handleTimeRangeChange = (value: string, timeRange: { startDate: Date; endDate: Date }) => {
     if (value === timeRangeLabel) return;

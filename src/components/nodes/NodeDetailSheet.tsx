@@ -3,19 +3,19 @@ import { NodeDetailContent } from './NodeDetailContent';
 import { Suspense } from 'react';
 
 interface NodeDetailSheetProps {
-  nodeId: number | null;
+  internalId: string | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-export function NodeDetailSheet({ nodeId, open, onOpenChange }: NodeDetailSheetProps) {
+export function NodeDetailSheet({ internalId, open, onOpenChange }: NodeDetailSheetProps) {
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-full sm:max-w-xl lg:max-w-2xl overflow-y-auto">
         <SheetHeader className="sr-only">
           <SheetTitle>Node Details</SheetTitle>
         </SheetHeader>
-        {nodeId != null && (
+        {internalId != null && (
           <Suspense
             fallback={
               <div className="flex items-center justify-center py-12">
@@ -23,7 +23,7 @@ export function NodeDetailSheet({ nodeId, open, onOpenChange }: NodeDetailSheetP
               </div>
             }
           >
-            <NodeDetailContent nodeId={nodeId} compact />
+            <NodeDetailContent internalId={internalId} compact />
           </Suspense>
         )}
       </SheetContent>

@@ -30,7 +30,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { NodeDetailTab } from '@/lib/node-detail-tab';
 
 interface NodeDetailContentProps {
-  nodeId: number;
+  internalId: string;
   /** When true, hide the "Back to Nodes" link (e.g. when shown in slide-over) */
   compact?: boolean;
   /** Full page only — from `NodeDetails` reading `?tab=` */
@@ -64,12 +64,12 @@ function hasEnvironmentSensorMetrics(env: LatestEnvironmentMetrics | null | unde
 
 function NodeLocationCard({
   node,
-  nodeId,
+  internalId,
   compact,
   mapTabLink,
 }: {
   node: ObservedNode;
-  nodeId: number;
+  internalId: string;
   compact: boolean;
   mapTabLink?: boolean;
 }) {
@@ -99,7 +99,7 @@ function NodeLocationCard({
           </div>
           {mapTabLink && (
             <Link
-              to={`/nodes/${nodeId}?tab=map`}
+              to={`/nodes/${internalId}?tab=map`}
               className="shrink-0 text-sm text-teal-600 underline-offset-4 hover:underline dark:text-teal-400"
               data-testid="node-detail-map-tab-link"
             >
@@ -128,9 +128,9 @@ function NodeLocationCard({
                   {pos.altitude != null ? `${pos.altitude.toFixed(1)}m` : '—'}
                 </span>
               </div>
-              {pos.location_source && (
+              {pos.meshtastic_location_source && (
                 <span className="ml-4 rounded border border-slate-200 bg-muted px-2 py-0.5 text-xs text-muted-foreground dark:border-slate-700">
-                  {pos.location_source}
+                  {pos.meshtastic_location_source}
                 </span>
               )}
             </div>
@@ -148,7 +148,15 @@ function NodeLocationCard({
   );
 }
 
-function TracerouteLinksSection({ nodeId, isManagedNode }: { nodeId: number; isManagedNode: boolean }) {
+function TracerouteLinksSection({
+  internalId,
+  meshtasticNodeId,
+  isManagedNode,
+}: {
+  internalId: string;
+  meshtasticNodeId: number;
+  isManagedNode: boolean;
+}) {
   const [timeRange, setTimeRange] = useState<TracerouteTimeRange>('7d');
   const triggeredAtAfter = useMemo(() => {
     if (timeRange === '24h') return subHours(new Date(), 24);
@@ -157,7 +165,7 @@ function TracerouteLinksSection({ nodeId, isManagedNode }: { nodeId: number; isM
     return undefined;
   }, [timeRange]);
 
-  const { data, isLoading, error } = useNodeTracerouteLinks(nodeId, { triggeredAtAfter });
+  const { data, isLoading, error } = useNodeTracerouteLinks(internalId, { triggeredAtAfter });
 
   const hasData = data && (data.edges.length > 0 || data.nodes.length > 0);
 
@@ -174,7 +182,7 @@ function TracerouteLinksSection({ nodeId, isManagedNode }: { nodeId: number; isM
           <div className="flex w-full items-center gap-2 sm:w-auto">
             {isManagedNode && (
               <Link
-                to={`/traceroutes/map/coverage?feeder=${nodeId}`}
+                to={`/traceroutes/map/coverage?feeder=${meshtasticNodeId}`}
                 className="text-sm text-teal-600 underline-offset-4 hover:underline dark:text-teal-400"
                 data-testid="node-coverage-map-link"
               >
@@ -217,7 +225,12 @@ function TracerouteLinksSection({ nodeId, isManagedNode }: { nodeId: number; isM
           {!error && !isLoading && hasData && data && (
             <>
               <div className="mb-4 h-[300px] w-full">
-                <NodeTracerouteLinksMap edges={data.edges} nodes={data.nodes} focusNodeId={nodeId} showLabels={true} />
+                <NodeTracerouteLinksMap
+                  edges={data.edges}
+                  nodes={data.nodes}
+                  focusNodeId={meshtasticNodeId ?? 0}
+                  showLabels={true}
+                />
               </div>
               {data.snr_history.length > 0 && (
                 <div>
@@ -238,8 +251,9 @@ function TracerouteLinksSection({ nodeId, isManagedNode }: { nodeId: number; isM
   );
 }
 
-export function NodeDetailContent({ nodeId, compact = false, activeTab, onTabChange }: NodeDetailContentProps) {
-  const node = useNodeSuspense(nodeId);
+export function NodeDetailContent({ internalId, compact = false, activeTab, onTabChange }: NodeDetailContentProps) {
+  const node = useNodeSuspense(internalId);
+  const meshtasticNodeId = node.meshtastic_node_id;
   const { recentNodes, addRecentNode } = useRecentNodes();
   const [settingsOpen, setSettingsOpen] = useState(false);
 
@@ -250,19 +264,20 @@ export function NodeDetailContent({ nodeId, compact = false, activeTab, onTabCha
   const { managedNodes } = useManagedNodesSuspense({ includeGeoClassification: true });
 
   const isManagedNode = useMemo(() => {
-    return managedNodes.some((managedNode) => managedNode.meshtastic_node_id === nodeId);
-  }, [managedNodes, nodeId]);
+    if (meshtasticNodeId == null) return false;
+    return managedNodes.some((managedNode) => managedNode.meshtastic_node_id === meshtasticNodeId);
+  }, [managedNodes, meshtasticNodeId]);
 
-  const managedForThisNode = useMemo(
-    () => managedNodes.find((m) => m.meshtastic_node_id === nodeId),
-    [managedNodes, nodeId]
-  );
+  const managedForThisNode = useMemo(() => {
+    if (meshtasticNodeId == null) return undefined;
+    return managedNodes.find((m) => m.meshtastic_node_id === meshtasticNodeId);
+  }, [managedNodes, meshtasticNodeId]);
 
   useEffect(() => {
     if (node) {
       addRecentNode(node);
     }
-  }, [nodeId, addRecentNode, node]);
+  }, [internalId, addRecentNode, node]);
 
   const currentUser = authService.getCurrentUser();
   const roleLabel = getRoleLabel(node.meshtastic_role);
@@ -343,9 +358,9 @@ export function NodeDetailContent({ nodeId, compact = false, activeTab, onTabCha
                 Last time any packet was received from this node (telemetry, messages, etc.)
               </span>
             </p>
-            {node.inferred_max_hops != null && (
+            {node.meshtastic_inferred_max_hops != null && (
               <p>
-                <span className="font-medium">Inferred Max Hops:</span> {node.inferred_max_hops}
+                <span className="font-medium">Inferred Max Hops:</span> {node.meshtastic_inferred_max_hops}
                 <span className="mt-0.5 block text-xs text-muted-foreground">
                   Inferred from packets; recommended is 7
                 </span>
@@ -373,10 +388,10 @@ export function NodeDetailContent({ nodeId, compact = false, activeTab, onTabCha
                 voltage={node.latest_device_metrics.voltage ?? null}
               />
               <PercentGauge
-                value={node.latest_device_metrics.channel_utilization ?? null}
+                value={node.latest_device_metrics.meshtastic_channel_utilization ?? null}
                 label="Channel Utilization"
               />
-              <PercentGauge value={node.latest_device_metrics.air_util_tx ?? null} label="Air Utilization" />
+              <PercentGauge value={node.latest_device_metrics.meshtastic_air_util_tx ?? null} label="Air Utilization" />
               <p>
                 <span className="font-medium">Uptime:</span>{' '}
                 {node.latest_device_metrics.uptime_seconds != null
@@ -438,7 +453,7 @@ export function NodeDetailContent({ nodeId, compact = false, activeTab, onTabCha
             <NodeEnvironmentSettingsDialog
               open={settingsOpen}
               onOpenChange={setSettingsOpen}
-              nodeId={nodeId}
+              internalId={internalId}
               initialEnvironmentExposure={(node.environment_exposure ?? 'unknown') as EnvironmentExposureSlug}
               initialWeatherUse={(node.weather_use ?? 'unknown') as WeatherUseSlug}
             />
@@ -475,7 +490,7 @@ export function NodeDetailContent({ nodeId, compact = false, activeTab, onTabCha
 
   const renderLegacyLocationBlock = () => (
     <div className={showRfPropagation ? 'mb-6 grid grid-cols-1 gap-6 lg:grid-cols-2' : 'mb-6'}>
-      <NodeLocationCard node={node} nodeId={nodeId} compact={compact} />
+      <NodeLocationCard node={node} internalId={internalId} compact={compact} />
       {showRfPropagation ? <RfPropagationSection node={node} className="mb-0" /> : null}
     </div>
   );
@@ -518,7 +533,7 @@ export function NodeDetailContent({ nodeId, compact = false, activeTab, onTabCha
         <div className="flex shrink-0 items-start gap-2">
           {(!node.owner || hasPendingClaim) && (
             <Link
-              to={`/nodes/${nodeId}/claim`}
+              to={`/nodes/${internalId}/claim`}
               className="whitespace-nowrap rounded-md bg-teal-600 px-4 py-2 text-sm text-white transition-colors hover:bg-teal-700 dark:bg-teal-500 dark:hover:bg-teal-600"
             >
               {hasPendingClaim ? 'View Claim' : 'Claim Node'}
@@ -532,11 +547,11 @@ export function NodeDetailContent({ nodeId, compact = false, activeTab, onTabCha
           <div className="mb-2 text-sm text-slate-500 dark:text-slate-400">Recently viewed:</div>
           <div className="flex flex-wrap gap-2">
             {recentNodes
-              .filter((recentNode) => recentNode.meshtastic_node_id !== nodeId)
+              .filter((recentNode) => recentNode.meshtastic_node_id !== meshtasticNodeId)
               .map((recentNode) => (
                 <Link
                   key={recentNode.meshtastic_node_id}
-                  to={`/nodes/${recentNode.meshtastic_node_id}`}
+                  to={`/nodes/${recentNode.internal_id}`}
                   replace={true}
                   className="rounded-full bg-slate-100 px-3 py-1 text-sm text-teal-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-teal-400 dark:hover:bg-slate-700"
                 >
@@ -579,7 +594,7 @@ export function NodeDetailContent({ nodeId, compact = false, activeTab, onTabCha
               <div data-testid="node-detail-panel-overview">
                 {renderMetricsGrid()}
                 <div className="mb-6">
-                  <NodeLocationCard node={node} nodeId={nodeId} compact={false} mapTabLink />
+                  <NodeLocationCard node={node} internalId={internalId} compact={false} mapTabLink />
                 </div>
               </div>
             )}
@@ -587,7 +602,7 @@ export function NodeDetailContent({ nodeId, compact = false, activeTab, onTabCha
             {effectiveTab === 'map' && (
               <div data-testid="node-detail-panel-map">
                 <div className={showRfPropagation ? 'mb-6 grid grid-cols-1 gap-6 lg:grid-cols-2' : 'mb-6'}>
-                  <NodeLocationCard node={node} nodeId={nodeId} compact={false} />
+                  <NodeLocationCard node={node} internalId={internalId} compact={false} />
                   {showRfPropagation ? <RfPropagationSection node={node} className="mb-0" /> : null}
                 </div>
               </div>
@@ -595,7 +610,11 @@ export function NodeDetailContent({ nodeId, compact = false, activeTab, onTabCha
 
             {effectiveTab === 'traceroutes' && (
               <div data-testid="node-detail-panel-traceroutes">
-                <TracerouteLinksSection nodeId={nodeId} isManagedNode={isManagedNode} />
+                <TracerouteLinksSection
+                  internalId={internalId}
+                  meshtasticNodeId={meshtasticNodeId ?? 0}
+                  isManagedNode={isManagedNode}
+                />
                 <Suspense
                   fallback={
                     <div className="mb-6 flex min-h-[120px] items-center justify-center text-muted-foreground">
@@ -604,16 +623,16 @@ export function NodeDetailContent({ nodeId, compact = false, activeTab, onTabCha
                   }
                 >
                   {isManagedNode && managedForThisNode ? (
-                    <NodeOutgoingTraceroutesSection nodeId={nodeId} managed={managedForThisNode} />
+                    <NodeOutgoingTraceroutesSection nodeId={meshtasticNodeId ?? 0} managed={managedForThisNode} />
                   ) : null}
-                  <NodeTracerouteHistorySection nodeId={nodeId} observedNode={node} />
+                  <NodeTracerouteHistorySection nodeId={meshtasticNodeId ?? 0} observedNode={node} />
                 </Suspense>
               </div>
             )}
 
             {effectiveTab === 'statistics' && (
               <div data-testid="node-detail-panel-statistics">
-                <NodeStatsSection nodeId={nodeId} node={node} isManagedNode={isManagedNode} />
+                <NodeStatsSection internalId={internalId} node={node} isManagedNode={isManagedNode} />
               </div>
             )}
 
@@ -632,7 +651,11 @@ export function NodeDetailContent({ nodeId, compact = false, activeTab, onTabCha
           {!compact && (
             <>
               <NodeMeshMonitoringSection node={node} />
-              <TracerouteLinksSection nodeId={nodeId} isManagedNode={isManagedNode} />
+              <TracerouteLinksSection
+                internalId={internalId}
+                meshtasticNodeId={meshtasticNodeId ?? 0}
+                isManagedNode={isManagedNode}
+              />
               <Suspense
                 fallback={
                   <div className="mb-6 flex min-h-[120px] items-center justify-center text-muted-foreground">
@@ -641,16 +664,16 @@ export function NodeDetailContent({ nodeId, compact = false, activeTab, onTabCha
                 }
               >
                 {isManagedNode && managedForThisNode ? (
-                  <NodeOutgoingTraceroutesSection nodeId={nodeId} managed={managedForThisNode} />
+                  <NodeOutgoingTraceroutesSection nodeId={meshtasticNodeId ?? 0} managed={managedForThisNode} />
                 ) : null}
-                <NodeTracerouteHistorySection nodeId={nodeId} observedNode={node} />
+                <NodeTracerouteHistorySection nodeId={meshtasticNodeId ?? 0} observedNode={node} />
               </Suspense>
-              <NodeStatsSection nodeId={nodeId} node={node} isManagedNode={isManagedNode} />
+              <NodeStatsSection internalId={internalId} node={node} isManagedNode={isManagedNode} />
             </>
           )}
 
           {compact && (
-            <Link to={`/nodes/${nodeId}`} className="text-sm text-teal-600 hover:underline dark:text-teal-400">
+            <Link to={`/nodes/${internalId}`} className="text-sm text-teal-600 hover:underline dark:text-teal-400">
               View full details →
             </Link>
           )}

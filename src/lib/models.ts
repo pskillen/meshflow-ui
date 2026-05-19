@@ -88,7 +88,7 @@ export function isRfPropagationNone(r: RfPropagationPollResult): r is { status: 
  */
 export interface ObservedNode {
   /** Stable UUID primary key (API returns string; parsed in api-utils). */
-  internal_id: number;
+  internal_id: string;
   protocol?: MeshProtocol;
   /** Meshtastic numeric node id; null/absent for MeshCore (use node_id_str / mc_pubkey*). */
   meshtastic_node_id: number;
@@ -108,7 +108,7 @@ export interface ObservedNode {
   meshtastic_is_licensed?: boolean | null;
   meshtastic_is_unmessagable?: boolean | null;
   /** Meshtastic-only: inferred max hops from hop_start; null for MeshCore. */
-  inferred_max_hops?: number | null;
+  meshtastic_inferred_max_hops?: number | null;
   environment_exposure?: EnvironmentExposureSlug;
   weather_use?: WeatherUseSlug;
   /** True when the current user may PATCH environment-settings (staff or claim owner). */
@@ -190,27 +190,27 @@ export interface ManagedNode {
     id: number;
     name?: string;
     map_color?: string;
-    bot_default_ignore_portnums?: string | null;
-    bot_default_hop_limit?: number | null;
+    bot_default_ignore_meshtastic_portnums?: string | null;
+    bot_default_meshtastic_hop_limit?: number | null;
   };
   allow_auto_traceroute?: boolean;
   position: {
     latitude: number | null;
     longitude: number | null;
-    precision_bits?: number | null;
+    meshtastic_precision_bits?: number | null;
   };
 }
 
 // OwnedManagedNode extends ManagedNode with channel mappings
 export interface OwnedManagedNode extends ManagedNode {
-  channel_0?: { id: number; name?: string } | null;
-  channel_1?: { id: number; name?: string } | null;
-  channel_2?: { id: number; name?: string } | null;
-  channel_3?: { id: number; name?: string } | null;
-  channel_4?: { id: number; name?: string } | null;
-  channel_5?: { id: number; name?: string } | null;
-  channel_6?: { id: number; name?: string } | null;
-  channel_7?: { id: number; name?: string } | null;
+  meshtastic_channel_0?: { id: number; name?: string } | null;
+  meshtastic_channel_1?: { id: number; name?: string } | null;
+  meshtastic_channel_2?: { id: number; name?: string } | null;
+  meshtastic_channel_3?: { id: number; name?: string } | null;
+  meshtastic_channel_4?: { id: number; name?: string } | null;
+  meshtastic_channel_5?: { id: number; name?: string } | null;
+  meshtastic_channel_6?: { id: number; name?: string } | null;
+  meshtastic_channel_7?: { id: number; name?: string } | null;
   default_location_latitude?: number | null;
   default_location_longitude?: number | null;
 }
@@ -222,14 +222,14 @@ export interface CreateManagedNode {
   owner_id: number | null;
   default_location_latitude: number | null;
   default_location_longitude: number | null;
-  channel_0: number | null;
-  channel_1: number | null;
-  channel_2: number | null;
-  channel_3: number | null;
-  channel_4: number | null;
-  channel_5: number | null;
-  channel_6: number | null;
-  channel_7: number | null;
+  meshtastic_channel_0: number | null;
+  meshtastic_channel_1: number | null;
+  meshtastic_channel_2: number | null;
+  meshtastic_channel_3: number | null;
+  meshtastic_channel_4: number | null;
+  meshtastic_channel_5: number | null;
+  meshtastic_channel_6: number | null;
+  meshtastic_channel_7: number | null;
 }
 
 /** Enriched route node with position for map display (from API route_nodes/route_back_nodes) */
@@ -299,12 +299,12 @@ export interface TextMessage {
   id: string; // UUID
   packet_id: number;
   sender: TextMessageSender;
-  recipient_node_id: number | null;
+  recipient_meshtastic_node_id: number | null;
   channel: number;
   sent_at: string; // ISO date string
   message_text: string;
   is_emoji: boolean;
-  reply_to_message_id: number | null;
+  reply_to_meshtastic_packet_id: number | null;
   heard: PacketObservation[];
 }
 
@@ -321,8 +321,8 @@ export interface DeviceMetrics {
   logged_time: Date | null;
   battery_level: number;
   voltage: number;
-  channel_utilization: number; // Changed from chUtil
-  air_util_tx: number; // Changed from airUtil
+  meshtastic_channel_utilization: number; // Changed from chUtil
+  meshtastic_air_util_tx: number; // Changed from airUtil
   uptime_seconds: number; // Changed from uptime
 }
 
@@ -412,9 +412,9 @@ export interface Position {
   latitude: number;
   longitude: number;
   altitude: number | null;
-  location_source: string;
-  /** Meshtastic precision_bits – lower = larger uncertainty. 16≈365m, 17≈182m, 18≈91m, etc. */
-  precision_bits?: number | null;
+  meshtastic_location_source: string;
+  /** Meshtastic meshtastic_precision_bits – lower = larger uncertainty. 16≈365m, 17≈182m, 18≈91m, etc. */
+  meshtastic_precision_bits?: number | null;
 }
 
 // API response types
@@ -509,12 +509,13 @@ export interface Constellation {
   created_by: number;
   channels: MessageChannel[];
   map_color: string;
-  bot_default_ignore_portnums?: string | null;
-  bot_default_hop_limit?: number | null;
+  bot_default_ignore_meshtastic_portnums?: string | null;
+  bot_default_meshtastic_hop_limit?: number | null;
 }
 
 export interface NodeClaim {
   node: {
+    internal_id: string;
     meshtastic_node_id: number;
     node_id_str: string;
     long_name: string;
@@ -532,8 +533,8 @@ export interface NodeApiKeyConstellation {
   id: number;
   name: string;
   map_color: string;
-  bot_default_ignore_portnums?: string | null;
-  bot_default_hop_limit?: number | null;
+  bot_default_ignore_meshtastic_portnums?: string | null;
+  bot_default_meshtastic_hop_limit?: number | null;
 }
 
 export interface NodeApiKey {

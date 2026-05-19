@@ -14,7 +14,7 @@ import {
   smoothedRate,
 } from '@/components/map/coverageStyling';
 import { DeckMapboxMap } from '@/components/map/DeckMapboxMap';
-import type { ConstellationCoverageHex, ConstellationCoverageTarget } from '@/lib/api/meshtastic-api';
+import type { ConstellationCoverageHex, ConstellationCoverageTarget } from '@/lib/api/meshflow-api';
 import type { CoverageHeardGhost } from '@/lib/coverageHeardGhosts';
 
 const DEFAULT_CENTER = { longitude: -4.2518, latitude: 55.8642, zoom: 7 };

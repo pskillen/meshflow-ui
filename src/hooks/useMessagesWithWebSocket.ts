@@ -40,7 +40,7 @@ export function useMessagesWithWebSocket(options?: UseMessagesWithWebSocketOptio
       const matchesChannel = options?.channelId ? message.channel === options.channelId : true;
       const matchesNode = options?.nodeId
         ? parseInt(message.sender.node_id_str.replace('!', ''), 16) === options.nodeId ||
-          message.recipient_node_id === options.nodeId
+          message.recipient_meshtastic_node_id === options.nodeId
         : true;
 
       if (matchesChannel && matchesNode) {

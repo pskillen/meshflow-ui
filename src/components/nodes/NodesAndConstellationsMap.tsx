@@ -37,8 +37,9 @@ function getNodePosition(node: MapNode): { lat: number; lng: number } | null {
 }
 
 function getNodePrecisionBits(node: MapNode): number | null | undefined {
-  if ('latest_position' in node) return node.latest_position?.precision_bits;
-  if ('position' in node) return (node.position as { precision_bits?: number | null })?.precision_bits;
+  if ('latest_position' in node) return node.latest_position?.meshtastic_precision_bits;
+  if ('position' in node)
+    return (node.position as { meshtastic_precision_bits?: number | null })?.meshtastic_precision_bits;
   return null;
 }
 
@@ -358,7 +359,7 @@ export function NodesAndConstellationsMap({
       });
     }
 
-    // 3. Uncertainty circles (for nodes with precision_bits >= 200m)
+    // 3. Uncertainty circles (for nodes with meshtastic_precision_bits >= 200m)
     // When showUnmanagedNodes=false, only draw for managed nodes
     if (drawPositionUncertainty) {
       const nodesWithUncertainty: MapNode[] = showUnmanagedNodes

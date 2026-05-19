@@ -1,21 +1,21 @@
 import { useQuery, useMutation, useQueryClient, useSuspenseQuery } from '@tanstack/react-query';
-import { useMeshtasticApi } from './useApi';
+import { useMeshflowApi } from './useApi';
 import { NodeClaim } from '@/lib/models';
 import { authService } from '@/lib/auth/authService';
 
 /**
  * Hook to fetch claim status for a node
- * @param nodeId ID of the node
+ * @param internalId ID of the node
  * @param enabled Whether the query is enabled
  * @returns Query result with claim status and loading/error states
  */
-export function useNodeClaimStatus(nodeId: number, enabled = true) {
-  const api = useMeshtasticApi();
+export function useNodeClaimStatus(internalId: string, enabled = true) {
+  const api = useMeshflowApi();
 
   return useQuery<NodeClaim | undefined, Error>({
-    queryKey: ['nodes', nodeId, 'claim'],
-    queryFn: () => api.getClaimStatus(nodeId),
-    enabled: !!nodeId && enabled,
+    queryKey: ['nodes', internalId, 'claim'],
+    queryFn: () => api.getClaimStatus(internalId),
+    enabled: !!internalId && enabled,
   });
 }
 
@@ -24,16 +24,16 @@ export function useNodeClaimStatus(nodeId: number, enabled = true) {
  * @returns Mutation for claiming a node
  */
 export function useClaimNode() {
-  const api = useMeshtasticApi();
+  const api = useMeshflowApi();
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (nodeId: number) => api.claimNode(nodeId),
-    onSuccess: (_, nodeId) => {
+    mutationFn: (internalId: string) => api.claimNode(internalId),
+    onSuccess: (_, internalId) => {
       // Invalidate the claim status query for the specific node
-      queryClient.invalidateQueries({ queryKey: ['nodes', nodeId, 'claim'] });
+      queryClient.invalidateQueries({ queryKey: ['nodes', internalId, 'claim'] });
       // Invalidate the node detail (claim is now embedded in node response)
-      queryClient.invalidateQueries({ queryKey: ['nodes', nodeId] });
+      queryClient.invalidateQueries({ queryKey: ['nodes', internalId] });
       // Also invalidate the user's claimed nodes list
       queryClient.invalidateQueries({ queryKey: ['observed-nodes', 'mine'] });
     },
@@ -45,28 +45,28 @@ export function useClaimNode() {
  * @returns Mutation for creating a managed node
  */
 export function useCreateManagedNode() {
-  const api = useMeshtasticApi();
+  const api = useMeshflowApi();
   const queryClient = useQueryClient();
 
   const currentUser = authService.getCurrentUser();
 
   return useMutation({
     mutationFn: (data: {
-      nodeId: number;
+      meshtastic_node_id: number;
       constellationId: number;
       name: string;
       options?: {
         defaultLocationLatitude?: number;
         defaultLocationLongitude?: number;
         channels?: {
-          channel_0?: number | null;
-          channel_1?: number | null;
-          channel_2?: number | null;
-          channel_3?: number | null;
-          channel_4?: number | null;
-          channel_5?: number | null;
-          channel_6?: number | null;
-          channel_7?: number | null;
+          meshtastic_channel_0?: number | null;
+          meshtastic_channel_1?: number | null;
+          meshtastic_channel_2?: number | null;
+          meshtastic_channel_3?: number | null;
+          meshtastic_channel_4?: number | null;
+          meshtastic_channel_5?: number | null;
+          meshtastic_channel_6?: number | null;
+          meshtastic_channel_7?: number | null;
         };
       };
     }) => {
@@ -74,14 +74,19 @@ export function useCreateManagedNode() {
         throw new Error('User not authenticated');
       }
 
-      return api.createManagedNode(data.nodeId, data.constellationId, data.name, currentUser.id, data.options);
+      return api.createManagedNode(
+        data.meshtastic_node_id,
+        data.constellationId,
+        data.name,
+        currentUser.id,
+        data.options
+      );
     },
-    onSuccess: (_data, variables) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['managed-nodes'] });
       queryClient.invalidateQueries({ queryKey: ['managed-nodes', 'mine'] });
       queryClient.invalidateQueries({ queryKey: ['observed-nodes', 'mine'] });
-      queryClient.invalidateQueries({ queryKey: ['nodes', variables.nodeId] });
-      queryClient.invalidateQueries({ queryKey: ['nodes', variables.nodeId, 'claim'] });
+      queryClient.invalidateQueries({ queryKey: ['observed-nodes'] });
       queryClient.invalidateQueries({ queryKey: ['api-keys'] });
     },
   });
@@ -91,16 +96,15 @@ export function useCreateManagedNode() {
  * Soft-delete a managed node (owner or staff); invalidates related queries.
  */
 export function useDeleteManagedNode() {
-  const api = useMeshtasticApi();
+  const api = useMeshflowApi();
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (nodeId: number) => api.deleteManagedNode(nodeId),
-    onSuccess: (_, nodeId) => {
+    mutationFn: (meshtasticNodeId: number) => api.deleteManagedNode(meshtasticNodeId),
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['managed-nodes'] });
       queryClient.invalidateQueries({ queryKey: ['managed-nodes', 'mine'] });
-      queryClient.invalidateQueries({ queryKey: ['nodes', nodeId] });
-      queryClient.invalidateQueries({ queryKey: ['nodes', nodeId, 'claim'] });
+      queryClient.invalidateQueries({ queryKey: ['observed-nodes'] });
       queryClient.invalidateQueries({ queryKey: ['api-keys'] });
       queryClient.invalidateQueries({ queryKey: ['observed-nodes', 'mine'] });
     },
@@ -112,12 +116,12 @@ export function useDeleteManagedNode() {
  * Use inside a <Suspense> boundary. No isLoading or error states are returned.
  * Note: Suspense hooks do not support the 'enabled' option.
  */
-export function useNodeClaimStatusSuspense(nodeId: number) {
-  const api = useMeshtasticApi();
+export function useNodeClaimStatusSuspense(internalId: string) {
+  const api = useMeshflowApi();
   // Note: Suspense hooks do not support 'enabled'.
   const query = useSuspenseQuery<NodeClaim | undefined, Error>({
-    queryKey: ['nodes', nodeId, 'claim'],
-    queryFn: () => api.getClaimStatus(nodeId),
+    queryKey: ['nodes', internalId, 'claim'],
+    queryFn: () => api.getClaimStatus(internalId),
   });
   return {
     claimStatus: query.data,
@@ -138,7 +142,7 @@ export function useClaimNodeSuspense() {
  * @returns Query result with all claims and loading/error states
  */
 export function useUserClaims() {
-  const api = useMeshtasticApi();
+  const api = useMeshflowApi();
 
   return useQuery<NodeClaim[], Error>({
     queryKey: ['node-claims', 'mine'],
@@ -150,15 +154,15 @@ export function useUserClaims() {
  * Withdraw the current user's outstanding (unaccepted) claim for a node.
  */
 export function useCancelNodeClaim() {
-  const api = useMeshtasticApi();
+  const api = useMeshflowApi();
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (nodeId: number) => api.cancelNodeClaim(nodeId),
-    onSuccess: (_, nodeId) => {
+    mutationFn: (internalId: string) => api.cancelNodeClaim(internalId),
+    onSuccess: (_, internalId) => {
       queryClient.invalidateQueries({ queryKey: ['node-claims', 'mine'] });
-      queryClient.invalidateQueries({ queryKey: ['nodes', nodeId, 'claim'] });
-      queryClient.invalidateQueries({ queryKey: ['nodes', nodeId] });
+      queryClient.invalidateQueries({ queryKey: ['nodes', internalId, 'claim'] });
+      queryClient.invalidateQueries({ queryKey: ['nodes', internalId] });
       queryClient.invalidateQueries({ queryKey: ['observed-nodes', 'mine'] });
       queryClient.invalidateQueries({ queryKey: ['managed-nodes'] });
       queryClient.invalidateQueries({ queryKey: ['managed-nodes', 'mine'] });
@@ -172,7 +176,7 @@ export function useCancelNodeClaim() {
  * Use inside a <Suspense> boundary. No isLoading or error states are returned.
  */
 export function useUserClaimsSuspense() {
-  const api = useMeshtasticApi();
+  const api = useMeshflowApi();
 
   const query = useSuspenseQuery<NodeClaim[], Error>({
     queryKey: ['node-claims', 'mine'],

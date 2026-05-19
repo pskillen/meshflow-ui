@@ -17,7 +17,7 @@ vi.mock('@/components/nodes/MeshWatchControls', () => ({
 
 function makeNode(overrides: Partial<ObservedNode> = {}): ObservedNode {
   return {
-    internal_id: 1,
+    internal_id: '00000000-0000-4000-8000-000000000001',
     meshtastic_node_id: 100,
     node_id_str: '!00000064',
     mac_addr: null,
@@ -134,7 +134,7 @@ describe('MyNodeCard position hint styling (fixed clock)', () => {
           reported_time: new Date('2026-04-21T11:00:00Z'),
           logged_time: null,
           altitude: null,
-          location_source: 'gps',
+          meshtastic_location_source: 'gps',
         },
       }),
     });
@@ -151,7 +151,7 @@ describe('MyNodeCard position hint styling (fixed clock)', () => {
           reported_time: old,
           logged_time: null,
           altitude: null,
-          location_source: 'gps',
+          meshtastic_location_source: 'gps',
         },
       }),
     });

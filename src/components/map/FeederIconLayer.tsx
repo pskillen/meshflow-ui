@@ -1,6 +1,6 @@
 import { IconLayer } from '@deck.gl/layers';
 
-import type { FeederReachFeeder } from '@/lib/api/meshtastic-api';
+import type { FeederReachFeeder } from '@/lib/api/meshflow-api';
 
 /** Broadcast tower on slate disc — visually distinct from reliability dots. */
 const FEEDER_TOWER_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="72" height="72" viewBox="0 0 72 72">

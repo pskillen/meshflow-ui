@@ -37,12 +37,13 @@ function computeDateRange(value: string): { startDate: Date; endDate: Date } {
 }
 
 interface NodeStatsSectionProps {
-  nodeId: number;
+  internalId: string;
   node: ObservedNode;
   isManagedNode: boolean;
 }
 
-export function NodeStatsSection({ nodeId, node, isManagedNode }: NodeStatsSectionProps) {
+export function NodeStatsSection({ internalId, node, isManagedNode }: NodeStatsSectionProps) {
+  const meshtasticNodeId = node.meshtastic_node_id;
   const [timeRange, setTimeRange] = React.useState('48h');
   const [dateRange, setDateRange] = React.useState(() => computeDateRange('48h'));
   const [batteryDisplayMode, setBatteryDisplayMode] = React.useState<BatteryDisplayMode>('voltage');
@@ -106,7 +107,7 @@ export function NodeStatsSection({ nodeId, node, isManagedNode }: NodeStatsSecti
             </div>
             <Suspense fallback={chartFallback}>
               <BatteryChartShadcn
-                nodeId={nodeId}
+                internalId={internalId}
                 defaultTimeRange="48h"
                 controlledDateRange={controlledDateRange}
                 displayMode={batteryDisplayMode}
@@ -117,7 +118,7 @@ export function NodeStatsSection({ nodeId, node, isManagedNode }: NodeStatsSecti
           {node.latest_environment_metrics && (
             <Suspense fallback={chartFallback}>
               <EnvironmentMetricsChart
-                nodeId={nodeId}
+                internalId={internalId}
                 defaultTimeRange="48h"
                 controlledDateRange={controlledDateRange}
               />
@@ -126,24 +127,32 @@ export function NodeStatsSection({ nodeId, node, isManagedNode }: NodeStatsSecti
 
           {node.latest_power_metrics && (
             <Suspense fallback={chartFallback}>
-              <PowerMetricsChart nodeId={nodeId} defaultTimeRange="48h" controlledDateRange={controlledDateRange} />
+              <PowerMetricsChart
+                internalId={internalId}
+                defaultTimeRange="48h"
+                controlledDateRange={controlledDateRange}
+              />
             </Suspense>
           )}
 
           <Suspense fallback={chartFallback}>
-            <PacketTypeChart nodeId={nodeId} defaultTimeRange="48h" controlledDateRange={controlledDateRange} />
+            <PacketTypeChart
+              nodeId={meshtasticNodeId}
+              defaultTimeRange="48h"
+              controlledDateRange={controlledDateRange}
+            />
           </Suspense>
 
           {isManagedNode && (
             <>
               <Suspense fallback={chartFallback}>
                 <ReceivedPacketTypeChart
-                  nodeId={nodeId}
+                  nodeId={meshtasticNodeId}
                   defaultTimeRange="48h"
                   controlledDateRange={controlledDateRange}
                 />
               </Suspense>
-              <NeighbourStatsWithLoad nodeId={nodeId} controlledDateRange={controlledDateRange} />
+              <NeighbourStatsWithLoad nodeId={meshtasticNodeId} controlledDateRange={controlledDateRange} />
             </>
           )}
         </CardContent>

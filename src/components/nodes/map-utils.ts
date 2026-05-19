@@ -281,8 +281,8 @@ export function createWeatherNodeIcon(
 }
 
 /**
- * Meshtastic precision_bits to approximate radius in meters.
- * Lower precision_bits = larger uncertainty (more obfuscation).
+ * Meshtastic meshtastic_precision_bits to approximate radius in meters.
+ * Lower meshtastic_precision_bits = larger uncertainty (more obfuscation).
  * Source: https://meshtastic.org/docs/configuration/radio/channels/#position-precision
  *
  * Values 0–32: 0 = never send, 32 = full precision.

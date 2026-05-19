@@ -39,7 +39,7 @@ function renderCard(node: ObservedNode, opts?: { managedNode?: ManagedNode | nul
 
 function makeNode(overrides: Partial<ObservedNode> = {}): ObservedNode {
   return {
-    internal_id: 1,
+    internal_id: '00000000-0000-4000-8000-000000000001',
     meshtastic_node_id: 100,
     node_id_str: '!00000064',
     mac_addr: null,
@@ -66,10 +66,11 @@ describe('InfrastructureNodeCard', () => {
     expect(screen.queryByTestId('infra-coverage-link-4242')).not.toBeInTheDocument();
   });
 
-  it('also renders the Open node details link to /nodes/<meshtastic_node_id>', () => {
-    renderCard(makeNode({ meshtastic_node_id: 7 }));
+  it('also renders the Open node details link to /nodes/<internal_id>', () => {
+    const internalId = '00000000-0000-4000-8000-000000000007';
+    renderCard(makeNode({ meshtastic_node_id: 7, internal_id: internalId }));
     const detailsLink = screen.getByRole('link', { name: /open node details/i });
-    expect(detailsLink.getAttribute('href')).toBe('/nodes/7');
+    expect(detailsLink.getAttribute('href')).toBe(`/nodes/${internalId}`);
   });
 
   it('shows Propagation map only when has_ready_rf_render is true', () => {

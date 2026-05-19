@@ -34,7 +34,7 @@ function makeGeo(overrides: Partial<GeoClassification> = {}): GeoClassification 
 function makeObserved(overrides: Partial<ObservedNode> = {}): ObservedNode {
   const now = new Date();
   return {
-    internal_id: 1,
+    internal_id: '00000000-0000-4000-8000-000000000001',
     meshtastic_node_id: 99,
     node_id_str: '!00000063',
     mac_addr: null,
@@ -43,7 +43,7 @@ function makeObserved(overrides: Partial<ObservedNode> = {}): ObservedNode {
     meshtastic_hw_model: null,
     meshtastic_public_key: null,
     last_heard: now,
-    latest_position: { latitude: 55.05, longitude: -4.25, reported_time: now, logged_time: now, altitude: null, location_source: 'gps' },
+    latest_position: { latitude: 55.05, longitude: -4.25, reported_time: now, logged_time: now, altitude: null, meshtastic_location_source: 'gps' },
     ...overrides,
   } as ObservedNode;
 }
@@ -80,7 +80,7 @@ describe('tracerouteTargetGeometry', () => {
         reported_time: new Date(),
         logged_time: new Date(),
         altitude: null,
-        location_source: 'gps',
+        meshtastic_location_source: 'gps',
       },
     });
     const ctx = {
@@ -105,7 +105,7 @@ describe('tracerouteTargetGeometry', () => {
         reported_time: new Date(),
         logged_time: new Date(),
         altitude: null,
-        location_source: 'gps',
+        meshtastic_location_source: 'gps',
       },
     });
     const ctx = {
@@ -151,7 +151,7 @@ describe('tracerouteTargetGeometry', () => {
         reported_time: new Date(),
         logged_time: new Date(),
         altitude: null,
-        location_source: 'gps',
+        meshtastic_location_source: 'gps',
       },
     });
     const south = makeObserved({
@@ -162,7 +162,7 @@ describe('tracerouteTargetGeometry', () => {
         reported_time: new Date(),
         logged_time: new Date(),
         altitude: null,
-        location_source: 'gps',
+        meshtastic_location_source: 'gps',
       },
     });
     const ctx = {
@@ -191,7 +191,7 @@ describe('tracerouteTargetGeometry', () => {
         reported_time: new Date(),
         logged_time: new Date(),
         altitude: null,
-        location_source: 'gps',
+        meshtastic_location_source: 'gps',
       },
     });
     const ctx = {
