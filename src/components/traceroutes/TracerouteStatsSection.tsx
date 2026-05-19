@@ -257,7 +257,7 @@ export function TracerouteStatsSection({ sourceNodeId = null }: TracerouteStatsS
                     innerRadius={40}
                     outerRadius={65}
                     paddingAngle={2}
-                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`}
                   >
                     {sourcesChartData.map((entry, idx) => (
                       <Cell key={idx} fill={entry.fill} />
@@ -295,7 +295,7 @@ export function TracerouteStatsSection({ sourceNodeId = null }: TracerouteStatsS
                     innerRadius={40}
                     outerRadius={65}
                     paddingAngle={2}
-                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`}
                   >
                     {strategyMixChartData.map((entry, idx) => (
                       <Cell key={idx} fill={entry.fill} />
@@ -330,7 +330,7 @@ export function TracerouteStatsSection({ sourceNodeId = null }: TracerouteStatsS
                     innerRadius={40}
                     outerRadius={65}
                     paddingAngle={2}
-                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`}
                   >
                     {successFailureChartData.map((entry, idx) => (
                       <Cell key={idx} fill={entry.fill} />
@@ -391,7 +391,7 @@ export function TracerouteStatsSection({ sourceNodeId = null }: TracerouteStatsS
                           }
                           return [value, ` ${name === 'completed' ? 'Completed' : 'Failed'}`];
                         }}
-                        labelFormatter={(l) => new Date(l).toLocaleDateString()}
+                        labelFormatter={(l) => new Date(Number(l)).toLocaleDateString()}
                       />
                     }
                   />
@@ -629,7 +629,7 @@ export function TracerouteStatsSection({ sourceNodeId = null }: TracerouteStatsS
                       innerRadius={50}
                       outerRadius={85}
                       paddingAngle={2}
-                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                      label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`}
                     >
                       {sentByNodeChartData.map((entry, idx) => (
                         <Cell key={idx} fill={entry.fill} />

@@ -142,7 +142,7 @@ export function PacketStatsChart({
               cursor={false}
               content={
                 <ChartTooltipContent
-                  labelFormatter={(_, payload: Payload<ValueType, NameType>[]) => {
+                  labelFormatter={(_, payload: readonly Payload<ValueType, NameType>[]) => {
                     // Extract the timestamp from the payload
                     if (payload && payload[0] && payload[0].payload) {
                       const timestamp = payload[0].payload.timestamp;
