@@ -1,5 +1,5 @@
 # Build stage
-FROM node:20-alpine as build
+FROM node:26-alpine as build
 
 # Add build argument for version
 ARG VERSION=development
