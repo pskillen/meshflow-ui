@@ -30,6 +30,8 @@ import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { AppLayout } from '@/components/layouts/AppLayout';
 import MonitorNodes from '@/pages/nodes/monitor';
 import DxMonitoringPage from '@/pages/nodes/DxMonitoringPage';
+import { MeshCoreMap } from '@/pages/meshcore/MeshCoreMap';
+import { MeshCoreNodesList } from '@/pages/meshcore/MeshCoreNodesList';
 
 const ManagedNodesStatus = lazy(() => import('@/pages/nodes/ManagedNodesStatus'));
 
@@ -71,6 +73,8 @@ function App() {
                   <Route path="/nodes/:id/claim" element={<ClaimNode />} />
                   <Route path="/nodes/:id" element={<NodeDetails />} />
                   <Route path="/map" element={<NodeMap />} />
+                  <Route path="/meshcore/map" element={<MeshCoreMap />} />
+                  <Route path="/meshcore/nodes" element={<MeshCoreNodesList />} />
                   <Route path="/messages" element={<MessageHistory />} />
                   <Route path="/traceroutes/history" element={<TracerouteHistory />} />
                   <Route path="/traceroutes" element={<TraceroutesLanding />} />

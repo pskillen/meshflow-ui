@@ -26,6 +26,9 @@ export type EnvironmentExposureSlug = 'unknown' | 'indoor' | 'outdoor' | 'shelte
 /** API slugs for ObservedNode.weather_use */
 export type WeatherUseSlug = 'unknown' | 'include' | 'exclude';
 
+/** API protocol discriminator: 1 = Meshtastic, 2 = MeshCore */
+export type MeshProtocol = 1 | 2;
+
 export type AntennaPattern = 'omni' | 'directional';
 
 /** RF propagation profile from GET/PATCH `/nodes/observed-nodes/{id}/rf-profile/` (snake_case from API). */
@@ -82,8 +85,11 @@ export function isRfPropagationNone(r: RfPropagationPollResult): r is { status: 
 // ObservedNode from Meshflow API v2
 export interface ObservedNode {
   internal_id: number;
+  protocol?: MeshProtocol;
   node_id: number;
   node_id_str: string;
+  mc_pubkey?: string | null;
+  mc_pubkey_prefix?: string | null;
   mac_addr: string | null;
   long_name: string | null;
   short_name: string | null;
@@ -133,8 +139,25 @@ export interface GeoClassification {
   };
 }
 
+export interface MeshCorePacketListItem {
+  id: string;
+  payload_type: number;
+  event_type: string;
+  from_pubkey: string | null;
+  from_pubkey_prefix: string | null;
+  pkt_hash: number | null;
+  rx_time: string;
+  rx_rssi: number | null;
+  rx_snr: number | null;
+  route_typename: string | null;
+  first_reported_time: string;
+  observer_name: string;
+  text: string | null;
+}
+
 // ManagedNode from Meshflow API v2
 export interface ManagedNode {
+  protocol?: MeshProtocol;
   node_id: number;
   long_name: string | null;
   short_name: string | null;
