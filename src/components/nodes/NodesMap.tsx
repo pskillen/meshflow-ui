@@ -12,7 +12,7 @@ interface NodesMapProps {
   nodes: ObservedNode[];
   /** Default true: role-colour key for marker pins. */
   showMapLegend?: boolean;
-  /** When set, marker pins use these colours by `node_id` instead of Meshtastic role. */
+  /** When set, marker pins use these colours by `meshtastic_node_id` instead of Meshtastic role. */
   markerColorsByNodeId?: ReadonlyMap<number, string> | Record<number, string>;
   /** Legend rows when using `markerColorsByNodeId` (e.g. watch monitoring status). */
   mapLegendStatusSwatches?: RoleLegendSwatch[];
@@ -169,7 +169,7 @@ export function NodesMap({
     nodesWithPosition.forEach((node) => {
       const position: L.LatLngExpression = [node.latest_position!.latitude!, node.latest_position!.longitude!];
 
-      const pinColor = colorByNodeId?.get(node.node_id) ?? getRoleColor(node.role);
+      const pinColor = colorByNodeId?.get(node.meshtastic_node_id) ?? getRoleColor(node.role);
 
       const marker = L.marker(position, {
         icon: createNodeIcon(node.short_name || node.node_id_str.toString(), pinColor, false),

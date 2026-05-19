@@ -51,8 +51,8 @@ export function NodeOutgoingTraceroutesSection({ nodeId, managed }: NodeOutgoing
   const handleRepeat = (tr: AutoTraceRoute) => {
     triggerMutation.mutate(
       {
-        managedNodeId: tr.source_node.node_id,
-        targetNodeId: tr.target_node.node_id,
+        managedNodeId: tr.source_node.meshtastic_node_id,
+        targetNodeId: tr.target_node.meshtastic_node_id,
         targetStrategy:
           tr.target_strategy === 'intra_zone' ||
           tr.target_strategy === 'dx_across' ||
@@ -116,7 +116,9 @@ export function NodeOutgoingTraceroutesSection({ nodeId, managed }: NodeOutgoing
                   </TableHeader>
                   <TableBody>
                     {traceroutes.map((tr) => {
-                      const canRepeat = triggerableNodes.some((n) => n.node_id === tr.source_node.node_id);
+                      const canRepeat = triggerableNodes.some(
+                        (n) => n.meshtastic_node_id === tr.source_node.meshtastic_node_id
+                      );
                       return (
                         <TableRow
                           key={tr.id}

@@ -45,7 +45,7 @@ function getLastHeardAfter(timeRange: TimeRangeOption): Date | undefined {
 function RecentNodeChip({ node }: { node: ObservedNode }) {
   return (
     <Link
-      to={`/nodes/${node.node_id}`}
+      to={`/nodes/${node.meshtastic_node_id}`}
       className="flex-shrink-0 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary/10 hover:bg-primary/20 transition-colors border border-primary/20"
     >
       <span className="font-medium text-sm truncate max-w-[120px]">{node.short_name}</span>

@@ -48,7 +48,7 @@ describe('heatmapEncoding', () => {
     const nowMs = Date.parse('2026-01-15T12:00:00.000Z');
     const fill = degreeFillColor(
       {
-        node_id: 1,
+        meshtastic_node_id: 1,
         node_id_str: '!1',
         lat: 0,
         lng: 0,

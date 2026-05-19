@@ -67,18 +67,18 @@ function MyNodesContent() {
     return m;
   }, [watchesQuery.data]);
 
-  const managedNodeIds = useMemo(() => new Set(myManagedNodes.map((n) => n.node_id)), [myManagedNodes]);
+  const managedNodeIds = useMemo(() => new Set(myManagedNodes.map((n) => n.meshtastic_node_id)), [myManagedNodes]);
 
   const claimedByNodeId = useMemo(() => {
     const m = new Map<number, ObservedNode>();
     for (const c of myClaimedNodes) {
-      m.set(c.node_id, c);
+      m.set(c.meshtastic_node_id, c);
     }
     return m;
   }, [myClaimedNodes]);
 
   const claimedOnlyNodes = useMemo(
-    () => myClaimedNodes.filter((n) => !managedNodeIds.has(n.node_id)),
+    () => myClaimedNodes.filter((n) => !managedNodeIds.has(n.meshtastic_node_id)),
     [myClaimedNodes, managedNodeIds]
   );
 
@@ -102,7 +102,7 @@ function MyNodesContent() {
 
   const renderInstructionsModal = () => {
     if (!showInstructionsNode) return null;
-    const nodeApiKeys = apiKeys?.filter((key) => key.nodes.includes(showInstructionsNode.node_id)) || [];
+    const nodeApiKeys = apiKeys?.filter((key) => key.nodes.includes(showInstructionsNode.meshtastic_node_id)) || [];
     const firstApiKey = nodeApiKeys[0]?.key;
     return (
       <Dialog
@@ -164,7 +164,9 @@ function MyNodesContent() {
             <Button variant="outline" onClick={() => setInstructionsModalOpen(false)}>
               Close
             </Button>
-            <Button onClick={() => navigate(`/nodes/${showInstructionsNode.node_id}`)}>Go to Node Details</Button>
+            <Button onClick={() => navigate(`/nodes/${showInstructionsNode.meshtastic_node_id}`)}>
+              Go to Node Details
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -217,7 +219,7 @@ function MyNodesContent() {
               disabled={cancelClaimMutation.isPending}
               onClick={() => {
                 if (!unclaimTarget) return;
-                cancelClaimMutation.mutate(unclaimTarget.node_id, {
+                cancelClaimMutation.mutate(unclaimTarget.meshtastic_node_id, {
                   onSuccess: () => setUnclaimTarget(null),
                 });
               }}
@@ -281,12 +283,12 @@ function MyNodesContent() {
               <CardContent>
                 <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
                   {myManagedNodes.map((managed) => {
-                    const node = observedNodeForManagedRow(managed, claimedByNodeId.get(managed.node_id));
+                    const node = observedNodeForManagedRow(managed, claimedByNodeId.get(managed.meshtastic_node_id));
                     const watch = watchesByNodeIdStr.get(node.node_id_str);
                     const liveness = getManagedLiveness(managed);
                     return (
                       <MyNodeCard
-                        key={`managed-${managed.node_id}`}
+                        key={`managed-${managed.meshtastic_node_id}`}
                         node={node}
                         isManaged
                         isClaimed={node.owner?.id !== undefined}
@@ -301,7 +303,7 @@ function MyNodesContent() {
                         }}
                         onRequestUnmanage={() =>
                           setUnmanageTarget({
-                            nodeId: managed.node_id,
+                            nodeId: managed.meshtastic_node_id,
                             label: node.short_name || node.node_id_str,
                           })
                         }
@@ -333,7 +335,7 @@ function MyNodesContent() {
                         const watch = watchesByNodeIdStr.get(node.node_id_str);
                         return (
                           <MyNodeCard
-                            key={node.node_id}
+                            key={node.meshtastic_node_id}
                             node={node}
                             isManaged={false}
                             isClaimed={node.owner?.id !== undefined}
@@ -367,7 +369,7 @@ function MyNodesContent() {
                         const watch = watchesByNodeIdStr.get(node.node_id_str);
                         return (
                           <MyNodeCard
-                            key={node.node_id}
+                            key={node.meshtastic_node_id}
                             node={node}
                             isManaged={false}
                             isClaimed={node.owner?.id !== undefined}
@@ -397,7 +399,7 @@ function MyNodesContent() {
                         const watch = watchesByNodeIdStr.get(node.node_id_str);
                         return (
                           <MyNodeCard
-                            key={node.node_id}
+                            key={node.meshtastic_node_id}
                             node={node}
                             isManaged={false}
                             isClaimed={node.owner?.id !== undefined}

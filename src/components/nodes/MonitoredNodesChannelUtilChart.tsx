@@ -71,7 +71,7 @@ export function MonitoredNodesChannelUtilChart({
     const allTimestamps = Array.from(
       new Set(
         nodes.flatMap((node) => {
-          const metrics = metricsMap[node.node_id] || [];
+          const metrics = metricsMap[node.meshtastic_node_id] || [];
           return metrics.filter((m) => m.reported_time != null).map((m) => new Date(m.reported_time!).getTime());
         })
       )
@@ -79,7 +79,7 @@ export function MonitoredNodesChannelUtilChart({
 
     const nodeLookups: Record<string, Record<number, number>> = {};
     nodes.forEach((node) => {
-      const metrics = metricsMap[node.node_id] || [];
+      const metrics = metricsMap[node.meshtastic_node_id] || [];
       const lookup: Record<number, number> = {};
       metrics
         .filter((m) => m.reported_time != null)

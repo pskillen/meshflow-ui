@@ -35,7 +35,7 @@ vi.mock('@/hooks/api/useMultiNodeMetrics', () => ({
 function makeObservedNode(overrides: Partial<ObservedNodeWatchSummary> = {}): ObservedNode {
   return {
     internal_id: 1,
-    node_id: 100,
+    meshtastic_node_id: 100,
     node_id_str: '!00000064',
     mac_addr: null,
     long_name: 'Long',
@@ -53,7 +53,7 @@ function makeWatch(overrides: Partial<NodeWatch> & { node?: Partial<ObservedNode
   const id = idOverride ?? 1;
   const node = makeObservedNode({
     internal_id: id,
-    node_id: 100 + id,
+    meshtastic_node_id: 100 + id,
     short_name: `SN${id}`,
     ...nodeOverrides,
   });
@@ -78,7 +78,7 @@ function renderTable(props: Partial<ComponentProps<typeof WatchedNodesTable>> & 
       makeWatch({
         id: 1,
         node: {
-          node_id: 1,
+          meshtastic_node_id: 1,
           internal_id: 10,
           node_id_str: '!00000001',
           short_name: 'OnlineN',
@@ -90,7 +90,7 @@ function renderTable(props: Partial<ComponentProps<typeof WatchedNodesTable>> & 
       makeWatch({
         id: 2,
         node: {
-          node_id: 2,
+          meshtastic_node_id: 2,
           internal_id: 20,
           node_id_str: '!00000002',
           short_name: 'OffN',
@@ -138,7 +138,7 @@ describe('WatchedNodesTable', () => {
         makeWatch({
           id: 1,
           node: {
-            node_id: 1,
+            meshtastic_node_id: 1,
             short_name: 'LowBatt',
             last_heard: recent,
             monitoring_offline_confirmed_at: null,
@@ -159,7 +159,7 @@ describe('WatchedNodesTable', () => {
         makeWatch({
           id: 1,
           node: {
-            node_id: 1,
+            meshtastic_node_id: 1,
             short_name: 'OnlyOnline',
             last_heard: recent,
             monitoring_offline_confirmed_at: null,
@@ -176,7 +176,7 @@ describe('WatchedNodesTable', () => {
     const tr: AutoTraceRoute = {
       id: 50,
       source_node: {
-        node_id: 200,
+        meshtastic_node_id: 200,
         short_name: 'SRC',
         node_id_str: '!c8',
         long_name: null,
@@ -186,7 +186,7 @@ describe('WatchedNodesTable', () => {
         allow_auto_traceroute: true,
         position: { latitude: null, longitude: null },
       },
-      target_node: makeObservedNode({ node_id: 2 }),
+      target_node: makeObservedNode({ meshtastic_node_id: 2 }),
       trigger_type: 4,
       trigger_type_label: 'Node Watch',
       triggered_by: null,
@@ -211,7 +211,7 @@ describe('WatchedNodesTable', () => {
         makeWatch({
           id: 2,
           node: {
-            node_id: 2,
+            meshtastic_node_id: 2,
             short_name: 'OffOnly',
             monitoring_offline_confirmed_at: '2026-04-21T11:00:00Z',
           },
@@ -235,7 +235,7 @@ describe('WatchedNodesTable', () => {
         makeWatch({
           id: 3,
           node: {
-            node_id: 3,
+            meshtastic_node_id: 3,
             short_name: 'Trig',
             monitoring_offline_confirmed_at: '2026-04-21T11:00:00Z',
           },
@@ -245,7 +245,7 @@ describe('WatchedNodesTable', () => {
     });
     await user.click(screen.getByRole('button', { name: /Trigger traceroute/i }));
     expect(onTrigger).toHaveBeenCalledTimes(1);
-    expect(onTrigger.mock.calls[0][0].node_id).toBe(3);
+    expect(onTrigger.mock.calls[0][0].meshtastic_node_id).toBe(3);
   });
 
   it('disables trigger button when canTriggerTraceroute is false', () => {
@@ -256,7 +256,7 @@ describe('WatchedNodesTable', () => {
         makeWatch({
           id: 99,
           node: {
-            node_id: 99,
+            meshtastic_node_id: 99,
             short_name: 'Solo',
             last_heard: recent,
             monitoring_offline_confirmed_at: null,

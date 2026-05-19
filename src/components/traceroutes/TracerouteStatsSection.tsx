@@ -137,7 +137,7 @@ export function TracerouteStatsSection({ sourceNodeId = null }: TracerouteStatsS
 
   const sourceScopeHint = useMemo(() => {
     if (sourceNodeId == null || !data?.by_source?.length) return null;
-    const row = data.by_source.find((r) => r.node_id === sourceNodeId);
+    const row = data.by_source.find((r) => r.meshtastic_node_id === sourceNodeId);
     if (!row) return 'Stats scoped to the selected source node.';
     return `Stats scoped to source ${row.short_name ?? row.node_id_str ?? sourceNodeId}.`;
   }, [sourceNodeId, data?.by_source]);
@@ -650,7 +650,7 @@ export function TracerouteStatsSection({ sourceNodeId = null }: TracerouteStatsS
 }
 
 interface TargetRow {
-  node_id: number;
+  meshtastic_node_id: number;
   node_id_str: string;
   short_name: string | null;
   long_name: string | null;
@@ -698,10 +698,10 @@ function TargetsRankingCard({
               </TableHeader>
               <TableBody>
                 {rows.map((row) => (
-                  <TableRow key={row.node_id}>
+                  <TableRow key={row.meshtastic_node_id}>
                     <TableCell>
                       <Link
-                        to={`/traceroutes/history?target_node=${row.node_id}`}
+                        to={`/traceroutes/history?target_node=${row.meshtastic_node_id}`}
                         className="flex flex-col gap-0.5 min-w-0 hover:underline"
                       >
                         <span className="font-medium truncate" title={row.short_name ?? row.node_id_str}>

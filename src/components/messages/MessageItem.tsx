@@ -42,7 +42,10 @@ function HeardDialog({
         <div className="space-y-4 mt-4">
           {observations?.length ? (
             observations.map((observation) => (
-              <div key={observation.observer.node_id} className="flex items-start space-x-4 p-2 border rounded-md">
+              <div
+                key={observation.observer.meshtastic_node_id}
+                className="flex items-start space-x-4 p-2 border rounded-md"
+              >
                 <div className="flex-1">
                   <div className="font-semibold">
                     {observation.observer.short_name || observation.observer.node_id_str}
@@ -86,7 +89,7 @@ interface MessageItemProps {
   continuationMessages?: Array<{ message: TextMessage; replies: TextMessage[]; emojiReactions: TextMessage[] }>;
 }
 
-/** Parse node_id_str (!hex) to numeric node_id for routing */
+/** Parse node_id_str (!hex) to numeric meshtastic_node_id for routing */
 function parseNodeId(nodeIdStr: string): number | null {
   const match = nodeIdStr?.replace(/^!/, '').match(/^[0-9a-fA-F]+$/);
   return match ? parseInt(match[0], 16) : null;

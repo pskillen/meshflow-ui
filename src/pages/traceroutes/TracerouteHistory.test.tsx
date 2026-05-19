@@ -39,7 +39,7 @@ const mockedUseManagedNodes = vi.mocked(useManagedNodesSuspense);
 
 function makeManagedNode(overrides: Partial<ManagedNode> = {}): ManagedNode {
   return {
-    node_id: 200,
+    meshtastic_node_id: 200,
     long_name: 'Source node',
     short_name: 'SRC',
     last_heard: null,
@@ -58,7 +58,7 @@ function makeTraceroute(overrides: Partial<AutoTraceRoute> = {}): AutoTraceRoute
     source_node: makeManagedNode(),
     target_node: {
       internal_id: 1,
-      node_id: 100,
+      meshtastic_node_id: 100,
       node_id_str: '!00000064',
       mac_addr: null,
       long_name: 'Target',
@@ -98,7 +98,7 @@ interface InfiniteOptions {
 function makeObservedNode(overrides: Partial<ObservedNode> = {}): ObservedNode {
   return {
     internal_id: 1,
-    node_id: 100,
+    meshtastic_node_id: 100,
     node_id_str: '!00000064',
     mac_addr: null,
     long_name: 'Target',
@@ -278,9 +278,9 @@ describe('TracerouteHistory', () => {
 
   it('opens the searchable target filter and filters options by query', () => {
     const nodes = [
-      makeObservedNode({ node_id: 1, node_id_str: '!00000001', short_name: 'AAA', long_name: 'Alpha' }),
-      makeObservedNode({ node_id: 2, node_id_str: '!00000002', short_name: 'BBB', long_name: 'Bravo' }),
-      makeObservedNode({ node_id: 3, node_id_str: '!00000003', short_name: 'CCC', long_name: 'Charlie' }),
+      makeObservedNode({ meshtastic_node_id: 1, node_id_str: '!00000001', short_name: 'AAA', long_name: 'Alpha' }),
+      makeObservedNode({ meshtastic_node_id: 2, node_id_str: '!00000002', short_name: 'BBB', long_name: 'Bravo' }),
+      makeObservedNode({ meshtastic_node_id: 3, node_id_str: '!00000003', short_name: 'CCC', long_name: 'Charlie' }),
     ];
     setupHooks({}, [], nodes);
     renderAt('/traceroutes/history');
@@ -301,7 +301,7 @@ describe('TracerouteHistory', () => {
 
   it('selecting a node from the searchable target filter updates the query', () => {
     const nodes = [
-      makeObservedNode({ node_id: 555, node_id_str: '!0000022b', short_name: 'PICKME', long_name: 'Pick me' }),
+      makeObservedNode({ meshtastic_node_id: 555, node_id_str: '!0000022b', short_name: 'PICKME', long_name: 'Pick me' }),
     ];
     setupHooks({}, [], nodes);
     renderAt('/traceroutes/history');

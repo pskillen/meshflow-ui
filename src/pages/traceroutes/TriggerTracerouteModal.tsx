@@ -79,17 +79,20 @@ export function TriggerTracerouteModal({
 
   useEffect(() => {
     if (!hasFixedTarget || !fixedTargetNode) return;
-    setTargetNodeId(fixedTargetNode.node_id);
+    setTargetNodeId(fixedTargetNode.meshtastic_node_id);
     setTargetNodeLabel(formatNodeLabel(fixedTargetNode));
   }, [hasFixedTarget, fixedTargetNode]);
 
-  const selectedManaged = managedNodes.find((m) => m.node_id === managedNodeId);
+  const selectedManaged = managedNodes.find((m) => m.meshtastic_node_id === managedNodeId);
   const geo = selectedManaged?.geo_classification;
   const canIntraZone = geo?.applicable_strategies?.includes('intra_zone') ?? false;
 
   const managedNodesForMap = useMemo(() => filterManagedNodesForMapDisplay(managedNodes), [managedNodes]);
 
-  const managedNodeIdSet = useMemo(() => new Set(managedNodesForMap.map((m) => m.node_id)), [managedNodesForMap]);
+  const managedNodeIdSet = useMemo(
+    () => new Set(managedNodesForMap.map((m) => m.meshtastic_node_id)),
+    [managedNodesForMap]
+  );
 
   const [pickTargetLastHeardAfter, setPickTargetLastHeardAfter] = useState(() => pickTargetLastHeardCutoff());
 
@@ -138,7 +141,7 @@ export function TriggerTracerouteModal({
       setTargetNodeLabel(null);
       return false;
     }
-    setTargetNodeId(node.node_id);
+    setTargetNodeId(node.meshtastic_node_id);
     setTargetNodeLabel(`${node.short_name ?? node.node_id_str} (${node.node_id_str})`);
     return true;
   };
@@ -147,9 +150,9 @@ export function TriggerTracerouteModal({
   // Clicking anything else (e.g. the fixed target itself) is a no-op.
   const handleFixedTargetMapNodeSelect = (node: MapNode | null) => {
     if (!node) return false;
-    const isManaged = managedNodesForMap.some((m) => m.node_id === node.node_id);
+    const isManaged = managedNodesForMap.some((m) => m.meshtastic_node_id === node.meshtastic_node_id);
     if (!isManaged) return false;
-    setManagedNodeId(node.node_id);
+    setManagedNodeId(node.meshtastic_node_id);
     return true;
   };
 
@@ -189,7 +192,7 @@ export function TriggerTracerouteModal({
               </SelectTrigger>
               <SelectContent>
                 {managedNodes.map((node) => (
-                  <SelectItem key={node.node_id} value={node.node_id.toString()}>
+                  <SelectItem key={node.meshtastic_node_id} value={node.meshtastic_node_id.toString()}>
                     {node.short_name ?? node.node_id_str} ({node.node_id_str})
                   </SelectItem>
                 ))}
@@ -297,7 +300,7 @@ export function TriggerTracerouteModal({
                     showUnmanagedNodes={true}
                     drawBoundingBox={false}
                     enableBubbles={false}
-                    selectedNodeId={managedNodeId ?? fixedTargetNode.node_id}
+                    selectedNodeId={managedNodeId ?? fixedTargetNode.meshtastic_node_id}
                     onNodeSelect={handleFixedTargetMapNodeSelect}
                   />
                 </div>

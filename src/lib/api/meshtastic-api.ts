@@ -46,7 +46,7 @@ import type { RfProfile, RfProfileUpdateBody, RfPropagationPollResult, RfPropaga
 
 export interface FeederReachFeeder {
   managed_node_id: string;
-  node_id: number;
+  meshtastic_node_id: number;
   node_id_str: string;
   short_name?: string | null;
   long_name?: string | null;
@@ -55,7 +55,7 @@ export interface FeederReachFeeder {
 }
 
 export interface FeederReachTarget {
-  node_id: number;
+  meshtastic_node_id: number;
   node_id_str: string;
   short_name?: string | null;
   long_name?: string | null;
@@ -88,7 +88,7 @@ export interface ConstellationCoverageHex {
 
 /** Per-target aggregate across all feeders (when `include_targets=1`). */
 export interface ConstellationCoverageTarget {
-  node_id: number;
+  meshtastic_node_id: number;
   node_id_str: string;
   short_name: string | null;
   long_name: string | null;
@@ -157,7 +157,7 @@ export class MeshtasticApi extends BaseApi {
   }
 
   /**
-   * Get one observed node by Meshtastic numeric `node_id` (path `/nodes/observed-nodes/{id}/`).
+   * Get one observed node by Meshtastic numeric `meshtastic_node_id` (path `/nodes/observed-nodes/{id}/`).
    * Not valid for MeshCore nodes until internal_id lookup exists — use {@link getNodes} with
    * `protocol: 'meshcore'` or search instead.
    */
@@ -287,12 +287,12 @@ export class MeshtasticApi extends BaseApi {
 
   /**
    * Get device metrics for multiple nodes in one request (bulk).
-   * Returns flat list; frontend groups by node_id for per-node charts.
+   * Returns flat list; frontend groups by meshtastic_node_id for per-node charts.
    */
   async getDeviceMetricsBulk(
     nodeIds: number[],
     params?: DateRangeParams
-  ): Promise<Array<DeviceMetrics & { node_id: number; node_id_str: string; short_name: string | null }>> {
+  ): Promise<Array<DeviceMetrics & { meshtastic_node_id: number; node_id_str: string; short_name: string | null }>> {
     if (nodeIds.length === 0) return [];
     const searchParams = new URLSearchParams();
     searchParams.append('node_ids', nodeIds.join(','));
@@ -300,7 +300,7 @@ export class MeshtasticApi extends BaseApi {
     if (params?.endDate) searchParams.append('end_date', params.endDate.toISOString());
 
     const response = await this.get<{
-      results: Array<DeviceMetrics & { node_id: number; node_id_str: string; short_name: string | null }>;
+      results: Array<DeviceMetrics & { meshtastic_node_id: number; node_id_str: string; short_name: string | null }>;
     }>('/nodes/device-metrics-bulk/', searchParams);
     return (response.results || []).map((metric) => ({
       ...metric,
@@ -327,12 +327,14 @@ export class MeshtasticApi extends BaseApi {
 
   /**
    * Get environment metrics for multiple nodes in one request (bulk).
-   * Returns flat list; frontend groups by node_id for per-node charts.
+   * Returns flat list; frontend groups by meshtastic_node_id for per-node charts.
    */
   async getEnvironmentMetricsBulk(
     nodeIds: number[],
     params?: DateRangeParams
-  ): Promise<Array<EnvironmentMetrics & { node_id: number; node_id_str: string; short_name: string | null }>> {
+  ): Promise<
+    Array<EnvironmentMetrics & { meshtastic_node_id: number; node_id_str: string; short_name: string | null }>
+  > {
     if (nodeIds.length === 0) return [];
     const searchParams = new URLSearchParams();
     searchParams.append('node_ids', nodeIds.join(','));
@@ -340,7 +342,9 @@ export class MeshtasticApi extends BaseApi {
     if (params?.endDate) searchParams.append('end_date', params.endDate.toISOString());
 
     const response = await this.get<{
-      results: Array<EnvironmentMetrics & { node_id: number; node_id_str: string; short_name: string | null }>;
+      results: Array<
+        EnvironmentMetrics & { meshtastic_node_id: number; node_id_str: string; short_name: string | null }
+      >;
     }>('/nodes/environment-metrics-bulk/', searchParams);
     return (response.results || []).map((metric) => ({
       ...metric,
@@ -544,7 +548,7 @@ export class MeshtasticApi extends BaseApi {
     }
   ): Promise<OwnedManagedNode> {
     const data: CreateManagedNode = {
-      node_id: nodeId,
+      meshtastic_node_id: nodeId,
       constellation_id: constellationId,
       name: name,
       owner_id: ownerId,
@@ -597,14 +601,14 @@ export class MeshtasticApi extends BaseApi {
    * Add a node to an API key
    */
   async addNodeToApiKey(apiKeyId: string, nodeId: number): Promise<NodeApiKey> {
-    return this.post<NodeApiKey>(`/nodes/api-keys/${apiKeyId}/add_node/`, { node_id: nodeId });
+    return this.post<NodeApiKey>(`/nodes/api-keys/${apiKeyId}/add_node/`, { meshtastic_node_id: nodeId });
   }
 
   /**
    * Remove a node from an API key
    */
   async removeNodeFromApiKey(apiKeyId: string, nodeId: number): Promise<NodeApiKey> {
-    return this.post<NodeApiKey>(`/nodes/api-keys/${apiKeyId}/remove_node/`, { node_id: nodeId });
+    return this.post<NodeApiKey>(`/nodes/api-keys/${apiKeyId}/remove_node/`, { meshtastic_node_id: nodeId });
   }
 
   /**
@@ -848,10 +852,10 @@ export class MeshtasticApi extends BaseApi {
   async getTracerouteStats(params?: { triggered_at_after?: string; source_node?: number }): Promise<{
     sources: Array<{ trigger_type: number; count: number }>;
     success_failure: Array<{ status: string; count: number }>;
-    top_routers: Array<{ node_id: number; node_id_str: string; short_name: string; count: number }>;
+    top_routers: Array<{ meshtastic_node_id: number; node_id_str: string; short_name: string; count: number }>;
     by_source: Array<{
       managed_node_id: string;
-      node_id: number;
+      meshtastic_node_id: number;
       node_id_str: string;
       name: string;
       short_name: string;
@@ -861,7 +865,7 @@ export class MeshtasticApi extends BaseApi {
       success_rate: number | null;
     }>;
     by_target?: Array<{
-      node_id: number;
+      meshtastic_node_id: number;
       node_id_str: string;
       short_name: string | null;
       long_name: string | null;
@@ -909,7 +913,7 @@ export class MeshtasticApi extends BaseApi {
       avg_snr?: number;
     }>;
     nodes: Array<{
-      node_id: number;
+      meshtastic_node_id: number;
       node_id_str: string;
       lat: number;
       lng: number;
@@ -1026,7 +1030,7 @@ export class MeshtasticApi extends BaseApi {
       count: number;
     }>;
     nodes: Array<{
-      node_id: number;
+      meshtastic_node_id: number;
       node_id_str?: string;
       lat: number;
       lng: number;
@@ -1156,7 +1160,7 @@ export class MeshtasticApi extends BaseApi {
   }
 
   async postDxNodeExclusion(body: {
-    node_id: number;
+    meshtastic_node_id: number;
     exclude_from_detection: boolean;
     exclude_notes?: string;
   }): Promise<DxNodeExclusionResponse> {

@@ -282,20 +282,20 @@ function ApiKeysContent() {
             <div className="max-h-48 overflow-y-auto border rounded p-2 mb-4">
               {nodesForAssignModal.length > 0 ? (
                 nodesForAssignModal.map((node) => (
-                  <div key={node.node_id} className="flex items-center gap-2 mb-1">
+                  <div key={node.meshtastic_node_id} className="flex items-center gap-2 mb-1">
                     <input
                       type="checkbox"
-                      id={`assign-node-${node.node_id}`}
-                      checked={selectedAssignNodes.includes(node.node_id)}
+                      id={`assign-node-${node.meshtastic_node_id}`}
+                      checked={selectedAssignNodes.includes(node.meshtastic_node_id)}
                       onChange={(e) => {
                         if (e.target.checked) {
-                          setSelectedAssignNodes((prev) => [...prev, node.node_id]);
+                          setSelectedAssignNodes((prev) => [...prev, node.meshtastic_node_id]);
                         } else {
-                          setSelectedAssignNodes((prev) => prev.filter((id) => id !== node.node_id));
+                          setSelectedAssignNodes((prev) => prev.filter((id) => id !== node.meshtastic_node_id));
                         }
                       }}
                     />
-                    <label htmlFor={`assign-node-${node.node_id}`} className="text-sm cursor-pointer">
+                    <label htmlFor={`assign-node-${node.meshtastic_node_id}`} className="text-sm cursor-pointer">
                       {node.short_name || node.node_id_str}
                     </label>
                   </div>
@@ -356,8 +356,8 @@ function ApiKeyCard({
   const assignedNodeNames = apiKey.nodes
     .map(
       (nid) =>
-        myManagedNodes.find((n) => n.node_id === nid)?.short_name ||
-        myManagedNodes.find((n) => n.node_id === nid)?.node_id_str ||
+        myManagedNodes.find((n) => n.meshtastic_node_id === nid)?.short_name ||
+        myManagedNodes.find((n) => n.meshtastic_node_id === nid)?.node_id_str ||
         `!${nid.toString(16)}`
     )
     .filter(Boolean);

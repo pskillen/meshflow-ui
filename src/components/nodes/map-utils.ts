@@ -130,7 +130,7 @@ function percentileSorted(sorted: number[], p: number): number {
 
 /** Minimal node fields for popup content */
 export interface NodePopupData {
-  node_id: number;
+  meshtastic_node_id: number;
   node_id_str?: string;
   long_name: string | null;
   short_name: string | null;
@@ -148,9 +148,9 @@ export function buildNodePopupHtml(node: NodePopupData): string {
   const displayName =
     node.long_name && node.short_name
       ? `${node.long_name} (${node.short_name})`
-      : node.long_name || node.short_name || node.node_id_str || `Node ${node.node_id}`;
+      : node.long_name || node.short_name || node.node_id_str || `Node ${node.meshtastic_node_id}`;
   const lastSeen = node.last_heard != null ? new Date(node.last_heard).toLocaleString() : 'Never';
-  const detailsUrl = `/nodes/${node.node_id}`;
+  const detailsUrl = `/nodes/${node.meshtastic_node_id}`;
   const constellationLine =
     node.constellationName != null && node.constellationName !== ''
       ? `Constellation: ${escapeHtml(node.constellationName)}`

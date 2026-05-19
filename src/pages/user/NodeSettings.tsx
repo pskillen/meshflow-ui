@@ -77,7 +77,7 @@ function NodeSettingsContent() {
   };
 
   // Create a Set of managed node IDs for quick lookup
-  const managedNodeIds = new Set(myManagedNodes.map((n) => n.node_id));
+  const managedNodeIds = new Set(myManagedNodes.map((n) => n.meshtastic_node_id));
 
   // Fetch API keys
   const { data: apiKeys, isLoading: isLoadingApiKeys } = useQuery({
@@ -112,7 +112,7 @@ function NodeSettingsContent() {
               {myClaimedNodes.length > 0 ? (
                 <div className="space-y-4">
                   {myClaimedNodes.map((node) => (
-                    <div key={node.node_id} className="border rounded-md p-4">
+                    <div key={node.meshtastic_node_id} className="border rounded-md p-4">
                       <div className="flex justify-between items-start">
                         <div>
                           <h3 className="font-medium">{node.short_name || node.node_id_str}</h3>
@@ -124,10 +124,13 @@ function NodeSettingsContent() {
                         </div>
                       </div>
                       <div className="mt-2 flex gap-2">
-                        <Link to={`/nodes/${node.node_id}`} className="text-blue-500 hover:text-blue-700 text-sm">
+                        <Link
+                          to={`/nodes/${node.meshtastic_node_id}`}
+                          className="text-blue-500 hover:text-blue-700 text-sm"
+                        >
                           View Node
                         </Link>
-                        {!managedNodeIds.has(node.node_id) && (
+                        {!managedNodeIds.has(node.meshtastic_node_id) && (
                           <Button
                             onClick={() => handleRunAsManagedNode(node)}
                             size="sm"
@@ -182,7 +185,7 @@ function NodeSettingsContent() {
                   return pendingClaims.length > 0 ? (
                     <div className="space-y-4">
                       {pendingClaims.map((claim) => (
-                        <div key={claim.node.node_id} className="border rounded-md p-4">
+                        <div key={claim.node.meshtastic_node_id} className="border rounded-md p-4">
                           <div className="flex justify-between items-start gap-2">
                             <div>
                               <h3 className="font-medium">{claim.node.short_name || claim.node.node_id_str}</h3>
@@ -196,14 +199,14 @@ function NodeSettingsContent() {
                               variant="outline"
                               size="sm"
                               className="shrink-0 text-destructive border-destructive/40 hover:bg-destructive/10"
-                              onClick={() => setCancelClaimForNodeId(claim.node.node_id)}
+                              onClick={() => setCancelClaimForNodeId(claim.node.meshtastic_node_id)}
                             >
                               Cancel claim
                             </Button>
                           </div>
                           <div className="mt-2">
                             <Link
-                              to={`/nodes/${claim.node.node_id}`}
+                              to={`/nodes/${claim.node.meshtastic_node_id}`}
                               className="text-blue-500 hover:text-blue-700 text-sm"
                             >
                               View Node
@@ -258,11 +261,11 @@ function NodeSettingsContent() {
               {myManagedNodes.length > 0 ? (
                 <Accordion type="multiple" className="space-y-2">
                   {myManagedNodes.map((node) => {
-                    const nodeApiKeys = apiKeys?.filter((key) => key.nodes.includes(node.node_id)) || [];
+                    const nodeApiKeys = apiKeys?.filter((key) => key.nodes.includes(node.meshtastic_node_id)) || [];
                     return (
                       <AccordionItem
-                        key={node.node_id}
-                        value={`node-${node.node_id}`}
+                        key={node.meshtastic_node_id}
+                        value={`node-${node.meshtastic_node_id}`}
                         className="border-2 border-slate-300 dark:border-slate-500 rounded-lg bg-slate-50/80 dark:bg-slate-950/40 shadow-sm"
                       >
                         <AccordionTrigger className="px-4 py-3 hover:no-underline">
@@ -355,7 +358,7 @@ function NodeSettingsContent() {
               disabled={cancelClaimMutation.isPending}
               onClick={() => {
                 if (!unclaimMyNodesTarget) return;
-                cancelClaimMutation.mutate(unclaimMyNodesTarget.node_id, {
+                cancelClaimMutation.mutate(unclaimMyNodesTarget.meshtastic_node_id, {
                   onSuccess: () => setUnclaimMyNodesTarget(null),
                 });
               }}
@@ -388,7 +391,7 @@ function NodeSettingsContent() {
               disabled={deleteManagedMutation.isPending}
               onClick={() => {
                 if (!unmanageManagedTarget) return;
-                deleteManagedMutation.mutate(unmanageManagedTarget.node_id, {
+                deleteManagedMutation.mutate(unmanageManagedTarget.meshtastic_node_id, {
                   onSuccess: () => setUnmanageManagedTarget(null),
                 });
               }}
@@ -503,7 +506,7 @@ function ManagedNodeSettings({
 
   const saveChannels = useMutation({
     mutationFn: () =>
-      api.patchManagedNode(node.node_id, {
+      api.patchManagedNode(node.meshtastic_node_id, {
         channel_0: mappings.channel_0,
         channel_1: mappings.channel_1,
         channel_2: mappings.channel_2,
@@ -527,7 +530,7 @@ function ManagedNodeSettings({
   return (
     <div className="space-y-4 pt-2">
       <div className="flex flex-wrap gap-2">
-        <Link to={`/nodes/${node.node_id}`}>
+        <Link to={`/nodes/${node.meshtastic_node_id}`}>
           <Button variant="outline" size="sm">
             View Node Details
           </Button>
@@ -593,11 +596,11 @@ function ManagedNodeSettings({
                     const cur = mappings[slotKey];
                     return (
                       <div key={i} className="flex items-center gap-2">
-                        <Label htmlFor={`managed-ch-${node.node_id}-${i}`} className="w-24 shrink-0 text-sm">
+                        <Label htmlFor={`managed-ch-${node.meshtastic_node_id}-${i}`} className="w-24 shrink-0 text-sm">
                           Slot {i}
                         </Label>
                         <Select value={cur == null ? 'none' : String(cur)} onValueChange={(v) => setSlot(i, v)}>
-                          <SelectTrigger id={`managed-ch-${node.node_id}-${i}`} className="flex-1">
+                          <SelectTrigger id={`managed-ch-${node.meshtastic_node_id}-${i}`} className="flex-1">
                             <SelectValue placeholder="Unmapped" />
                           </SelectTrigger>
                           <SelectContent>

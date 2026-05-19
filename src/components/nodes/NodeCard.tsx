@@ -45,8 +45,8 @@ export function NodeCard({ node }: NodeCardProps) {
 
   return (
     <Link
-      key={node.node_id}
-      to={`/nodes/${node.node_id}`}
+      key={node.meshtastic_node_id}
+      to={`/nodes/${node.meshtastic_node_id}`}
       className="block p-5 bg-white dark:bg-slate-800 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-200 border border-slate-200 dark:border-slate-700"
     >
       <div className="flex justify-between items-start gap-3 mb-3">

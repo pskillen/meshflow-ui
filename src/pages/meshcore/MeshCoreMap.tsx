@@ -35,7 +35,7 @@ function MeshCoreMapContent() {
               <h3 className="mb-2 text-sm font-medium">Feeders (default location)</h3>
               <ul className="list-inside list-disc text-sm text-muted-foreground">
                 {feedersWithPosition.map((f) => (
-                  <li key={f.node_id}>
+                  <li key={f.meshtastic_node_id}>
                     {f.long_name || f.node_id_str} — {f.position.latitude?.toFixed(4)},{' '}
                     {f.position.longitude?.toFixed(4)}
                   </li>

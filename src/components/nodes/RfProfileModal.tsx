@@ -56,7 +56,7 @@ const inputSurfaceClass = 'border border-slate-300 bg-background shadow-sm dark:
 const FREQ_BAND_UNSET = '__freq_unset__';
 
 export function RfProfileModal({ open, onOpenChange, node }: RfProfileModalProps) {
-  const nodeId = node.node_id;
+  const nodeId = node.meshtastic_node_id;
   const { data: profile, isLoading } = useRfProfile(nodeId, { enabled: open });
   const updateMutation = useUpdateRfProfile(nodeId);
   const recomputeMutation = useRecomputeRfPropagation(nodeId);

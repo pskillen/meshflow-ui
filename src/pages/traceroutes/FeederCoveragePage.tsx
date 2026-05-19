@@ -124,7 +124,7 @@ export function FeederCoveragePage() {
   const feederOptions = useMemo(
     () =>
       [...(managedNodes ?? [])]
-        .filter((n) => n.node_id != null)
+        .filter((n) => n.meshtastic_node_id != null)
         .sort((a, b) => {
           const labelA = (a.short_name || a.long_name || a.node_id_str || '').toLowerCase();
           const labelB = (b.short_name || b.long_name || b.node_id_str || '').toLowerCase();
@@ -143,7 +143,7 @@ export function FeederCoveragePage() {
   useEffect(() => {
     if (selectedFeederId != null) return;
     if (feederOptions.length === 0) return;
-    setSelectedFeederId(feederOptions[0].node_id);
+    setSelectedFeederId(feederOptions[0].meshtastic_node_id);
   }, [feederOptions, selectedFeederId]);
 
   // Mirror selection into the URL so it's deep-linkable.
@@ -179,8 +179,8 @@ export function FeederCoveragePage() {
 
   const representedForHeard = useMemo(() => {
     const s = new Set<number>();
-    if (data?.feeder?.node_id != null) s.add(data.feeder.node_id);
-    for (const t of data?.targets ?? []) s.add(t.node_id);
+    if (data?.feeder?.meshtastic_node_id != null) s.add(data.feeder.meshtastic_node_id);
+    for (const t of data?.targets ?? []) s.add(t.meshtastic_node_id);
     return s;
   }, [data]);
 
@@ -200,7 +200,7 @@ export function FeederCoveragePage() {
     ? filteredTargets.reduce((acc, t) => acc + smoothedRate(t.successes, t.attempts), 0) / filteredTargets.length
     : null;
 
-  const selectedFeeder = feederOptions.find((n) => n.node_id === selectedFeederId);
+  const selectedFeeder = feederOptions.find((n) => n.meshtastic_node_id === selectedFeederId);
   const feederLabel = selectedFeeder
     ? selectedFeeder.short_name || selectedFeeder.long_name || selectedFeeder.node_id_str
     : 'Select a feeder';
@@ -239,7 +239,7 @@ export function FeederCoveragePage() {
                 </SelectTrigger>
                 <SelectContent>
                   {feederOptions.map((n) => (
-                    <SelectItem key={n.node_id} value={String(n.node_id)}>
+                    <SelectItem key={n.meshtastic_node_id} value={String(n.meshtastic_node_id)}>
                       {n.short_name || n.long_name || n.node_id_str}
                     </SelectItem>
                   ))}

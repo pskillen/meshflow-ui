@@ -18,7 +18,7 @@ export function NodeSelector({ nodes, onSelect, onCancel, excludeNodes = [] }: N
   const [showDebug, setShowDebug] = useState(false);
 
   // First filter: exclude already selected nodes
-  const nodesAfterExclusion = nodes.filter((node) => !excludeNodes.includes(node.node_id));
+  const nodesAfterExclusion = nodes.filter((node) => !excludeNodes.includes(node.meshtastic_node_id));
 
   // Second filter: search query
   const availableNodes = nodesAfterExclusion.filter((node) => {
@@ -77,7 +77,7 @@ export function NodeSelector({ nodes, onSelect, onCancel, excludeNodes = [] }: N
             </TableHeader>
             <TableBody>
               {availableNodes.map((node) => (
-                <TableRow key={node.node_id}>
+                <TableRow key={node.meshtastic_node_id}>
                   <TableCell>
                     <div>
                       {node.short_name || node.node_id_str}
@@ -90,7 +90,7 @@ export function NodeSelector({ nodes, onSelect, onCancel, excludeNodes = [] }: N
                     {node.latest_device_metrics?.battery_level ? `${node.latest_device_metrics.battery_level}%` : '-'}
                   </TableCell>
                   <TableCell>
-                    <Button variant="secondary" size="sm" onClick={() => onSelect(node.node_id)}>
+                    <Button variant="secondary" size="sm" onClick={() => onSelect(node.meshtastic_node_id)}>
                       Monitor
                     </Button>
                   </TableCell>

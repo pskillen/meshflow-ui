@@ -21,7 +21,7 @@ vi.mock('@/hooks/api/useRfPropagation', () => ({
 function makeNode(overrides: Partial<ObservedNode> = {}): ObservedNode {
   return {
     internal_id: 1,
-    node_id: 200,
+    meshtastic_node_id: 200,
     node_id_str: '!000000c8',
     mac_addr: null,
     long_name: 'Tower',

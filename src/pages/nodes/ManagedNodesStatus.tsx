@@ -407,19 +407,19 @@ function ManagedNodesStatusContent() {
                   {group.nodes.map((node) => {
                     const tier = getManagedNodeStatusTier(node.last_packet_ingested_at);
                     return (
-                      <TableRow key={node.node_id}>
+                      <TableRow key={node.meshtastic_node_id}>
                         <TableCell>
                           <Badge style={{ backgroundColor: managedNodeStatusTierColor(tier), color: 'white' }}>
                             {tierLabel(tier)}
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <Link to={`/nodes/${node.node_id}`} className="text-primary hover:underline">
+                          <Link to={`/nodes/${node.meshtastic_node_id}`} className="text-primary hover:underline">
                             {node.short_name ?? '—'}
                           </Link>
                         </TableCell>
                         <TableCell>
-                          <Link to={`/nodes/${node.node_id}`} className="text-primary hover:underline">
+                          <Link to={`/nodes/${node.meshtastic_node_id}`} className="text-primary hover:underline">
                             {node.long_name ?? node.node_id_str}
                           </Link>
                         </TableCell>

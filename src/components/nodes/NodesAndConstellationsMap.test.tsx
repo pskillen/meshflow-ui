@@ -45,7 +45,7 @@ vi.mock('leaflet', () => ({
 
 function managedWithConstellation(): ManagedNode {
   return {
-    node_id: 1,
+    meshtastic_node_id: 1,
     node_id_str: '!00000001',
     long_name: 'A',
     short_name: 'A',

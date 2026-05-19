@@ -190,8 +190,8 @@ export function TracerouteHeatmapChrome({
           <SelectContent>
             <SelectItem value="all">All sources</SelectItem>
             {managedNodes.map((n) => (
-              <SelectItem key={n.node_id} value={String(n.node_id)}>
-                {n.short_name ?? n.node_id_str ?? String(n.node_id)}
+              <SelectItem key={n.meshtastic_node_id} value={String(n.meshtastic_node_id)}>
+                {n.short_name ?? n.node_id_str ?? String(n.meshtastic_node_id)}
               </SelectItem>
             ))}
           </SelectContent>

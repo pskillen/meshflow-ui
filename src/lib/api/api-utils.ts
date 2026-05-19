@@ -4,7 +4,7 @@ import { NodeWatch, ObservedNode } from '../models';
 export function parseObservedNodeFromAPI(node: ObservedNode): ObservedNode {
   return {
     ...node,
-    node_id: node.node_id ?? 0,
+    meshtastic_node_id: node.meshtastic_node_id ?? 0,
     last_heard: node.last_heard ? new Date(node.last_heard) : null,
     latest_position: node.latest_position
       ? {

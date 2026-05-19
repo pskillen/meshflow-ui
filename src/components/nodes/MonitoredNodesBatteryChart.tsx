@@ -86,7 +86,7 @@ export function MonitoredNodesBatteryChart({
     const allTimestamps = Array.from(
       new Set(
         nodes.flatMap((node) => {
-          const metrics = metricsMap[node.node_id] || [];
+          const metrics = metricsMap[node.meshtastic_node_id] || [];
           return metrics.filter((m) => m.reported_time != null).map((m) => new Date(m.reported_time!).getTime());
         })
       )
@@ -95,7 +95,7 @@ export function MonitoredNodesBatteryChart({
     // 2. Build a lookup for each node
     const nodeLookups: Record<string, Record<number, number>> = {};
     nodes.forEach((node) => {
-      const metrics = metricsMap[node.node_id] || [];
+      const metrics = metricsMap[node.meshtastic_node_id] || [];
       const lookup: Record<number, number> = {};
       metrics
         .filter((m) => m.reported_time != null)
@@ -164,20 +164,20 @@ export function MonitoredNodesBatteryChart({
     const allTimestamps = pivotedData.map((row) => row.timestamp);
     const nodeLookups: Record<string, Record<number, number>> = {};
     nodes.forEach((node) => {
-      const metrics = metricsMap[node.node_id] || [];
+      const metrics = metricsMap[node.meshtastic_node_id] || [];
       const lookup: Record<number, number> = {};
       metrics
         .filter((m) => m.reported_time != null)
         .forEach((m) => {
           lookup[new Date(m.reported_time!).getTime()] = m.battery_level;
         });
-      const name = node.short_name || node.node_id_str || String(node.node_id);
+      const name = node.short_name || node.node_id_str || String(node.meshtastic_node_id);
       nodeLookups[name] = lookup;
     });
     return allTimestamps.map((timestamp) => {
       const row: Record<string, number | null> = { timestamp };
       for (const node of nodes) {
-        const name = node.short_name || node.node_id_str || String(node.node_id);
+        const name = node.short_name || node.node_id_str || String(node.meshtastic_node_id);
         if (timestamp !== undefined && timestamp !== null) {
           row[name] = nodeLookups[name][timestamp] ?? null;
         } else {

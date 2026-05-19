@@ -84,14 +84,14 @@ export function isRfPropagationNone(r: RfPropagationPollResult): r is { status: 
 
 /**
  * Observed node from Meshflow API (Meshtastic and MeshCore in one list resource).
- * Use `protocol` on list queries to filter; detail by numeric `node_id` is Meshtastic-only today.
+ * Use `protocol` on list queries to filter; detail by numeric `meshtastic_node_id` is Meshtastic-only today.
  */
 export interface ObservedNode {
   /** Stable UUID primary key (API returns string; parsed in api-utils). */
   internal_id: number;
   protocol?: MeshProtocol;
   /** Meshtastic numeric node id; null/absent for MeshCore (use node_id_str / mc_pubkey*). */
-  node_id: number;
+  meshtastic_node_id: number;
   /** Canonical display id: `!hex8` (Meshtastic) or `mc:prefix12` (MeshCore). */
   node_id_str: string;
   mc_pubkey?: string | null;
@@ -171,7 +171,7 @@ export interface MeshCorePacketListItem {
 // ManagedNode from Meshflow API v2
 export interface ManagedNode {
   protocol?: MeshProtocol;
-  node_id: number;
+  meshtastic_node_id: number;
   long_name: string | null;
   short_name: string | null;
   last_heard: Date | null;
@@ -216,7 +216,7 @@ export interface OwnedManagedNode extends ManagedNode {
 }
 
 export interface CreateManagedNode {
-  node_id: number;
+  meshtastic_node_id: number;
   constellation_id: number;
   name: string;
   owner_id: number | null;
@@ -234,7 +234,7 @@ export interface CreateManagedNode {
 
 /** Enriched route node with position for map display (from API route_nodes/route_back_nodes) */
 export interface TracerouteRouteNode {
-  node_id: number;
+  meshtastic_node_id: number;
   node_id_str: string;
   short_name: string | null;
   position: { latitude: number; longitude: number } | null;
@@ -263,8 +263,8 @@ export interface AutoTraceRoute {
   /** Last dispatch/channel error while pending, if any. */
   dispatch_error?: string | null;
   status: 'pending' | 'sent' | 'completed' | 'failed';
-  route: Array<{ node_id: number; snr: number | null }> | null;
-  route_back: Array<{ node_id: number; snr: number | null }> | null;
+  route: Array<{ meshtastic_node_id: number; snr: number | null }> | null;
+  route_back: Array<{ meshtastic_node_id: number; snr: number | null }> | null;
   route_nodes?: TracerouteRouteNode[];
   route_back_nodes?: TracerouteRouteNode[];
   raw_packet: string | null;
@@ -280,7 +280,7 @@ export interface TextMessageSender {
 }
 
 export interface PacketObservationObserver {
-  node_id: number;
+  meshtastic_node_id: number;
   node_id_str: string;
   long_name: string | null;
   short_name: string | null;
@@ -420,7 +420,7 @@ export interface Position {
 // API response types
 export interface NodeSearchResult {
   internal_id: number;
-  node_id: number;
+  meshtastic_node_id: number;
   node_id_str: string;
   short_name: string | null;
   long_name: string | null;
@@ -465,7 +465,7 @@ export interface PacketStats {
 }
 
 export interface NeighbourStatsCandidate {
-  node_id: number;
+  meshtastic_node_id: number;
   node_id_str: string;
   short_name: string | null;
 }
@@ -515,7 +515,7 @@ export interface Constellation {
 
 export interface NodeClaim {
   node: {
-    node_id: number;
+    meshtastic_node_id: number;
     node_id_str: string;
     long_name: string;
     short_name: string;
@@ -697,7 +697,7 @@ export interface DxNodeMetadataPublic {
 
 export interface DxDestinationNode {
   internal_id: string;
-  node_id: number;
+  meshtastic_node_id: number;
   node_id_str: string;
   short_name: string;
   long_name: string;
@@ -706,7 +706,7 @@ export interface DxDestinationNode {
 
 export interface DxManagedNodeMinimal {
   internal_id: string;
-  node_id: number;
+  meshtastic_node_id: number;
   node_id_str: string;
   name: string;
 }
@@ -735,7 +735,7 @@ export type DxExplorationSkipReason =
 
 export interface DxObservedNodeHop {
   internal_id: string;
-  node_id: number;
+  meshtastic_node_id: number;
   node_id_str: string;
   short_name: string;
   long_name: string;
@@ -811,7 +811,7 @@ export interface DxEventDetail extends DxEventListItem {
 }
 
 export interface DxNodeExclusionResponse {
-  node_id: number;
+  meshtastic_node_id: number;
   node_id_str: string;
   exclude_from_detection: boolean;
   exclude_notes: string;

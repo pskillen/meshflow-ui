@@ -47,12 +47,14 @@ function RoleNodeTable({ nodes }: { nodes: HeatmapNode[] }) {
       </TableHeader>
       <TableBody>
         {nodes.map((n) => (
-          <TableRow key={n.node_id}>
+          <TableRow key={n.meshtastic_node_id}>
             <TableCell>
-              <Link to={`/nodes/${n.node_id}`} className="font-medium text-primary hover:underline">
+              <Link to={`/nodes/${n.meshtastic_node_id}`} className="font-medium text-primary hover:underline">
                 {getHeatmapNodeLabel(n)}
               </Link>
-              <div className="text-muted-foreground text-xs">{n.node_id_str ?? `!${n.node_id.toString(16)}`}</div>
+              <div className="text-muted-foreground text-xs">
+                {n.node_id_str ?? `!${n.meshtastic_node_id.toString(16)}`}
+              </div>
             </TableCell>
             <TableCell className="text-right tabular-nums">
               {n.centrality != null ? `${(n.centrality * 100).toFixed(1)}%` : '—'}

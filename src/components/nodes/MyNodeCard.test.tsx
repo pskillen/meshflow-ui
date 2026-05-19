@@ -18,7 +18,7 @@ vi.mock('@/components/nodes/MeshWatchControls', () => ({
 function makeNode(overrides: Partial<ObservedNode> = {}): ObservedNode {
   return {
     internal_id: 1,
-    node_id: 100,
+    meshtastic_node_id: 100,
     node_id_str: '!00000064',
     mac_addr: null,
     long_name: 'Long',

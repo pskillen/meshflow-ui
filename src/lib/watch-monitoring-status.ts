@@ -69,7 +69,7 @@ export function deriveWatchMonitoringStatus(watch: NodeWatch, nowMs: number = Da
   return 'unknown';
 }
 
-/** Stable sort: status rank, then last heard ascending (stale first), then node_id. */
+/** Stable sort: status rank, then last heard ascending (stale first), then meshtastic_node_id. */
 export function compareWatchesByMonitoringStatus(a: NodeWatch, b: NodeWatch, nowMs?: number): number {
   const t = nowMs ?? Date.now();
   const sa = deriveWatchMonitoringStatus(a, t);
@@ -84,7 +84,7 @@ export function compareWatchesByMonitoringStatus(a: NodeWatch, b: NodeWatch, now
   if (la == null && lb != null) return 1;
   if (la != null && lb == null) return -1;
 
-  return a.observed_node.node_id - b.observed_node.node_id;
+  return a.observed_node.meshtastic_node_id - b.observed_node.meshtastic_node_id;
 }
 
 export function sortWatchesByMonitoringStatus(watches: NodeWatch[], nowMs?: number): NodeWatch[] {

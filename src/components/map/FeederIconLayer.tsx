@@ -27,7 +27,7 @@ const FEEDER_ICON_DESCRIPTOR = {
 
 export type FeederIconDatum = Pick<
   FeederReachFeeder,
-  'lat' | 'lng' | 'node_id' | 'node_id_str' | 'short_name' | 'long_name' | 'managed_node_id'
+  'lat' | 'lng' | 'meshtastic_node_id' | 'node_id_str' | 'short_name' | 'long_name' | 'managed_node_id'
 > & { lat: number; lng: number };
 
 export function buildFeederIconLayer<T extends FeederIconDatum>(

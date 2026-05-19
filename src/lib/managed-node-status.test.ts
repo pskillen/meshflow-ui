@@ -49,7 +49,7 @@ describe('hasManagedNodeEverFedData', () => {
 
 describe('filterManagedNodesForMapDisplay', () => {
   const base: ManagedNode = {
-    node_id: 1,
+    meshtastic_node_id: 1,
     long_name: null,
     short_name: 'A',
     last_heard: null,
@@ -61,8 +61,8 @@ describe('filterManagedNodesForMapDisplay', () => {
   };
 
   it('drops nodes with no ingestion timestamp', () => {
-    const fed: ManagedNode = { ...base, node_id: 2, last_packet_ingested_at: new Date() };
-    const never: ManagedNode = { ...base, node_id: 3 };
+    const fed: ManagedNode = { ...base, meshtastic_node_id: 2, last_packet_ingested_at: new Date() };
+    const never: ManagedNode = { ...base, meshtastic_node_id: 3 };
     expect(filterManagedNodesForMapDisplay([fed, never])).toEqual([fed]);
   });
 });

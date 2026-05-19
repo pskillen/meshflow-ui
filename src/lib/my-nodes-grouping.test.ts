@@ -20,7 +20,7 @@ const NOW = new Date('2026-04-21T12:00:00.000Z');
 function makeObserved(overrides: Partial<ObservedNode> = {}): ObservedNode {
   return {
     internal_id: 1,
-    node_id: 100,
+    meshtastic_node_id: 100,
     node_id_str: '!00000064',
     mac_addr: null,
     long_name: 'LN',
@@ -35,7 +35,7 @@ function makeObserved(overrides: Partial<ObservedNode> = {}): ObservedNode {
 
 function makeManaged(overrides: Partial<ManagedNode> = {}): ManagedNode {
   return {
-    node_id: 200,
+    meshtastic_node_id: 200,
     long_name: 'Managed LN',
     short_name: 'M1',
     last_heard: NOW,
@@ -97,14 +97,14 @@ describe('groupClaimedNodes', () => {
 
   it('partitions nodes into buckets', () => {
     const online = makeObserved({
-      node_id: 1,
+      meshtastic_node_id: 1,
       last_heard: new Date(NOW.getTime() - 60_000),
     });
     const recent = makeObserved({
-      node_id: 2,
+      meshtastic_node_id: 2,
       last_heard: new Date(NOW.getTime() - MY_NODES_CLAIMED_ONLINE_MS - 60_000),
     });
-    const offline = makeObserved({ node_id: 3, last_heard: null });
+    const offline = makeObserved({ meshtastic_node_id: 3, last_heard: null });
     const g = groupClaimedNodes([online, recent, offline], NOW);
     expect(g.online).toEqual([online]);
     expect(g.recent).toEqual([recent]);
@@ -271,13 +271,13 @@ describe('getPositionHint', () => {
 });
 
 describe('buildNodesForMap and merge', () => {
-  it('dedupes by node_id and merges managed position when observed has none', () => {
+  it('dedupes by meshtastic_node_id and merges managed position when observed has none', () => {
     const claimed = makeObserved({
-      node_id: 42,
+      meshtastic_node_id: 42,
       latest_position: null,
     });
     const managed = makeManaged({
-      node_id: 42,
+      meshtastic_node_id: 42,
       position: { latitude: 10, longitude: 20 },
     });
     const merged = buildNodesForMap([claimed], [managed]);
@@ -288,7 +288,7 @@ describe('buildNodesForMap and merge', () => {
 
   it('keeps claimed position when already valid', () => {
     const claimed = makeObserved({
-      node_id: 42,
+      meshtastic_node_id: 42,
       latest_position: {
         latitude: 1,
         longitude: 2,
@@ -299,7 +299,7 @@ describe('buildNodesForMap and merge', () => {
       },
     });
     const managed = makeManaged({
-      node_id: 42,
+      meshtastic_node_id: 42,
       position: { latitude: 10, longitude: 20 },
     });
     const merged = buildNodesForMap([claimed], [managed]);
@@ -307,15 +307,15 @@ describe('buildNodesForMap and merge', () => {
   });
 
   it('adds managed-only nodes', () => {
-    const managed = makeManaged({ node_id: 99 });
+    const managed = makeManaged({ meshtastic_node_id: 99 });
     const merged = buildNodesForMap([], [managed]);
     expect(merged).toHaveLength(1);
-    expect(merged[0].node_id).toBe(99);
+    expect(merged[0].meshtastic_node_id).toBe(99);
   });
 
   it('mergeManagedPositionIntoObserved fills from managed', () => {
-    const o = makeObserved({ node_id: 1, latest_position: null });
-    const m = makeManaged({ node_id: 1, position: { latitude: 3, longitude: 4 } });
+    const o = makeObserved({ meshtastic_node_id: 1, latest_position: null });
+    const m = makeManaged({ meshtastic_node_id: 1, position: { latitude: 3, longitude: 4 } });
     const r = mergeManagedPositionIntoObserved(o, m);
     expect(r.latest_position?.latitude).toBe(3);
   });

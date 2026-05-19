@@ -86,7 +86,7 @@ export function TracerouteDetailModal({ tracerouteId, open, onOpenChange }: Trac
             {traceroute ? (
               <>
                 <Link
-                  to={`/nodes/${traceroute.source_node.node_id}`}
+                  to={`/nodes/${traceroute.source_node.meshtastic_node_id}`}
                   onClick={(e) => e.stopPropagation()}
                   className="font-medium text-primary underline-offset-4 hover:underline"
                 >
@@ -94,7 +94,7 @@ export function TracerouteDetailModal({ tracerouteId, open, onOpenChange }: Trac
                 </Link>
                 <span aria-hidden>→</span>
                 <Link
-                  to={`/nodes/${traceroute.target_node.node_id}`}
+                  to={`/nodes/${traceroute.target_node.meshtastic_node_id}`}
                   onClick={(e) => e.stopPropagation()}
                   className="font-medium text-primary underline-offset-4 hover:underline"
                 >
@@ -119,7 +119,7 @@ export function TracerouteDetailModal({ tracerouteId, open, onOpenChange }: Trac
               <Badge variant="outline" className="gap-1">
                 <span className="text-muted-foreground">Source:</span>
                 <Link
-                  to={`/nodes/${traceroute.source_node.node_id}`}
+                  to={`/nodes/${traceroute.source_node.meshtastic_node_id}`}
                   onClick={(e) => e.stopPropagation()}
                   className="text-primary underline-offset-4 hover:underline"
                 >
@@ -129,7 +129,7 @@ export function TracerouteDetailModal({ tracerouteId, open, onOpenChange }: Trac
               <Badge variant="outline" className="gap-1">
                 <span className="text-muted-foreground">Target:</span>
                 <Link
-                  to={`/nodes/${traceroute.target_node.node_id}`}
+                  to={`/nodes/${traceroute.target_node.meshtastic_node_id}`}
                   onClick={(e) => e.stopPropagation()}
                   className="text-primary underline-offset-4 hover:underline"
                 >

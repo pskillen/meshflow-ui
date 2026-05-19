@@ -234,7 +234,7 @@ export function managedNodeToObservedNode(m: ManagedNode): ObservedNode {
   const latest_position = positionFromManaged(m);
   return {
     internal_id: 0,
-    node_id: m.node_id,
+    meshtastic_node_id: m.meshtastic_node_id,
     node_id_str: m.node_id_str,
     mac_addr: null,
     long_name: m.long_name,
@@ -258,20 +258,20 @@ export function mergeManagedPositionIntoObserved(node: ObservedNode, m: ManagedN
 }
 
 /**
- * Union of claimed + managed for `NodesMap` / battery chart: one entry per `node_id`.
+ * Union of claimed + managed for `NodesMap` / battery chart: one entry per `meshtastic_node_id`.
  * When both exist, claimed data wins; managed fills in default position if needed.
  */
 export function buildNodesForMap(claimed: ObservedNode[], managed: ManagedNode[]): ObservedNode[] {
   const map = new Map<number, ObservedNode>();
   for (const c of claimed) {
-    map.set(c.node_id, c);
+    map.set(c.meshtastic_node_id, c);
   }
   for (const m of managed) {
-    const existing = map.get(m.node_id);
+    const existing = map.get(m.meshtastic_node_id);
     if (existing) {
-      map.set(m.node_id, mergeManagedPositionIntoObserved(existing, m));
+      map.set(m.meshtastic_node_id, mergeManagedPositionIntoObserved(existing, m));
     } else {
-      map.set(m.node_id, managedNodeToObservedNode(m));
+      map.set(m.meshtastic_node_id, managedNodeToObservedNode(m));
     }
   }
   return [...map.values()];

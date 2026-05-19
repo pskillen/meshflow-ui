@@ -33,7 +33,7 @@ export interface NodeTracerouteLinksMapProps {
 }
 
 function getNodeLabel(node: NodeTracerouteLinkNode): string {
-  return node.short_name || node.long_name || node.node_id_str || `!${node.node_id.toString(16)}`;
+  return node.short_name || node.long_name || node.node_id_str || `!${node.meshtastic_node_id.toString(16)}`;
 }
 
 export function NodeTracerouteLinksMap({ edges, nodes, focusNodeId, showLabels = true }: NodeTracerouteLinksMapProps) {
@@ -45,7 +45,7 @@ export function NodeTracerouteLinksMap({ edges, nodes, focusNodeId, showLabels =
       if (info.object && (info.layer?.id === 'links-nodes' || info.layer?.id === 'links-node-labels')) {
         const node = info.object as NodeTracerouteLinkNode;
         setSelectedNode(node);
-        setSelectedEdge(edges.find((e) => e.to_node_id === node.node_id) ?? null);
+        setSelectedEdge(edges.find((e) => e.to_node_id === node.meshtastic_node_id) ?? null);
       } else {
         setSelectedNode(null);
         setSelectedEdge(null);
@@ -89,8 +89,8 @@ export function NodeTracerouteLinksMap({ edges, nodes, focusNodeId, showLabels =
       id: 'links-nodes',
       data: nodes,
       getPosition: (d) => [d.lng, d.lat],
-      getFillColor: (d) => (d.node_id === focusNodeId ? FOCUS_NODE_COLOR : PEER_NODE_COLOR),
-      getRadius: (d) => (d.node_id === focusNodeId ? 150 : 100),
+      getFillColor: (d) => (d.meshtastic_node_id === focusNodeId ? FOCUS_NODE_COLOR : PEER_NODE_COLOR),
+      getRadius: (d) => (d.meshtastic_node_id === focusNodeId ? 150 : 100),
       radiusMinPixels: 4,
       radiusMaxPixels: 12,
       pickable: true,
@@ -136,7 +136,7 @@ export function NodeTracerouteLinksMap({ edges, nodes, focusNodeId, showLabels =
       ];
       return viewStateFromLngLatBBox(bbox, { padding: 40, maxZoom: 14 });
     }
-    const focusNode = nodes.find((n) => n.node_id === focusNodeId);
+    const focusNode = nodes.find((n) => n.meshtastic_node_id === focusNodeId);
     if (focusNode && focusNode.lat != null && focusNode.lng != null) {
       return { longitude: focusNode.lng, latitude: focusNode.lat, zoom: 10 };
     }
@@ -178,7 +178,7 @@ export function NodeTracerouteLinksMap({ edges, nodes, focusNodeId, showLabels =
                   : getNodeLabel(selectedNode)}
               </div>
               <div className="mt-0.5 text-xs text-slate-400">
-                {selectedNode.node_id_str || `!${selectedNode.node_id.toString(16)}`}
+                {selectedNode.node_id_str || `!${selectedNode.meshtastic_node_id.toString(16)}`}
               </div>
               {selectedEdge && (
                 <div className="mt-1 space-y-0.5 text-xs">
@@ -195,7 +195,7 @@ export function NodeTracerouteLinksMap({ edges, nodes, focusNodeId, showLabels =
                 </div>
               )}
               <Link
-                to={`/nodes/${selectedNode.node_id}`}
+                to={`/nodes/${selectedNode.meshtastic_node_id}`}
                 className="mt-1 inline-block text-xs text-emerald-400 hover:text-emerald-300 hover:underline"
               >
                 Open details

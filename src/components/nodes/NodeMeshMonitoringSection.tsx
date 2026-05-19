@@ -59,7 +59,7 @@ export function NodeMeshMonitoringSection({ node }: { node: ObservedNode }) {
               node={node}
               watch={watch}
               watchesQuery={watchesQuery}
-              idPrefix={`detail-${node.node_id}`}
+              idPrefix={`detail-${node.meshtastic_node_id}`}
             />
           </div>
 
@@ -131,7 +131,7 @@ export function NodeMeshMonitoringSection({ node }: { node: ObservedNode }) {
         open={settingsOpen}
         onOpenChange={setSettingsOpen}
         observedNodeId={observedUuid}
-        nodeId={node.node_id}
+        nodeId={node.meshtastic_node_id}
       />
     </div>
   );

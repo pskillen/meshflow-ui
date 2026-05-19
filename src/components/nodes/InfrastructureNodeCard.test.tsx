@@ -15,7 +15,7 @@ vi.mock('@/hooks/api/useRfPropagation', () => ({
 
 function minimalManaged(nodeId: number): ManagedNode {
   return {
-    node_id: nodeId,
+    meshtastic_node_id: nodeId,
     long_name: null,
     short_name: null,
     last_heard: null,
@@ -40,7 +40,7 @@ function renderCard(node: ObservedNode, opts?: { managedNode?: ManagedNode | nul
 function makeNode(overrides: Partial<ObservedNode> = {}): ObservedNode {
   return {
     internal_id: 1,
-    node_id: 100,
+    meshtastic_node_id: 100,
     node_id_str: '!00000064',
     mac_addr: null,
     long_name: 'Hilltop',
@@ -56,18 +56,18 @@ function makeNode(overrides: Partial<ObservedNode> = {}): ObservedNode {
 
 describe('InfrastructureNodeCard', () => {
   it('renders Coverage map link only when the infra node is a managed feeder', () => {
-    renderCard(makeNode({ node_id: 4242 }), { managedNode: minimalManaged(4242) });
+    renderCard(makeNode({ meshtastic_node_id: 4242 }), { managedNode: minimalManaged(4242) });
     const link = screen.getByTestId('infra-coverage-link-4242');
     expect(link.getAttribute('href')).toBe('/traceroutes/map/coverage?feeder=4242');
   });
 
   it('does not render Coverage map link for unmanaged infrastructure nodes', () => {
-    renderCard(makeNode({ node_id: 4242 }));
+    renderCard(makeNode({ meshtastic_node_id: 4242 }));
     expect(screen.queryByTestId('infra-coverage-link-4242')).not.toBeInTheDocument();
   });
 
-  it('also renders the Open node details link to /nodes/<node_id>', () => {
-    renderCard(makeNode({ node_id: 7 }));
+  it('also renders the Open node details link to /nodes/<meshtastic_node_id>', () => {
+    renderCard(makeNode({ meshtastic_node_id: 7 }));
     const detailsLink = screen.getByRole('link', { name: /open node details/i });
     expect(detailsLink.getAttribute('href')).toBe('/nodes/7');
   });
@@ -77,7 +77,7 @@ describe('InfrastructureNodeCard', () => {
     const { rerender } = render(
       <QueryClientProvider client={client}>
         <MemoryRouter>
-          <InfrastructureNodeCard node={makeNode({ node_id: 9, has_ready_rf_render: false })} />
+          <InfrastructureNodeCard node={makeNode({ meshtastic_node_id: 9, has_ready_rf_render: false })} />
         </MemoryRouter>
       </QueryClientProvider>
     );
@@ -85,7 +85,7 @@ describe('InfrastructureNodeCard', () => {
     rerender(
       <QueryClientProvider client={client}>
         <MemoryRouter>
-          <InfrastructureNodeCard node={makeNode({ node_id: 9, has_ready_rf_render: true })} />
+          <InfrastructureNodeCard node={makeNode({ meshtastic_node_id: 9, has_ready_rf_render: true })} />
         </MemoryRouter>
       </QueryClientProvider>
     );

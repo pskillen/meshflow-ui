@@ -8,7 +8,7 @@ import { countWatchesByMonitoringStatus } from '@/lib/watch-monitoring-status';
 function makeNode(overrides: Partial<ObservedNode> = {}): ObservedNode {
   return {
     internal_id: 1,
-    node_id: 50,
+    meshtastic_node_id: 50,
     node_id_str: '!00000032',
     mac_addr: null,
     long_name: null,
@@ -24,7 +24,7 @@ function makeNode(overrides: Partial<ObservedNode> = {}): ObservedNode {
 function makeWatch(id: number, node: Partial<ObservedNode>): NodeWatch {
   return {
     id,
-    observed_node: makeNode({ internal_id: id, node_id: 50 + id, ...node }) as NodeWatch['observed_node'],
+    observed_node: makeNode({ internal_id: id, meshtastic_node_id: 50 + id, ...node }) as NodeWatch['observed_node'],
     offline_after: 3600,
     enabled: true,
     offline_notifications_enabled: true,

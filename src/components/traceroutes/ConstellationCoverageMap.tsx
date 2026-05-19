@@ -26,15 +26,15 @@ export interface SmoothedHex extends ConstellationCoverageHex {
 }
 
 function getTargetLabel(t: ConstellationCoverageTarget): string {
-  return t.short_name || t.long_name || t.node_id_str || `!${t.node_id.toString(16)}`;
+  return t.short_name || t.long_name || t.node_id_str || `!${t.meshtastic_node_id.toString(16)}`;
 }
 
 function feederLabel(f: FeederIconDatum): string {
-  return f.short_name || f.long_name || f.node_id_str || `!${f.node_id.toString(16)}`;
+  return f.short_name || f.long_name || f.node_id_str || `!${f.meshtastic_node_id.toString(16)}`;
 }
 
 function ghostLabel(g: CoverageHeardGhost): string {
-  return g.short_name || g.long_name || g.node_id_str || `!${g.node_id.toString(16)}`;
+  return g.short_name || g.long_name || g.node_id_str || `!${g.meshtastic_node_id.toString(16)}`;
 }
 
 export interface ConstellationCoverageMapProps {
@@ -204,10 +204,10 @@ export function ConstellationCoverageMap({
               </div>
               <div className="mt-0.5 font-semibold">{ghostLabel(selectedHeardGhost)}</div>
               <div className="mt-0.5 text-xs text-slate-400">
-                {selectedHeardGhost.node_id_str || `!${selectedHeardGhost.node_id.toString(16)}`}
+                {selectedHeardGhost.node_id_str || `!${selectedHeardGhost.meshtastic_node_id.toString(16)}`}
               </div>
               <Link
-                to={`/nodes/${selectedHeardGhost.node_id}`}
+                to={`/nodes/${selectedHeardGhost.meshtastic_node_id}`}
                 className="mt-1 inline-block text-xs text-emerald-400 hover:text-emerald-300 hover:underline"
               >
                 Open details
@@ -278,7 +278,7 @@ export function ConstellationCoverageMap({
                   : getTargetLabel(selectedTarget)}
               </div>
               <div className="mt-0.5 text-xs text-slate-400">
-                {selectedTarget.node_id_str || `!${selectedTarget.node_id.toString(16)}`}
+                {selectedTarget.node_id_str || `!${selectedTarget.meshtastic_node_id.toString(16)}`}
               </div>
               <div className="mt-1 text-xs">
                 {selectedTarget.successes} / {selectedTarget.attempts} (
@@ -295,7 +295,7 @@ export function ConstellationCoverageMap({
                 {selectedTarget.contributing_feeders === 1 ? '' : 's'}
               </div>
               <Link
-                to={`/nodes/${selectedTarget.node_id}`}
+                to={`/nodes/${selectedTarget.meshtastic_node_id}`}
                 className="mt-1 inline-block text-xs text-emerald-400 hover:text-emerald-300 hover:underline"
               >
                 Open details
@@ -328,10 +328,10 @@ export function ConstellationCoverageMap({
               <div className="text-xs font-medium uppercase tracking-wide text-amber-400">Managed node (feeder)</div>
               <div className="mt-0.5 font-semibold">{feederLabel(selectedFeeder)}</div>
               <div className="mt-0.5 text-xs text-slate-400">
-                {selectedFeeder.node_id_str || `!${selectedFeeder.node_id.toString(16)}`}
+                {selectedFeeder.node_id_str || `!${selectedFeeder.meshtastic_node_id.toString(16)}`}
               </div>
               <Link
-                to={`/nodes/${selectedFeeder.node_id}`}
+                to={`/nodes/${selectedFeeder.meshtastic_node_id}`}
                 className="mt-1 inline-block text-xs text-emerald-400 hover:text-emerald-300 hover:underline"
               >
                 Open details

@@ -69,7 +69,7 @@ const mockedUseManagedNodes = vi.mocked(useManagedNodesSuspense);
 function makeObservedNode(overrides: Partial<ObservedNode> = {}): ObservedNode {
   return {
     internal_id: 1,
-    node_id: 100,
+    meshtastic_node_id: 100,
     node_id_str: '!00000064',
     mac_addr: null,
     long_name: 'Target node',
@@ -82,7 +82,7 @@ function makeObservedNode(overrides: Partial<ObservedNode> = {}): ObservedNode {
 
 function makeManagedNode(overrides: Partial<ManagedNode> = {}): ManagedNode {
   return {
-    node_id: 200,
+    meshtastic_node_id: 200,
     long_name: 'Source node',
     short_name: 'SRC',
     last_heard: null,
@@ -161,7 +161,7 @@ function setupHooks(options: {
 function renderSection(observedNode: ObservedNode = makeObservedNode()) {
   return render(
     <MemoryRouter>
-      <NodeTracerouteHistorySection nodeId={observedNode.node_id} observedNode={observedNode} />
+      <NodeTracerouteHistorySection nodeId={observedNode.meshtastic_node_id} observedNode={observedNode} />
     </MemoryRouter>
   );
 }
@@ -219,7 +219,7 @@ describe('NodeTracerouteHistorySection', () => {
 
   it('opens the trigger modal with fixedTargetNode when the header button is clicked', () => {
     const managed = makeManagedNode();
-    const observed = makeObservedNode({ node_id: 555, node_id_str: '!0000022b' });
+    const observed = makeObservedNode({ meshtastic_node_id: 555, node_id_str: '!0000022b' });
     setupHooks({ traceroutes: [], triggerableNodes: [managed] });
     renderSection(observed);
     fireEvent.click(screen.getByRole('button', { name: /trigger traceroute to this node/i }));
@@ -227,8 +227,8 @@ describe('NodeTracerouteHistorySection', () => {
   });
 
   it('calls the trigger mutation with source + target when the repeat button is clicked', () => {
-    const managed = makeManagedNode({ node_id: 777 });
-    const observed = makeObservedNode({ node_id: 888 });
+    const managed = makeManagedNode({ meshtastic_node_id: 777 });
+    const observed = makeObservedNode({ meshtastic_node_id: 888 });
     const mutate = vi.fn();
     setupHooks({
       traceroutes: [makeTraceroute({ source_node: managed, target_node: observed })],
@@ -245,7 +245,7 @@ describe('NodeTracerouteHistorySection', () => {
 
   it('renders a View all link pointing at the traceroute history filtered by target', () => {
     const managed = makeManagedNode();
-    const observed = makeObservedNode({ node_id: 100 });
+    const observed = makeObservedNode({ meshtastic_node_id: 100 });
     setupHooks({ traceroutes: [makeTraceroute({ source_node: managed })], triggerableNodes: [managed] });
     renderSection(observed);
     const link = screen.getByRole('link', { name: /view all traceroutes to this node/i });

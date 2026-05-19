@@ -172,11 +172,11 @@ export function ConstellationCoveragePage() {
 
   const representedForHeard = useMemo(() => {
     const s = new Set<number>();
-    for (const t of data?.targets ?? []) s.add(t.node_id);
-    for (const f of data?.feeders ?? []) s.add(f.node_id);
+    for (const t of data?.targets ?? []) s.add(t.meshtastic_node_id);
+    for (const f of data?.feeders ?? []) s.add(f.meshtastic_node_id);
     if (Number.isFinite(constellationIdNum)) {
       for (const m of managedNodes ?? []) {
-        if (m.constellation?.id === constellationIdNum && m.node_id != null) s.add(m.node_id);
+        if (m.constellation?.id === constellationIdNum && m.meshtastic_node_id != null) s.add(m.meshtastic_node_id);
       }
     }
     return s;

@@ -6,7 +6,7 @@ import type { AutoTraceRoute, ManagedNode, ObservedNode } from '@/lib/models';
 
 function makeSource(): ManagedNode {
   return {
-    node_id: 1,
+    meshtastic_node_id: 1,
     long_name: 'Source',
     short_name: 'SRC',
     last_heard: null,
@@ -21,7 +21,7 @@ function makeSource(): ManagedNode {
 function makeTarget(): ObservedNode {
   return {
     internal_id: 2,
-    node_id: 2,
+    meshtastic_node_id: 2,
     node_id_str: '!00000002',
     mac_addr: null,
     long_name: 'Target',

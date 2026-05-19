@@ -123,10 +123,10 @@ function lastHeardTime(node: ObservedNode): number {
  */
 export function partitionMeshInfraLowBatteryTableNodes(nodes: ObservedNode[], now: Date = new Date()): ObservedNode[] {
   const base = partitionLowBatteryNodes(nodes, now);
-  const inBase = new Set(base.map((n) => n.node_id));
+  const inBase = new Set(base.map((n) => n.meshtastic_node_id));
   const additions: ObservedNode[] = [];
   for (const n of nodes) {
-    if (inBase.has(n.node_id)) continue;
+    if (inBase.has(n.meshtastic_node_id)) continue;
     if (n.battery_alert_active) additions.push(n);
   }
   additions.sort((a, b) => lastHeardTime(b) - lastHeardTime(a));
@@ -140,9 +140,9 @@ export function partitionLowBatteryNodes(nodes: ObservedNode[], now: Date = new 
   const seen = new Set<number>();
   const candidates: ObservedNode[] = [];
   for (const n of nodes) {
-    if (seen.has(n.node_id)) continue;
+    if (seen.has(n.meshtastic_node_id)) continue;
     if (!qualifiesLowBatterySection(n, now)) continue;
-    seen.add(n.node_id);
+    seen.add(n.meshtastic_node_id);
     candidates.push(n);
   }
 
