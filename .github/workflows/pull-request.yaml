@@ -34,7 +34,7 @@ jobs:
           npm test
 
       - name: Test Report
-        uses: dorny/test-reporter@v2
+        uses: dorny/test-reporter@v3
         with:
           name: vitest
           path: reports/junit.xml
@@ -61,7 +61,7 @@ jobs:
         run: mkdir -p reports && npm run test:browser
 
       - name: Test report
-        uses: dorny/test-reporter@v2
+        uses: dorny/test-reporter@v3
         with:
           name: playwright
           path: reports/browser-junit.xml
