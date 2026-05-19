@@ -20,8 +20,16 @@ const VALID_MAP_TILE_SOURCES: MapTileSourceId[] = [
   'terrain',
 ];
 
+function canUseLocalStorage(): boolean {
+  try {
+    return typeof window !== 'undefined' && typeof localStorage !== 'undefined' && localStorage != null;
+  } catch {
+    return false;
+  }
+}
+
 export function getMapTileSource(): MapTileSourceId {
-  if (typeof window === 'undefined') return DEFAULT_MAP_TILE_SOURCE as MapTileSourceId;
+  if (!canUseLocalStorage()) return DEFAULT_MAP_TILE_SOURCE as MapTileSourceId;
   const stored = localStorage.getItem(STORAGE_KEYS.MAP_TILE_SOURCE);
   if (stored && VALID_MAP_TILE_SOURCES.includes(stored as MapTileSourceId)) {
     return stored as MapTileSourceId;
@@ -30,6 +38,7 @@ export function getMapTileSource(): MapTileSourceId {
 }
 
 export function setMapTileSource(source: MapTileSourceId): void {
+  if (!canUseLocalStorage()) return;
   localStorage.setItem(STORAGE_KEYS.MAP_TILE_SOURCE, source);
   window.dispatchEvent(new Event('meshflow-settings-changed'));
 }

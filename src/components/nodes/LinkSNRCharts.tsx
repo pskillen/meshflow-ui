@@ -66,7 +66,8 @@ function LinkSNRChart({
 }) {
   const chartData = React.useMemo(() => mergeSnrPoints(inbound, outbound), [inbound, outbound]);
 
-  const formatter: Formatter<ValueType, NameType> = (value: ValueType, name: NameType) => {
+  const formatter: Formatter<ValueType, NameType> = (value, name) => {
+    if (value === undefined) return ['', name];
     const numValue = typeof value === 'string' ? parseFloat(value) : value;
     if (typeof numValue !== 'number' || isNaN(numValue)) return ['-', name];
     return [`${numValue.toFixed(1)} dB`, name];
@@ -118,7 +119,7 @@ function LinkSNRChart({
         <Tooltip
           content={
             <ChartTooltipContent
-              labelFormatter={(_, payload: Payload<ValueType, NameType>[]) => {
+              labelFormatter={(_, payload: readonly Payload<ValueType, NameType>[]) => {
                 if (payload?.[0]?.payload?.timestamp) {
                   const date = new Date(payload[0].payload.timestamp);
                   return date.toLocaleString('en-GB', {
@@ -190,7 +191,8 @@ function LinkSNRChartMultiSeries({
     return [minTs, maxTs];
   }, [chartData, timeRangeStart, timeRangeEnd]);
 
-  const formatter: Formatter<ValueType, NameType> = (value: ValueType, name: NameType) => {
+  const formatter: Formatter<ValueType, NameType> = (value, name) => {
+    if (value === undefined) return ['', name];
     const numValue = typeof value === 'string' ? parseFloat(value) : value;
     if (typeof numValue !== 'number' || isNaN(numValue)) return ['-', name];
     return [`${numValue.toFixed(1)} dB`, name];
@@ -232,7 +234,7 @@ function LinkSNRChartMultiSeries({
         <Tooltip
           content={
             <ChartTooltipContent
-              labelFormatter={(_, payload: Payload<ValueType, NameType>[]) => {
+              labelFormatter={(_, payload: readonly Payload<ValueType, NameType>[]) => {
                 if (payload?.[0]?.payload?.timestamp) {
                   const date = new Date(payload[0].payload.timestamp);
                   return date.toLocaleString('en-GB', {

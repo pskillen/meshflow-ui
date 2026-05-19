@@ -128,7 +128,7 @@ export function OnlineNodesChart({
     });
   };
 
-  const tooltipLabelFormatter = (_: unknown, payload: Payload<ValueType, NameType>[]) => {
+  const tooltipLabelFormatter = (_: unknown, payload: readonly Payload<ValueType, NameType>[]) => {
     if (payload?.[0]?.payload?.timestamp != null) {
       return tickFormatter(payload[0].payload.timestamp);
     }

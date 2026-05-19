@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Line, LineChart, CartesianGrid, XAxis, YAxis, Tooltip, Text } from 'recharts';
+import { Line, LineChart, CartesianGrid, XAxis, YAxis, Tooltip, Text, type XAxisTickContentProps } from 'recharts';
 import { EnvironmentMetrics } from '@/lib/models';
 import { ChartConfig, ChartContainer, ChartTooltipContent } from '@/components/ui/chart';
 import { Formatter, NameType, ValueType, Payload } from 'recharts/types/component/DefaultTooltipContent';
@@ -50,8 +50,11 @@ function SingleMetricChart({
   }, [dateRange.startDate, dateRange.endDate]);
 
   const renderXAxisTick = React.useCallback(
-    (props: { x: number; y: number; payload: { value: number }; tickFormatter?: (v: number, i: number) => string }) => {
-      const { x, y, payload, tickFormatter } = props;
+    (props: XAxisTickContentProps) => {
+      const { payload, tickFormatter } = props;
+      const x = Number(props.x);
+      const y = Number(props.y);
+      if (!payload || typeof payload.value !== 'number') return <g />;
       const isOurTick = xTicks.some((t) => Math.abs(t - payload.value) < 60_000);
       if (!isOurTick) return <g />;
       const value = tickFormatter ? tickFormatter(payload.value, 0) : String(payload.value);
@@ -71,7 +74,8 @@ function SingleMetricChart({
     [xTicks]
   );
 
-  const formatter: Formatter<ValueType, NameType> = (value: ValueType) => {
+  const formatter: Formatter<ValueType, NameType> = (value, name) => {
+    if (value === undefined) return ['', name];
     const numValue = typeof value === 'string' ? parseFloat(value) : value;
     if (typeof numValue !== 'number' || isNaN(numValue)) return ['-', label];
     const formatted = numValue.toFixed(1);
@@ -107,7 +111,7 @@ function SingleMetricChart({
         <Tooltip
           content={
             <ChartTooltipContent
-              labelFormatter={(_, payload: Payload<ValueType, NameType>[]) => {
+              labelFormatter={(_, payload: readonly Payload<ValueType, NameType>[]) => {
                 if (payload?.[0]?.payload?.timestamp) {
                   const date = new Date(payload[0].payload.timestamp);
                   return date.toLocaleString('en-GB', {

@@ -70,12 +70,7 @@ function httpStatus(err: unknown): number | undefined {
 function formatDestinationLabel(dest: DxDestinationNode): { primary: string; idSecondary?: string } {
   const long = dest.long_name?.trim();
   const short = dest.short_name?.trim();
-  let primary = '';
-  if (long && short) {
-    primary = long === short ? long : `${long} (${short})`;
-  } else {
-    primary = long || short || '';
-  }
+  const primary = long && short ? (long === short ? long : `${long} (${short})`) : long || short || '';
   if (!primary) {
     return { primary: dest.node_id_str };
   }
@@ -93,12 +88,7 @@ function formatObserverLabel(obs: DxManagedNodeMinimal): { primary: string; idSe
 function formatHopLabel(hop: DxObservedNodeHop): { primary: string; idSecondary?: string } {
   const long = hop.long_name?.trim();
   const short = hop.short_name?.trim();
-  let primary = '';
-  if (long && short) {
-    primary = long === short ? long : `${long} (${short})`;
-  } else {
-    primary = long || short || '';
-  }
+  const primary = long && short ? (long === short ? long : `${long} (${short})`) : long || short || '';
   if (!primary) {
     return { primary: hop.node_id_str };
   }

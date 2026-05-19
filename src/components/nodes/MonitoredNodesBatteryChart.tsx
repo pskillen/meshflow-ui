@@ -145,7 +145,8 @@ export function MonitoredNodesBatteryChart({
   };
 
   // Formatter for tooltip and axis
-  const formatter: Formatter<ValueType, NameType> = (value: ValueType, name: NameType) => {
+  const formatter: Formatter<ValueType, NameType> = (value, name) => {
+    if (value === undefined) return ['', name];
     const numValue = typeof value === 'string' ? parseFloat(value) : value;
     if (typeof numValue !== 'number' || isNaN(numValue)) return ['-', name];
     if (displayMode === 'voltage') {
@@ -334,7 +335,7 @@ export function MonitoredNodesBatteryChart({
             <Tooltip
               content={
                 <ChartTooltipContent
-                  labelFormatter={(_, payload: Payload<ValueType, NameType>[]) => {
+                  labelFormatter={(_, payload: readonly Payload<ValueType, NameType>[]) => {
                     // Extract the timestamp from the payload
                     if (payload && payload[0] && payload[0].payload && payload[0].payload.timestamp) {
                       const date = new Date(payload[0].payload.timestamp);

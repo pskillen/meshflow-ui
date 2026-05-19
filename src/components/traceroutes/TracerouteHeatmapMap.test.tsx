@@ -7,8 +7,8 @@ import type { HeatmapEdge, HeatmapNode } from '@/hooks/api/useHeatmapEdges';
 import { TracerouteHeatmapMap } from './TracerouteHeatmapMap';
 
 /** Real <Popup> needs MapContext; test only needs layer stability, not mapbox popups. */
-vi.mock('react-map-gl', async (importOriginal) => {
-  const mod = await importOriginal<typeof import('react-map-gl')>();
+vi.mock('react-map-gl/mapbox', async (importOriginal) => {
+  const mod = await importOriginal<typeof import('react-map-gl/mapbox')>();
   return {
     ...mod,
     Popup: ({ children }: { children?: React.ReactNode }) => <div data-testid="popup-mock">{children}</div>,

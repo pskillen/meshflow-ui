@@ -28,7 +28,8 @@ export function NodeMiniChart({ metrics, dateRange, lines = 'all' }: NodeMiniCha
       .sort((a, b) => a.timestamp - b.timestamp);
   }, [metrics]);
 
-  const formatter: Formatter<ValueType, NameType> = (value: ValueType, name: NameType) => {
+  const formatter: Formatter<ValueType, NameType> = (value, name) => {
+    if (value === undefined) return ['', name];
     const numValue = typeof value === 'string' ? parseFloat(value) : value;
     if (typeof numValue !== 'number' || isNaN(numValue)) return ['-', name];
     return [`${numValue.toFixed(1)}%`, name];
@@ -65,7 +66,7 @@ export function NodeMiniChart({ metrics, dateRange, lines = 'all' }: NodeMiniCha
         <Tooltip
           content={
             <ChartTooltipContent
-              labelFormatter={(_, payload: Payload<ValueType, NameType>[]) => {
+              labelFormatter={(_, payload: readonly Payload<ValueType, NameType>[]) => {
                 if (payload?.[0]?.payload?.timestamp) {
                   const date = new Date(payload[0].payload.timestamp);
                   return date.toLocaleString('en-GB', {

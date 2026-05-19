@@ -390,7 +390,6 @@ export function useAllInfrastructureNodesSuspense(options?: UseInfrastructureNod
     queryFn: async () => {
       const all: ObservedNode[] = [];
       let page = 1;
-      let totalNodes = 0;
       while (true) {
         const res = await api.getInfrastructureNodes({
           page,
@@ -398,12 +397,12 @@ export function useAllInfrastructureNodesSuspense(options?: UseInfrastructureNod
           lastHeardAfter: options?.lastHeardAfter,
           includeClientBase: options?.includeClientBase,
         });
-        totalNodes = res.count;
         all.push(...res.results);
-        if (!res.next || res.results.length === 0) break;
+        if (!res.next || res.results.length === 0) {
+          return { nodes: all, totalNodes: res.count };
+        }
         page += 1;
       }
-      return { nodes: all, totalNodes };
     },
     refetchInterval: 1000 * 60,
   });

@@ -1,7 +1,18 @@
 'use client';
 
 import * as React from 'react';
-import { Area, AreaChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend, ReferenceArea, Text } from 'recharts';
+import {
+  Area,
+  AreaChart,
+  CartesianGrid,
+  XAxis,
+  YAxis,
+  Tooltip,
+  Legend,
+  ReferenceArea,
+  Text,
+  type XAxisTickContentProps,
+} from 'recharts';
 import { useNodeMetricsSuspense } from '@/hooks/api/useNodes';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -91,7 +102,8 @@ export function BatteryChartShadcn({
   };
 
   // Formatter for tooltip and axis
-  const formatter: Formatter<ValueType, NameType> = (value: ValueType, name: NameType) => {
+  const formatter: Formatter<ValueType, NameType> = (value, name) => {
+    if (value === undefined) return ['', name];
     const numValue = typeof value === 'string' ? parseFloat(value) : value;
     if (typeof numValue !== 'number') return [String(value), name];
     if (displayMode === 'voltage' && name === 'voltage') {
@@ -117,8 +129,11 @@ export function BatteryChartShadcn({
   }, [dateRange.startDate, dateRange.endDate]);
 
   const renderXAxisTick = React.useCallback(
-    (props: { x: number; y: number; payload: { value: number }; tickFormatter?: (v: number, i: number) => string }) => {
-      const { x, y, payload, tickFormatter } = props;
+    (props: XAxisTickContentProps) => {
+      const { payload, tickFormatter } = props;
+      const x = Number(props.x);
+      const y = Number(props.y);
+      if (!payload || typeof payload.value !== 'number') return <g />;
       const isOurTick = xTicks.some((t) => Math.abs(t - payload.value) < 60_000);
       if (!isOurTick) return <g />;
       const value = tickFormatter ? tickFormatter(payload.value, 0) : String(payload.value);
@@ -248,7 +263,7 @@ export function BatteryChartShadcn({
             <Tooltip
               content={
                 <ChartTooltipContent
-                  labelFormatter={(_, payload: Payload<ValueType, NameType>[]) => {
+                  labelFormatter={(_, payload: readonly Payload<ValueType, NameType>[]) => {
                     // Extract the timestamp from the activeLabel property
                     if (payload && payload[0] && payload[0].payload && payload[0].payload.timestamp) {
                       const date = new Date(payload[0].payload.timestamp);

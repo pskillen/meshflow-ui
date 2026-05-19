@@ -160,7 +160,7 @@ export function PacketTypeChart({
               cursor={false}
               content={
                 <ChartTooltipContent
-                  labelFormatter={(_, payload: Payload<ValueType, NameType>[]) => {
+                  labelFormatter={(_, payload: readonly Payload<ValueType, NameType>[]) => {
                     if (payload && payload[0] && payload[0].payload) {
                       const timestamp = payload[0].payload.timestamp;
                       const date = new Date(timestamp);

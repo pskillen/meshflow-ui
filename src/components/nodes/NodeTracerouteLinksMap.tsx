@@ -1,5 +1,5 @@
 import { useMemo, useState, useCallback } from 'react';
-import { Popup } from 'react-map-gl';
+import { Popup } from 'react-map-gl/mapbox';
 import { ArcLayer, ScatterplotLayer, TextLayer } from '@deck.gl/layers';
 import type { PickingInfo } from '@deck.gl/core';
 import { Link } from 'react-router-dom';
