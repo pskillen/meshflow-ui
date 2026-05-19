@@ -28,8 +28,8 @@ function makeObservedNode(overrides: Partial<ObservedNode> = {}): ObservedNode {
     mac_addr: null,
     long_name: 'Fixed target',
     short_name: 'FIX',
-    hw_model: null,
-    public_key: null,
+    meshtastic_hw_model: null,
+    meshtastic_public_key: null,
     ...overrides,
   };
 }

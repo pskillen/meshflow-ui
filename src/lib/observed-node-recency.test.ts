@@ -10,8 +10,8 @@ function makeNode(overrides: Partial<ObservedNode> = {}): ObservedNode {
     mac_addr: null,
     long_name: null,
     short_name: 'A',
-    hw_model: null,
-    public_key: null,
+    meshtastic_hw_model: null,
+    meshtastic_public_key: null,
     ...overrides,
   };
 }

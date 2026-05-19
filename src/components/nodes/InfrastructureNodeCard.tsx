@@ -38,7 +38,7 @@ function InfrastructureNodeCardInner({
   watchesQuery,
   managedNode,
 }: InfrastructureNodeCardProps) {
-  const roleLabel = getRoleLabel(node.role);
+  const roleLabel = getRoleLabel(node.meshtastic_role);
   const [compareSelected, setCompareSelected] = useState(false);
   const [propagationMapOpen, setPropagationMapOpen] = useState(false);
 

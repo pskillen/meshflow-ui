@@ -425,7 +425,7 @@ export function NodesAndConstellationsMap({
       const grayscale = getMarkerGrayscale?.(node as ObservedNode);
       const color = getMarkerColor
         ? getMarkerColor(node as ObservedNode)
-        : getRoleColor('role' in node ? node.role : undefined);
+        : getRoleColor('meshtastic_role' in node ? node.meshtastic_role : undefined);
       const dimmed = hasSelection && !isSelected;
       const icon = getMarkerLabel
         ? createWeatherNodeIcon(

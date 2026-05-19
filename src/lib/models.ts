@@ -100,13 +100,13 @@ export interface ObservedNode {
   mac_addr: string | null;
   long_name: string | null;
   short_name: string | null;
-  hw_model: string | null;
+  meshtastic_hw_model: string | null;
   /** Meshtastic device public key (PKI); null for MeshCore. */
-  public_key: string | null;
+  meshtastic_public_key: string | null;
   /** Meshtastic RoleSource enum integer; null for MeshCore. */
-  role?: number | null;
-  is_licensed?: boolean | null;
-  is_unmessagable?: boolean | null;
+  meshtastic_role?: number | null;
+  meshtastic_is_licensed?: boolean | null;
+  meshtastic_is_unmessagable?: boolean | null;
   /** Meshtastic-only: inferred max hops from hop_start; null for MeshCore. */
   inferred_max_hops?: number | null;
   environment_exposure?: EnvironmentExposureSlug;

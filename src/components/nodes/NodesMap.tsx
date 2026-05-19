@@ -169,7 +169,7 @@ export function NodesMap({
     nodesWithPosition.forEach((node) => {
       const position: L.LatLngExpression = [node.latest_position!.latitude!, node.latest_position!.longitude!];
 
-      const pinColor = colorByNodeId?.get(node.meshtastic_node_id) ?? getRoleColor(node.role);
+      const pinColor = colorByNodeId?.get(node.meshtastic_node_id) ?? getRoleColor(node.meshtastic_role);
 
       const marker = L.marker(position, {
         icon: createNodeIcon(node.short_name || node.node_id_str.toString(), pinColor, false),
