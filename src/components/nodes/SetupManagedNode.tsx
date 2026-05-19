@@ -110,7 +110,7 @@ export function SetupManagedNode({ node, isOpen, onClose }: SetupManagedNodeProp
   });
 
   // Get the node's observed node data to check for existing location
-  const observedNode = useNodeSuspense(node.meshtastic_node_id);
+  const observedNode = useNodeSuspense(node.internal_id);
 
   // Reset state when dialog opens
   useEffect(() => {

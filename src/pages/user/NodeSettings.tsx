@@ -43,7 +43,7 @@ function NodeSettingsContent() {
     nodeShortName: string;
     botDefaults?: { ignorePortnums?: string | null; hopLimit?: number | null };
   } | null>(null);
-  const [cancelClaimForNodeId, setCancelClaimForNodeId] = useState<number | null>(null);
+  const [cancelClaimInternalId, setCancelClaimInternalId] = useState<string | null>(null);
   const [unclaimMyNodesTarget, setUnclaimMyNodesTarget] = useState<ObservedNode | null>(null);
   const [unmanageManagedTarget, setUnmanageManagedTarget] = useState<OwnedManagedNode | null>(null);
   const cancelClaimMutation = useCancelNodeClaim();
@@ -199,14 +199,14 @@ function NodeSettingsContent() {
                               variant="outline"
                               size="sm"
                               className="shrink-0 text-destructive border-destructive/40 hover:bg-destructive/10"
-                              onClick={() => setCancelClaimForNodeId(claim.node.meshtastic_node_id)}
+                              onClick={() => setCancelClaimInternalId(claim.node.internal_id)}
                             >
                               Cancel claim
                             </Button>
                           </div>
                           <div className="mt-2">
                             <Link
-                              to={`/nodes/${claim.node.meshtastic_node_id}`}
+                              to={`/nodes/${claim.node.internal_id}`}
                               className="text-blue-500 hover:text-blue-700 text-sm"
                             >
                               View Node
@@ -358,7 +358,7 @@ function NodeSettingsContent() {
               disabled={cancelClaimMutation.isPending}
               onClick={() => {
                 if (!unclaimMyNodesTarget) return;
-                cancelClaimMutation.mutate(unclaimMyNodesTarget.meshtastic_node_id, {
+                cancelClaimMutation.mutate(unclaimMyNodesTarget.internal_id, {
                   onSuccess: () => setUnclaimMyNodesTarget(null),
                 });
               }}
@@ -402,7 +402,7 @@ function NodeSettingsContent() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={cancelClaimForNodeId !== null} onOpenChange={(open) => !open && setCancelClaimForNodeId(null)}>
+      <Dialog open={cancelClaimInternalId !== null} onOpenChange={(open) => !open && setCancelClaimInternalId(null)}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Cancel this claim?</DialogTitle>
@@ -415,7 +415,7 @@ function NodeSettingsContent() {
             <p className="text-sm text-destructive">Could not cancel the claim. Try again.</p>
           )}
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setCancelClaimForNodeId(null)}>
+            <Button type="button" variant="outline" onClick={() => setCancelClaimInternalId(null)}>
               Back
             </Button>
             <Button
@@ -423,9 +423,9 @@ function NodeSettingsContent() {
               variant="destructive"
               disabled={cancelClaimMutation.isPending}
               onClick={() => {
-                if (cancelClaimForNodeId == null) return;
-                cancelClaimMutation.mutate(cancelClaimForNodeId, {
-                  onSuccess: () => setCancelClaimForNodeId(null),
+                if (cancelClaimInternalId == null) return;
+                cancelClaimMutation.mutate(cancelClaimInternalId, {
+                  onSuccess: () => setCancelClaimInternalId(null),
                 });
               }}
             >
@@ -456,14 +456,13 @@ type ChannelMappings = ReturnType<typeof channelMappingsFromNode>;
 const CHANNEL_SLOT_INDEXES = [0, 1, 2, 3, 4, 5, 6, 7] as const;
 
 function countMappedSlots(mappings: ChannelMappings): number {
-  return CHANNEL_SLOT_INDEXES.filter(
-    (i) => mappings[`meshtastic_meshtastic_channel_${i}` as keyof ChannelMappings] != null
-  ).length;
+  return CHANNEL_SLOT_INDEXES.filter((i) => mappings[`meshtastic_channel_${i}` as keyof ChannelMappings] != null)
+    .length;
 }
 
 function channelMappingsEqual(a: ChannelMappings, b: ChannelMappings): boolean {
   return CHANNEL_SLOT_INDEXES.every((i) => {
-    const k = `meshtastic_meshtastic_channel_${i}` as keyof ChannelMappings;
+    const k = `meshtastic_channel_${i}` as keyof ChannelMappings;
     return a[k] === b[k];
   });
 }

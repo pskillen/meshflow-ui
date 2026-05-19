@@ -84,7 +84,7 @@ export function MonitoredNodesChannelUtilChart({
       metrics
         .filter((m) => m.reported_time != null)
         .forEach((m) => {
-          lookup[new Date(m.reported_time!).getTime()] = m.channel_utilization;
+          lookup[new Date(m.reported_time!).getTime()] = m.meshtastic_channel_utilization;
         });
       nodeLookups[node.short_name || node.node_id_str] = lookup;
     });
