@@ -15,7 +15,7 @@ export interface DateRangeProp {
 }
 
 interface PowerMetricsChartProps {
-  nodeId: number;
+  internalId: string;
   timeRangeOptions?: TimeRangeOption[];
   defaultTimeRange?: string;
   /** When provided, use this date range instead of internal state (controlled mode). Hides the time range selector. */
@@ -23,7 +23,7 @@ interface PowerMetricsChartProps {
 }
 
 export function PowerMetricsChart({
-  nodeId,
+  internalId,
   timeRangeOptions = [
     { key: '24h', label: '24 hours' },
     { key: '48h', label: '48 hours' },
@@ -48,7 +48,7 @@ export function PowerMetricsChart({
   const dateRange = controlledDateRange ?? internalDateRange;
   const isControlled = controlledDateRange != null;
 
-  const { metrics } = useNodePowerMetricsSuspense(nodeId, dateRange);
+  const { metrics } = useNodePowerMetricsSuspense(internalId, dateRange);
 
   const handleTimeRangeChange = (value: string, timeRange: { startDate: Date; endDate: Date }) => {
     if (value === timeRangeLabel) return;

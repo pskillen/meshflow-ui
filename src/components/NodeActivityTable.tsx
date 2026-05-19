@@ -25,7 +25,7 @@ const columns: ColumnDef<ObservedNode>[] = [
     cell: ({ row }) => {
       const node = row.original;
       return (
-        <Link to={`/nodes/${node.meshtastic_node_id}`}>
+        <Link to={`/nodes/${node.internal_id}`}>
           <div>
             <div className="font-medium">{node.short_name}</div>
             <div className="text-sm text-muted-foreground">{node.long_name}</div>

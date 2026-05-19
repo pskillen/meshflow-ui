@@ -35,7 +35,7 @@ const X_AXIS_TICK_COUNT = 8;
 export type BatteryDisplayMode = 'voltage' | 'percentage';
 
 interface BatteryChartShadcnProps {
-  nodeId: number;
+  internalId: string;
   timeRangeOptions?: TimeRangeOption[];
   defaultTimeRange?: string;
   /** When provided, use this date range instead of internal state (controlled mode). Hides the time range selector. */
@@ -45,7 +45,7 @@ interface BatteryChartShadcnProps {
 }
 
 export function BatteryChartShadcn({
-  nodeId,
+  internalId,
   timeRangeOptions = [
     { key: '24h', label: '24 hours' },
     { key: '48h', label: '48 hours' },
@@ -68,7 +68,7 @@ export function BatteryChartShadcn({
   const dateRange = controlledDateRange ?? internalDateRange;
   const isControlled = controlledDateRange != null;
 
-  const { metrics } = useNodeMetricsSuspense(nodeId, dateRange);
+  const { metrics } = useNodeMetricsSuspense(internalId, dateRange);
 
   const handleTimeRangeChange = (value: string, timeRange: { startDate: Date; endDate: Date }) => {
     if (value === timeRangeLabel) return;
@@ -162,8 +162,8 @@ export function BatteryChartShadcn({
         timestamp: metric.reported_time!.getTime(),
         voltage: metric.voltage,
         batteryLevel: metric.battery_level,
-        chUtil: metric.channel_utilization,
-        airUtil: metric.air_util_tx,
+        chUtil: metric.meshtastic_channel_utilization,
+        airUtil: metric.meshtastic_air_util_tx,
       }));
   }, [metrics]);
 
