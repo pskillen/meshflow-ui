@@ -149,9 +149,11 @@ function NodeLocationCard({
 }
 
 function TracerouteLinksSection({
+  internalId,
   meshtasticNodeId,
   isManagedNode,
 }: {
+  internalId: string;
   meshtasticNodeId: number;
   isManagedNode: boolean;
 }) {
@@ -163,7 +165,7 @@ function TracerouteLinksSection({
     return undefined;
   }, [timeRange]);
 
-  const { data, isLoading, error } = useNodeTracerouteLinks(meshtasticNodeId ?? 0, { triggeredAtAfter });
+  const { data, isLoading, error } = useNodeTracerouteLinks(internalId, { triggeredAtAfter });
 
   const hasData = data && (data.edges.length > 0 || data.nodes.length > 0);
 
@@ -608,7 +610,11 @@ export function NodeDetailContent({ internalId, compact = false, activeTab, onTa
 
             {effectiveTab === 'traceroutes' && (
               <div data-testid="node-detail-panel-traceroutes">
-                <TracerouteLinksSection meshtasticNodeId={meshtasticNodeId ?? 0} isManagedNode={isManagedNode} />
+                <TracerouteLinksSection
+                  internalId={internalId}
+                  meshtasticNodeId={meshtasticNodeId ?? 0}
+                  isManagedNode={isManagedNode}
+                />
                 <Suspense
                   fallback={
                     <div className="mb-6 flex min-h-[120px] items-center justify-center text-muted-foreground">
@@ -645,7 +651,11 @@ export function NodeDetailContent({ internalId, compact = false, activeTab, onTa
           {!compact && (
             <>
               <NodeMeshMonitoringSection node={node} />
-              <TracerouteLinksSection meshtasticNodeId={meshtasticNodeId ?? 0} isManagedNode={isManagedNode} />
+              <TracerouteLinksSection
+                internalId={internalId}
+                meshtasticNodeId={meshtasticNodeId ?? 0}
+                isManagedNode={isManagedNode}
+              />
               <Suspense
                 fallback={
                   <div className="mb-6 flex min-h-[120px] items-center justify-center text-muted-foreground">

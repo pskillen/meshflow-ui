@@ -164,9 +164,8 @@ export class MeshflowApi extends BaseApi {
   }
 
   /**
-   * Get one observed node by Meshtastic numeric `meshtastic_node_id` (path `/nodes/observed-nodes/{id}/`).
-   * Not valid for MeshCore nodes until internal_id lookup exists — use {@link getNodes} with
-   * `protocol: 'meshcore'` or search instead.
+   * Get one observed node by stable UUID `internal_id` (`GET /nodes/observed-nodes/{internal_id}/`).
+   * Legacy Meshtastic numeric bookmarks: resolve via list/search or api `by-meshtastic-id` redirect.
    */
   async getObservedNode(internalId: string): Promise<ObservedNode> {
     const node = await this.get<ObservedNode>(`/nodes/observed-nodes/${internalId}/`);
@@ -1030,7 +1029,7 @@ export class MeshflowApi extends BaseApi {
    * Get traceroute links for a specific node (from Neo4j)
    */
   async getNodeTracerouteLinks(
-    nodeId: number,
+    internalId: string,
     params?: { triggered_at_after?: string }
   ): Promise<{
     edges: Array<{
@@ -1063,7 +1062,7 @@ export class MeshflowApi extends BaseApi {
     if (params?.triggered_at_after) {
       searchParams.append('triggered_at_after', params.triggered_at_after);
     }
-    return this.get(`/nodes/observed-nodes/${nodeId}/traceroute-links/`, searchParams);
+    return this.get(`/nodes/observed-nodes/${internalId}/traceroute-links/`, searchParams);
   }
 
   // ===== Discord notification prefs (Mesh Monitoring phase 02) =====
