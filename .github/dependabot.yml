@@ -6,7 +6,7 @@ updates:
     schedule:
       interval: weekly
       day: monday
-      time: "09:00"
+      time: '09:00'
       timezone: Europe/London
     open-pull-requests-limit: 5
     labels:
@@ -17,14 +17,14 @@ updates:
     groups:
       npm-dependencies:
         patterns:
-          - "*"
+          - '*'
 
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
       day: monday
-      time: "09:00"
+      time: '09:00'
       timezone: Europe/London
     open-pull-requests-limit: 5
     labels:
@@ -35,14 +35,14 @@ updates:
     groups:
       github-actions:
         patterns:
-          - "*"
+          - '*'
 
   - package-ecosystem: docker
     directory: /
     schedule:
       interval: weekly
       day: monday
-      time: "09:00"
+      time: '09:00'
       timezone: Europe/London
     open-pull-requests-limit: 5
     labels:
@@ -53,4 +53,4 @@ updates:
     groups:
       docker:
         patterns:
-          - "*"
+          - '*'

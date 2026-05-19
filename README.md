@@ -42,7 +42,6 @@ The application will be available at `http://localhost:5173` by default.
 The project uses Husky to manage Git hooks:
 
 - **Pre-commit hook**: Automatically runs before each commit
-
   - TypeScript build check (`tsc -b`)
   - ESLint check (`npm run lint`)
   - Prettier format check (only on staged files)
@@ -69,7 +68,6 @@ This will install and configure Husky to manage the Git hooks for this project.
 The application is containerized using a multi-stage Docker build process:
 
 1. Build stage:
-
    - Uses Node.js 20 Alpine as base
    - Installs dependencies
    - Builds the application

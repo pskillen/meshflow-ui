@@ -76,7 +76,9 @@
 }
 
 @layer base {
-  * {
+  *,
+  ::after,
+  ::before {
     @apply border-border;
   }
   body {
