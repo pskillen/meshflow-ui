@@ -285,7 +285,10 @@ function WatchCard({
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
         <div>
           <FieldLabel>Node</FieldLabel>
-          <Link to={`/nodes/${node.node_id}`} className="font-medium text-teal-600 dark:text-teal-400 hover:underline">
+          <Link
+            to={`/nodes/${node.meshtastic_node_id}`}
+            className="font-medium text-teal-600 dark:text-teal-400 hover:underline"
+          >
             {node.short_name || node.node_id_str}
           </Link>
           <div className="text-xs text-muted-foreground font-mono mt-0.5">{node.node_id_str}</div>
@@ -330,7 +333,10 @@ function WatchCard({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                <WatchTracerouteHistoryRows targetNodeId={node.node_id} onOpenTraceroute={onOpenTraceroute} />
+                <WatchTracerouteHistoryRows
+                  targetNodeId={node.meshtastic_node_id}
+                  onOpenTraceroute={onOpenTraceroute}
+                />
               </TableBody>
             </Table>
           </div>
@@ -421,7 +427,7 @@ export function WatchedNodesTable({
                     onOpenTraceroute={onOpenTraceroute}
                     onRequestTriggerTraceroute={onRequestTriggerTraceroute}
                     canTriggerTraceroute={canTriggerTraceroute}
-                    metrics={metricsMap[watch.observed_node.node_id] ?? []}
+                    metrics={metricsMap[watch.observed_node.meshtastic_node_id] ?? []}
                     chartDateRange={chartDateRange}
                     metricsLoading={metricsLoading}
                   />

@@ -80,7 +80,7 @@ function NodeDetail({ nodeId }) {
   return (
     <div>
       <h2>{node.short_name || node.node_id_str}</h2>
-      <p>Node ID: {node.node_id}</p>
+      <p>Node ID: {node.meshtastic_node_id}</p>
       <p>Last heard: {node.last_heard ? new Date(node.last_heard).toLocaleString() : 'Never'}</p>
     </div>
   );

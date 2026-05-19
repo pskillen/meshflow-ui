@@ -25,7 +25,7 @@ const columns: ColumnDef<ObservedNode>[] = [
     cell: ({ row }) => {
       const node = row.original;
       return (
-        <Link to={`/nodes/${node.node_id}`}>
+        <Link to={`/nodes/${node.meshtastic_node_id}`}>
           <div>
             <div className="font-medium">{node.short_name}</div>
             <div className="text-sm text-muted-foreground">{node.long_name}</div>
@@ -77,7 +77,7 @@ const columns: ColumnDef<ObservedNode>[] = [
     accessorKey: 'id',
     header: 'Node ID',
     cell: ({ row }) => {
-      return <span className="font-mono text-sm">{meshtasticIdToHex(row.original.node_id)}</span>;
+      return <span className="font-mono text-sm">{meshtasticIdToHex(row.original.meshtastic_node_id)}</span>;
     },
   },
 ];

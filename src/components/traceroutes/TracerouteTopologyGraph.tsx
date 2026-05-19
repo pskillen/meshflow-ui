@@ -87,7 +87,7 @@ export function TracerouteTopologyGraph({
 
   const roleById = useMemo(() => {
     const m = new Map<number, HeatmapNode['role']>();
-    for (const n of nodes) m.set(n.node_id, n.role);
+    for (const n of nodes) m.set(n.meshtastic_node_id, n.role);
     return m;
   }, [nodes]);
 
@@ -104,7 +104,7 @@ export function TracerouteTopologyGraph({
     return m;
   }, [edges]);
 
-  const sortedIds = useMemo(() => [...nodes.map((n) => n.node_id)].sort((a, b) => a - b), [nodes]);
+  const sortedIds = useMemo(() => [...nodes.map((n) => n.meshtastic_node_id)].sort((a, b) => a - b), [nodes]);
 
   const simulationNodesRef = useRef<SimNode[]>([]);
   const simulationLinksRef = useRef<GraphLink[]>([]);
@@ -134,10 +134,10 @@ export function TracerouteTopologyGraph({
       return;
     }
 
-    const byId = new Map(nodes.map((n) => [n.node_id, { ...n } as SimNode]));
+    const byId = new Map(nodes.map((n) => [n.meshtastic_node_id, { ...n } as SimNode]));
     const simNodes: SimNode[] = nodes.map((n) => {
-      const prev = warmRef.current.get(n.node_id);
-      const seed = deterministicSeedXY(n.node_id, width, height);
+      const prev = warmRef.current.get(n.meshtastic_node_id);
+      const seed = deterministicSeedXY(n.meshtastic_node_id, width, height);
       return {
         ...n,
         x: prev?.x ?? seed.x,
@@ -146,7 +146,7 @@ export function TracerouteTopologyGraph({
     });
 
     for (const sn of simNodes) {
-      byId.set(sn.node_id, sn);
+      byId.set(sn.meshtastic_node_id, sn);
     }
 
     const linkObjs: GraphLink[] = [];
@@ -165,7 +165,7 @@ export function TracerouteTopologyGraph({
         'link',
         d3
           .forceLink<SimNode, GraphLink>(linkObjs)
-          .id((d) => d.node_id)
+          .id((d) => d.meshtastic_node_id)
           .distance((d) => {
             if (!enc) return (minD + maxD) / 2;
             const t = linkStrengthValue(d.edge, enc);
@@ -197,7 +197,7 @@ export function TracerouteTopologyGraph({
 
     for (const n of simNodes) {
       if (n.x != null && n.y != null) {
-        warmRef.current.set(n.node_id, { x: n.x, y: n.y });
+        warmRef.current.set(n.meshtastic_node_id, { x: n.x, y: n.y });
       }
     }
 
@@ -249,8 +249,9 @@ export function TracerouteTopologyGraph({
       const a = L.source;
       const b = L.target;
       if (a.x == null || a.y == null || b.x == null || b.y == null) continue;
-      const alphaMul = edgeFade(a.node_id, b.node_id);
-      const touchesLeaf = roleById.get(a.node_id) === 'leaf' || roleById.get(b.node_id) === 'leaf';
+      const alphaMul = edgeFade(a.meshtastic_node_id, b.meshtastic_node_id);
+      const touchesLeaf =
+        roleById.get(a.meshtastic_node_id) === 'leaf' || roleById.get(b.meshtastic_node_id) === 'leaf';
       let stroke: [number, number, number, number];
       let lw: number;
       if (touchesLeaf) {
@@ -276,8 +277,8 @@ export function TracerouteTopologyGraph({
 
     const nodeDrawOrder = [...simNodes].sort((u, v) => {
       if (highlight == null) return 0;
-      if (u.node_id === highlight) return 1;
-      if (v.node_id === highlight) return -1;
+      if (u.meshtastic_node_id === highlight) return 1;
+      if (v.meshtastic_node_id === highlight) return -1;
       return 0;
     });
 
@@ -286,7 +287,7 @@ export function TracerouteTopologyGraph({
       const r = hasSignal ? nodeRadiusPixels(n.centrality, cExt.min, cExt.max) : 9;
       const fill = hasSignal ? degreeFillColor(n, dExt.min, dExt.max, nowMs, staleMs) : HEATMAP_NODE_COLOR_FALLBACK;
       const strokeCol = nodeLineColor(fill);
-      const fade = nodeFade(n.node_id);
+      const fade = nodeFade(n.meshtastic_node_id);
       ctx.beginPath();
       ctx.arc(n.x, n.y, r, 0, Math.PI * 2);
       ctx.fillStyle = `rgba(${fill[0]},${fill[1]},${fill[2]},${(fill[3] / 255) * fade})`;
@@ -309,7 +310,7 @@ export function TracerouteTopologyGraph({
       const gx = n.x * transform.k + transform.x;
       const gy = n.y * transform.k + transform.y;
       const rPx = (hasSignal ? nodeRadiusPixels(n.centrality, cExt.min, cExt.max) : 9) * transform.k;
-      const fade = nodeFade(n.node_id);
+      const fade = nodeFade(n.meshtastic_node_id);
       const label = truncateTopologyLabel(getHeatmapNodeLabel(n));
       const ty = gy + rPx + labelPx * 0.65 + 2;
       ctx.strokeStyle = `rgba(15, 23, 42, ${0.92 * fade})`;
@@ -373,7 +374,7 @@ export function TracerouteTopologyGraph({
   const onPointerMove = useCallback(
     (e: React.PointerEvent) => {
       const n = pickNode(e.clientX, e.clientY);
-      setHoverId(n?.node_id ?? null);
+      setHoverId(n?.meshtastic_node_id ?? null);
     },
     [pickNode]
   );
@@ -384,7 +385,7 @@ export function TracerouteTopologyGraph({
     (e: React.MouseEvent) => {
       const n = pickNode(e.clientX, e.clientY);
       onSelectedNodeChange(n);
-      if (n) setLiveMsg(`${n.short_name ?? n.node_id_str ?? n.node_id} selected`);
+      if (n) setLiveMsg(`${n.short_name ?? n.node_id_str ?? n.meshtastic_node_id} selected`);
     },
     [pickNode, onSelectedNodeChange]
   );
@@ -401,9 +402,9 @@ export function TracerouteTopologyGraph({
       } else if (e.key === 'Enter' || e.key === ' ') {
         e.preventDefault();
         const id = sortedIds[focusIndex];
-        const node = nodes.find((n) => n.node_id === id) ?? null;
+        const node = nodes.find((n) => n.meshtastic_node_id === id) ?? null;
         onSelectedNodeChange(node);
-        if (node) setLiveMsg(`${node.short_name ?? node.node_id_str ?? node.node_id} selected`);
+        if (node) setLiveMsg(`${node.short_name ?? node.node_id_str ?? node.meshtastic_node_id} selected`);
       }
     },
     [sortedIds, focusIndex, nodes, onSelectedNodeChange]
@@ -411,7 +412,7 @@ export function TracerouteTopologyGraph({
 
   useEffect(() => {
     const id = sortedIds[focusIndex];
-    const node = nodes.find((n) => n.node_id === id);
+    const node = nodes.find((n) => n.meshtastic_node_id === id);
     if (node && document.activeElement?.getAttribute('data-testid') === 'topology-canvas') {
       setLiveMsg(`Focused ${node.short_name ?? node.node_id_str ?? id}`);
     }
@@ -440,7 +441,7 @@ export function TracerouteTopologyGraph({
       )}
       <ul className="sr-only" aria-hidden>
         {nodes.map((n) => (
-          <li key={n.node_id}>{n.short_name ?? n.node_id_str ?? n.node_id}</li>
+          <li key={n.meshtastic_node_id}>{n.short_name ?? n.node_id_str ?? n.meshtastic_node_id}</li>
         ))}
       </ul>
       <div className="sr-only" aria-live="polite">

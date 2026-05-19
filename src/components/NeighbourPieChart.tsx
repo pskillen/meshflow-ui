@@ -217,8 +217,8 @@ export function NeighbourPieChart({
                       <div className="flex flex-wrap gap-1 mt-1">
                         {item.candidates.map((c) => (
                           <Link
-                            key={c.node_id}
-                            to={`/nodes/${c.node_id}`}
+                            key={c.meshtastic_node_id}
+                            to={`/nodes/${c.meshtastic_node_id}`}
                             className="text-xs text-teal-600 dark:text-teal-400 hover:underline px-1.5 py-0.5 rounded bg-muted"
                           >
                             {c.short_name || c.node_id_str}

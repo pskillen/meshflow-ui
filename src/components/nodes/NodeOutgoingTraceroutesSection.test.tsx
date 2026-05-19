@@ -28,7 +28,7 @@ vi.mock('@/hooks/api/useTraceroutes', () => ({
 
 function makeManaged(overrides: Partial<ManagedNode> = {}): ManagedNode {
   return {
-    node_id: 42,
+    meshtastic_node_id: 42,
     long_name: 'Feeder',
     short_name: 'F1',
     last_heard: null,
@@ -49,7 +49,7 @@ function renderSection(managed: ManagedNode) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={client}>
-      <NodeOutgoingTraceroutesSection nodeId={managed.node_id} managed={managed} />
+      <NodeOutgoingTraceroutesSection nodeId={managed.meshtastic_node_id} managed={managed} />
     </QueryClientProvider>
   );
 }

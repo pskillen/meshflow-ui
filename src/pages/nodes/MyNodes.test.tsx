@@ -58,7 +58,7 @@ const NOW = new Date('2026-04-21T12:00:00.000Z');
 function makeObserved(overrides: Partial<ObservedNode> = {}): ObservedNode {
   return {
     internal_id: 1,
-    node_id: 100,
+    meshtastic_node_id: 100,
     node_id_str: '!00000064',
     mac_addr: null,
     long_name: 'LN',
@@ -74,7 +74,7 @@ function makeObserved(overrides: Partial<ObservedNode> = {}): ObservedNode {
 
 function makeManaged(overrides: Partial<ManagedNode> = {}): ManagedNode {
   return {
-    node_id: 200,
+    meshtastic_node_id: 200,
     long_name: 'MLN',
     short_name: 'M1',
     last_heard: NOW,
@@ -126,13 +126,13 @@ describe('MyNodes', () => {
   it('dedupes claimed+managed so the node appears only under Managed', () => {
     const nid = 42;
     const claimed = makeObserved({
-      node_id: nid,
+      meshtastic_node_id: nid,
       node_id_str: '!0000002a',
       short_name: 'DEDUP',
       last_heard: new Date(NOW.getTime() - 60_000),
     });
     const managed = makeManaged({
-      node_id: nid,
+      meshtastic_node_id: nid,
       node_id_str: '!0000002a',
       short_name: 'DEDUP',
     });
@@ -147,7 +147,7 @@ describe('MyNodes', () => {
 
   it('shows online empty state when every claimed-only node is offline', () => {
     const offline = makeObserved({
-      node_id: 1,
+      meshtastic_node_id: 1,
       last_heard: new Date(NOW.getTime() - MY_NODES_CLAIMED_RECENT_MS - 60_000),
     });
     useMyClaimedNodesSuspense.mockReturnValue({ myClaimedNodes: [offline] });
@@ -160,7 +160,7 @@ describe('MyNodes', () => {
 
   it('hides Recent and Offline sections when those buckets are empty', () => {
     const online = makeObserved({
-      node_id: 1,
+      meshtastic_node_id: 1,
       last_heard: new Date(NOW.getTime() - 60_000),
     });
     useMyClaimedNodesSuspense.mockReturnValue({ myClaimedNodes: [online] });
@@ -172,7 +172,7 @@ describe('MyNodes', () => {
 
   it('shows destructive managed liveness when feeder and radio are stale', () => {
     const managed = makeManaged({
-      node_id: 7,
+      meshtastic_node_id: 7,
       last_packet_ingested_at: new Date(NOW.getTime() - MY_NODES_FEEDER_FRESH_MS - 120_000),
       radio_last_heard: new Date(NOW.getTime() - MY_NODES_CLAIMED_ONLINE_MS - 120_000),
     });
@@ -185,7 +185,7 @@ describe('MyNodes', () => {
 
   it('does not show feeder-not-reporting when last_packet_ingested_at is missing but radio is fresh', () => {
     const managed = makeManaged({
-      node_id: 8,
+      meshtastic_node_id: 8,
       last_packet_ingested_at: null,
       radio_last_heard: new Date(NOW.getTime() - 60_000),
     });

@@ -5,7 +5,7 @@ import type { ObservedNode } from '@/lib/models';
 function makeNode(overrides: Partial<ObservedNode> = {}): ObservedNode {
   return {
     internal_id: 1,
-    node_id: 1,
+    meshtastic_node_id: 1,
     node_id_str: '!00000001',
     mac_addr: null,
     long_name: null,

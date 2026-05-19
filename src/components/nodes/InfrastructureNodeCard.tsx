@@ -62,7 +62,7 @@ function InfrastructureNodeCardInner({
                 e.preventDefault();
                 const newState = !compareSelected;
                 setCompareSelected(newState);
-                onCompareToggle?.(node.node_id, newState);
+                onCompareToggle?.(node.meshtastic_node_id, newState);
               }}
             >
               <span
@@ -147,7 +147,7 @@ function InfrastructureNodeCardInner({
               node={node}
               watch={watch}
               watchesQuery={watchesQuery}
-              idPrefix={`infra-card-${node.node_id}`}
+              idPrefix={`infra-card-${node.meshtastic_node_id}`}
               compact
             />
           </div>
@@ -156,9 +156,9 @@ function InfrastructureNodeCardInner({
       <div className="mt-auto flex justify-end gap-3 pt-3">
         {managedNode != null && (
           <Link
-            to={`/traceroutes/map/coverage?feeder=${node.node_id}`}
+            to={`/traceroutes/map/coverage?feeder=${node.meshtastic_node_id}`}
             className="text-sm text-muted-foreground underline-offset-4 hover:text-primary hover:underline"
-            data-testid={`infra-coverage-link-${node.node_id}`}
+            data-testid={`infra-coverage-link-${node.meshtastic_node_id}`}
           >
             Coverage map
           </Link>
@@ -168,7 +168,7 @@ function InfrastructureNodeCardInner({
             <button
               type="button"
               className="text-sm text-muted-foreground underline-offset-4 hover:text-primary hover:underline"
-              data-testid={`infra-propagation-map-${node.node_id}`}
+              data-testid={`infra-propagation-map-${node.meshtastic_node_id}`}
               onClick={() => setPropagationMapOpen(true)}
             >
               Propagation map
@@ -176,13 +176,13 @@ function InfrastructureNodeCardInner({
             <RfPropagationMapModal
               open={propagationMapOpen}
               onOpenChange={setPropagationMapOpen}
-              nodeId={node.node_id}
+              nodeId={node.meshtastic_node_id}
               shortLabel={node.short_name}
             />
           </>
         )}
         <Link
-          to={`/nodes/${node.node_id}`}
+          to={`/nodes/${node.meshtastic_node_id}`}
           className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
         >
           Open node details

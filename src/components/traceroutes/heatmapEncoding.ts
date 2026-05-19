@@ -1,7 +1,7 @@
 import type { HeatmapEdge, HeatmapNode } from '@/hooks/api/useHeatmapEdges';
 
 export function getHeatmapNodeLabel(node: HeatmapNode): string {
-  return node.short_name || node.long_name || node.node_id_str || `!${node.node_id.toString(16)}`;
+  return node.short_name || node.long_name || node.node_id_str || `!${node.meshtastic_node_id.toString(16)}`;
 }
 
 /** Fallback fill when API omits centrality/degree */

@@ -39,11 +39,11 @@ export function TracerouteStatsPage() {
     includeStatus: true,
     includeGeoClassification: true,
   });
-  const managedByMeshId = useMemo(() => new Map(managedNodes.map((m) => [m.node_id, m])), [managedNodes]);
+  const managedByMeshId = useMemo(() => new Map(managedNodes.map((m) => [m.meshtastic_node_id, m])), [managedNodes]);
   const modalManagedNodes = useMemo(
     () =>
       triggerableNodes.map((t) => {
-        const full = managedByMeshId.get(t.node_id);
+        const full = managedByMeshId.get(t.meshtastic_node_id);
         return full ? { ...t, ...full } : t;
       }),
     [triggerableNodes, managedByMeshId]
@@ -73,8 +73,8 @@ export function TracerouteStatsPage() {
             <SelectContent>
               <SelectItem value="all">All sources</SelectItem>
               {triggerableNodes.map((n) => (
-                <SelectItem key={n.node_id} value={String(n.node_id)}>
-                  {n.short_name ?? n.node_id_str ?? String(n.node_id)}
+                <SelectItem key={n.meshtastic_node_id} value={String(n.meshtastic_node_id)}>
+                  {n.short_name ?? n.node_id_str ?? String(n.meshtastic_node_id)}
                 </SelectItem>
               ))}
             </SelectContent>

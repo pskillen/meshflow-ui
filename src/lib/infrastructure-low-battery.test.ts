@@ -11,7 +11,7 @@ import {
 function node(partial: Partial<ObservedNode>): ObservedNode {
   return {
     internal_id: 1,
-    node_id: 1,
+    meshtastic_node_id: 1,
     node_id_str: '!00000001',
     mac_addr: null,
     long_name: 'A',
@@ -30,7 +30,7 @@ function node(partial: Partial<ObservedNode>): ObservedNode {
 describe('partitionMeshInfraLowBatteryTableNodes', () => {
   it('includes nodes with battery_alert_active even when not in heuristic low-battery list', () => {
     const okBattery = node({
-      node_id: 1,
+      meshtastic_node_id: 1,
       latest_device_metrics: {
         battery_level: 90,
         reported_time: new Date(),
@@ -39,7 +39,7 @@ describe('partitionMeshInfraLowBatteryTableNodes', () => {
       battery_alert_active: false,
     });
     const alertOnly = node({
-      node_id: 2,
+      meshtastic_node_id: 2,
       latest_device_metrics: {
         battery_level: 90,
         reported_time: new Date(),
@@ -48,7 +48,7 @@ describe('partitionMeshInfraLowBatteryTableNodes', () => {
       battery_alert_active: true,
     });
     const low = node({
-      node_id: 3,
+      meshtastic_node_id: 3,
       latest_device_metrics: {
         battery_level: 10,
         reported_time: new Date(),
@@ -56,10 +56,10 @@ describe('partitionMeshInfraLowBatteryTableNodes', () => {
       } as ObservedNode['latest_device_metrics'],
     });
     const out = partitionMeshInfraLowBatteryTableNodes([okBattery, alertOnly, low]);
-    expect(out.map((n) => n.node_id)).toContain(2);
-    expect(out.map((n) => n.node_id)).toContain(3);
-    expect(out[0].node_id).toBe(2);
-    expect(partitionLowBatteryNodes([okBattery, alertOnly, low]).some((n) => n.node_id === 2)).toBe(false);
+    expect(out.map((n) => n.meshtastic_node_id)).toContain(2);
+    expect(out.map((n) => n.meshtastic_node_id)).toContain(3);
+    expect(out[0].meshtastic_node_id).toBe(2);
+    expect(partitionLowBatteryNodes([okBattery, alertOnly, low]).some((n) => n.meshtastic_node_id === 2)).toBe(false);
   });
 });
 
@@ -71,7 +71,7 @@ describe('isLowBatteryTableRowVisible', () => {
   };
 
   it('hides no-telemetry rows by default', () => {
-    const n = node({ node_id: 1, latest_device_metrics: null });
+    const n = node({ meshtastic_node_id: 1, latest_device_metrics: null });
     expect(isLowBatteryTableRowVisible(n, baseFilters)).toBe(false);
     expect(isLowBatteryTableRowVisible(n, { ...baseFilters, showNoTelemetry: true })).toBe(true);
   });
@@ -79,7 +79,7 @@ describe('isLowBatteryTableRowVisible', () => {
   it('hides stale-reading rows by default', () => {
     const old = new Date(Date.now() - 10 * 24 * 60 * 60 * 1000);
     const n = node({
-      node_id: 2,
+      meshtastic_node_id: 2,
       latest_device_metrics: {
         battery_level: 90,
         reported_time: old,
@@ -93,7 +93,7 @@ describe('isLowBatteryTableRowVisible', () => {
 
   it('shows mesh-alert-only rows regardless of battery filters', () => {
     const n = node({
-      node_id: 3,
+      meshtastic_node_id: 3,
       latest_device_metrics: {
         battery_level: 90,
         reported_time: new Date(),
@@ -109,7 +109,7 @@ describe('hasMeshInfraMapBatteryOrPresenceAlert', () => {
   it('returns false for stale-but-ok percentage', () => {
     const old = new Date(Date.now() - 10 * 24 * 60 * 60 * 1000);
     const n = node({
-      node_id: 1,
+      meshtastic_node_id: 1,
       last_heard: new Date(),
       latest_device_metrics: {
         battery_level: 88,
@@ -123,7 +123,7 @@ describe('hasMeshInfraMapBatteryOrPresenceAlert', () => {
   it('returns true for low percent with stale reading', () => {
     const old = new Date(Date.now() - 10 * 24 * 60 * 60 * 1000);
     const n = node({
-      node_id: 2,
+      meshtastic_node_id: 2,
       last_heard: new Date(),
       latest_device_metrics: {
         battery_level: 12,

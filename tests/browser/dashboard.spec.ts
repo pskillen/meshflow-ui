@@ -47,7 +47,7 @@ test.describe('Dashboard', () => {
       const nodesWithData = {
         results: [
           {
-            node_id: 1,
+            meshtastic_node_id: 1,
             node_id_str: '!abc123',
             short_name: 'TestNode',
             long_name: 'Test Node',

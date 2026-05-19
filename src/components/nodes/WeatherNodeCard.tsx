@@ -49,7 +49,7 @@ function WeatherNodeCardInner({ node, metrics, dateRange }: WeatherNodeCardProps
       </div>
       <div className="mt-auto flex justify-end pt-3">
         <Link
-          to={`/nodes/${node.node_id}`}
+          to={`/nodes/${node.meshtastic_node_id}`}
           className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
         >
           Open node details

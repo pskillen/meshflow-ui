@@ -50,11 +50,11 @@ export function NodeTracerouteHistorySection({ nodeId, observedNode }: NodeTrace
     includeStatus: true,
     includeGeoClassification: true,
   });
-  const managedByMeshId = useMemo(() => new Map(managedNodes.map((m) => [m.node_id, m])), [managedNodes]);
+  const managedByMeshId = useMemo(() => new Map(managedNodes.map((m) => [m.meshtastic_node_id, m])), [managedNodes]);
   const modalManagedNodes = useMemo(
     () =>
       triggerableNodes.map((t) => {
-        const full = managedByMeshId.get(t.node_id);
+        const full = managedByMeshId.get(t.meshtastic_node_id);
         return full ? { ...t, ...full } : t;
       }),
     [triggerableNodes, managedByMeshId]
@@ -67,8 +67,8 @@ export function NodeTracerouteHistorySection({ nodeId, observedNode }: NodeTrace
   const handleRepeat = (tr: AutoTraceRoute) => {
     triggerMutation.mutate(
       {
-        managedNodeId: tr.source_node.node_id,
-        targetNodeId: tr.target_node.node_id,
+        managedNodeId: tr.source_node.meshtastic_node_id,
+        targetNodeId: tr.target_node.meshtastic_node_id,
         targetStrategy:
           tr.target_strategy === 'intra_zone' ||
           tr.target_strategy === 'dx_across' ||
@@ -136,7 +136,9 @@ export function NodeTracerouteHistorySection({ nodeId, observedNode }: NodeTrace
                 </TableHeader>
                 <TableBody>
                   {traceroutes.map((tr) => {
-                    const canRepeat = triggerableNodes.some((n) => n.node_id === tr.source_node.node_id);
+                    const canRepeat = triggerableNodes.some(
+                      (n) => n.meshtastic_node_id === tr.source_node.meshtastic_node_id
+                    );
                     return (
                       <TableRow
                         key={tr.id}

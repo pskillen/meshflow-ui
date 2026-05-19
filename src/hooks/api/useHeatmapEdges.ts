@@ -15,7 +15,7 @@ export interface HeatmapEdge {
 export type HeatmapNodeRole = 'backbone' | 'relay' | 'leaf' | 'offline';
 
 export interface HeatmapNode {
-  node_id: number;
+  meshtastic_node_id: number;
   node_id_str: string;
   lat: number;
   lng: number;

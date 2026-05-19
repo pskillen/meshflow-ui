@@ -48,7 +48,9 @@ export function TracerouteHeatmapNodePanel({
         <div className="font-semibold">
           {node.long_name && node.short_name ? `${node.long_name} (${node.short_name})` : getHeatmapNodeLabel(node)}
         </div>
-        <div className="mt-0.5 text-xs text-slate-400">{node.node_id_str || `!${node.node_id.toString(16)}`}</div>
+        <div className="mt-0.5 text-xs text-slate-400">
+          {node.node_id_str || `!${node.meshtastic_node_id.toString(16)}`}
+        </div>
         {(node.centrality != null || node.degree != null) && (
           <dl className="mt-2 space-y-0.5 text-xs text-slate-300">
             {node.centrality != null && (
@@ -75,7 +77,7 @@ export function TracerouteHeatmapNodePanel({
           Last seen: <span className="text-slate-300">{formatRecency(node.last_seen)}</span>
         </div>
         <Link
-          to={`/nodes/${node.node_id}`}
+          to={`/nodes/${node.meshtastic_node_id}`}
           className="mt-1 inline-block text-xs text-emerald-400 hover:text-emerald-300 hover:underline"
         >
           Open details

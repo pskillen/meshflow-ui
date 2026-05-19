@@ -30,7 +30,7 @@
   ],
   "nodes": [
     {
-      "node_id": 1,
+      "meshtastic_node_id": 1,
       "node_id_str": "!a1b2c3d4",
       "lat": 55.86,
       "lng": -4.25,
@@ -38,7 +38,7 @@
       "long_name": "Test Node A"
     },
     {
-      "node_id": 2,
+      "meshtastic_node_id": 2,
       "node_id_str": "!b2c3d4e5",
       "lat": 55.5,
       "lng": -5.0,
@@ -46,7 +46,7 @@
       "long_name": "Test Node B"
     },
     {
-      "node_id": 3,
+      "meshtastic_node_id": 3,
       "node_id_str": "!c3d4e5f6",
       "lat": 56.2,
       "lng": -3.5,

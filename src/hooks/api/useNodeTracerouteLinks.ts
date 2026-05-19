@@ -14,7 +14,7 @@ export interface NodeTracerouteLinkEdge {
 }
 
 export interface NodeTracerouteLinkNode {
-  node_id: number;
+  meshtastic_node_id: number;
   node_id_str?: string;
   lat: number;
   lng: number;

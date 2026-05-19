@@ -8,7 +8,7 @@ describe('observedNodesToCoverageGhosts', () => {
     const nodes: ObservedNode[] = [
       {
         internal_id: 1,
-        node_id: 10,
+        meshtastic_node_id: 10,
         node_id_str: '!a',
         mac_addr: null,
         long_name: 'A',
@@ -19,7 +19,7 @@ describe('observedNodesToCoverageGhosts', () => {
       },
       {
         internal_id: 2,
-        node_id: 20,
+        meshtastic_node_id: 20,
         node_id_str: '!b',
         mac_addr: null,
         long_name: null,
@@ -37,7 +37,7 @@ describe('observedNodesToCoverageGhosts', () => {
     const nodes: ObservedNode[] = [
       {
         internal_id: 3,
-        node_id: 30,
+        meshtastic_node_id: 30,
         node_id_str: '!c',
         mac_addr: null,
         long_name: 'Ghost',
@@ -49,7 +49,7 @@ describe('observedNodesToCoverageGhosts', () => {
     ];
     const g = observedNodesToCoverageGhosts(nodes, new Set());
     expect(g).toHaveLength(1);
-    expect(g[0].node_id).toBe(30);
+    expect(g[0].meshtastic_node_id).toBe(30);
     expect(g[0].lat).toBe(55.1);
     expect(g[0].lng).toBe(-4.1);
   });

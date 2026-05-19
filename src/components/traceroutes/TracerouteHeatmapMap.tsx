@@ -84,7 +84,7 @@ export function TracerouteHeatmapMap({
 
   const roleById = useMemo(() => {
     const m = new Map<number, HeatmapNode['role']>();
-    for (const n of nodes) m.set(n.node_id, n.role);
+    for (const n of nodes) m.set(n.meshtastic_node_id, n.role);
     return m;
   }, [nodes]);
 

@@ -250,10 +250,13 @@ export function NodeDetailContent({ nodeId, compact = false, activeTab, onTabCha
   const { managedNodes } = useManagedNodesSuspense({ includeGeoClassification: true });
 
   const isManagedNode = useMemo(() => {
-    return managedNodes.some((managedNode) => managedNode.node_id === nodeId);
+    return managedNodes.some((managedNode) => managedNode.meshtastic_node_id === nodeId);
   }, [managedNodes, nodeId]);
 
-  const managedForThisNode = useMemo(() => managedNodes.find((m) => m.node_id === nodeId), [managedNodes, nodeId]);
+  const managedForThisNode = useMemo(
+    () => managedNodes.find((m) => m.meshtastic_node_id === nodeId),
+    [managedNodes, nodeId]
+  );
 
   useEffect(() => {
     if (node) {
@@ -528,11 +531,11 @@ export function NodeDetailContent({ nodeId, compact = false, activeTab, onTabCha
           <div className="mb-2 text-sm text-slate-500 dark:text-slate-400">Recently viewed:</div>
           <div className="flex flex-wrap gap-2">
             {recentNodes
-              .filter((recentNode) => recentNode.node_id !== nodeId)
+              .filter((recentNode) => recentNode.meshtastic_node_id !== nodeId)
               .map((recentNode) => (
                 <Link
-                  key={recentNode.node_id}
-                  to={`/nodes/${recentNode.node_id}`}
+                  key={recentNode.meshtastic_node_id}
+                  to={`/nodes/${recentNode.meshtastic_node_id}`}
                   replace={true}
                   className="rounded-full bg-slate-100 px-3 py-1 text-sm text-teal-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-teal-400 dark:hover:bg-slate-700"
                 >

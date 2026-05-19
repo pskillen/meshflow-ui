@@ -119,8 +119,8 @@ export function classifyCandidate(
   strategy: 'intra_zone' | 'dx_across' | 'dx_same_side',
   halfWindowDeg: number
 ): { included: boolean; reason: ExclusionReason } {
-  if (node.node_id === ctx.feederNodeId) return { included: false, reason: 'is_source' };
-  if (ctx.managedNodeIds.has(node.node_id)) return { included: false, reason: 'is_managed' };
+  if (node.meshtastic_node_id === ctx.feederNodeId) return { included: false, reason: 'is_source' };
+  if (ctx.managedNodeIds.has(node.meshtastic_node_id)) return { included: false, reason: 'is_managed' };
   const lh = node.last_heard;
   if (!lh || lh < ctx.lastHeardCutoff) return { included: false, reason: 'stale_last_heard' };
   const pos = observedLatLon(node);

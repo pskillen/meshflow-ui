@@ -5,17 +5,17 @@ import { DateRangeParams } from '@/lib/types';
 import { getKeyValue, roundDateParams } from './hooks-utils';
 
 /**
- * Transform flat bulk response into metricsMap keyed by node_id.
- * Strips node_id, node_id_str, short_name from each item for EnvironmentMetrics shape.
+ * Transform flat bulk response into metricsMap keyed by meshtastic_node_id.
+ * Strips meshtastic_node_id, node_id_str, short_name from each item for EnvironmentMetrics shape.
  */
 function bulkResultsToMetricsMap(
-  results: Array<EnvironmentMetrics & { node_id: number; node_id_str?: string; short_name?: string | null }>
+  results: Array<EnvironmentMetrics & { meshtastic_node_id: number; node_id_str?: string; short_name?: string | null }>
 ): Record<number, EnvironmentMetrics[]> {
   const map: Record<number, EnvironmentMetrics[]> = {};
   for (const item of results) {
-    const { node_id, ...metric } = item;
-    if (!map[node_id]) map[node_id] = [];
-    map[node_id].push(metric as EnvironmentMetrics);
+    const { meshtastic_node_id, ...metric } = item;
+    if (!map[meshtastic_node_id]) map[meshtastic_node_id] = [];
+    map[meshtastic_node_id].push(metric as EnvironmentMetrics);
   }
   // Sort each node's metrics by reported_time ascending (for chart ordering)
   for (const nodeId of Object.keys(map)) {
@@ -36,7 +36,7 @@ function bulkResultsToMetricsMap(
  */
 export function useMultiNodeEnvironmentMetrics(nodes: ObservedNode[], dateRange?: DateRangeParams) {
   const api = useMeshtasticApi();
-  const nodeIds = nodes.map((n) => n.node_id);
+  const nodeIds = nodes.map((n) => n.meshtastic_node_id);
   const params = roundDateParams(dateRange);
   const keyValue = getKeyValue(params);
   const queryKey = ['nodes', 'environment-metrics-bulk', nodeIds.sort().join(','), keyValue];
@@ -67,7 +67,7 @@ export function useMultiNodeEnvironmentMetrics(nodes: ObservedNode[], dateRange?
 export function useMultiNodeEnvironmentMetricsSuspense(nodes: ObservedNode[], params?: DateRangeParams) {
   const api = useMeshtasticApi();
   const roundedParams = roundDateParams(params);
-  const nodeIds = nodes.map((n) => n.node_id);
+  const nodeIds = nodes.map((n) => n.meshtastic_node_id);
   const keyValue = getKeyValue(roundedParams);
   const queryKey = ['nodes', 'environment-metrics-bulk', nodeIds.sort().join(','), keyValue];
 

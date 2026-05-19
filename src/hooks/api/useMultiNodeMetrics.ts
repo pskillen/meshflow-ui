@@ -6,17 +6,17 @@ import { getKeyValue } from './hooks-utils';
 import { roundDateParams } from './hooks-utils';
 
 /**
- * Transform flat bulk response into metricsMap keyed by node_id.
- * Strips node_id, node_id_str, short_name from each item for DeviceMetrics shape.
+ * Transform flat bulk response into metricsMap keyed by meshtastic_node_id.
+ * Strips meshtastic_node_id, node_id_str, short_name from each item for DeviceMetrics shape.
  */
 function bulkResultsToMetricsMap(
-  results: Array<DeviceMetrics & { node_id: number; node_id_str?: string; short_name?: string | null }>
+  results: Array<DeviceMetrics & { meshtastic_node_id: number; node_id_str?: string; short_name?: string | null }>
 ): Record<number, DeviceMetrics[]> {
   const map: Record<number, DeviceMetrics[]> = {};
   for (const item of results) {
-    const { node_id, ...metric } = item;
-    if (!map[node_id]) map[node_id] = [];
-    map[node_id].push(metric as DeviceMetrics);
+    const { meshtastic_node_id, ...metric } = item;
+    if (!map[meshtastic_node_id]) map[meshtastic_node_id] = [];
+    map[meshtastic_node_id].push(metric as DeviceMetrics);
   }
   // Sort each node's metrics by reported_time ascending (for chart ordering)
   for (const nodeId of Object.keys(map)) {
@@ -37,7 +37,7 @@ function bulkResultsToMetricsMap(
  */
 export function useMultiNodeMetrics(nodes: ObservedNode[], dateRange?: DateRangeParams) {
   const api = useMeshtasticApi();
-  const nodeIds = nodes.map((n) => n.node_id);
+  const nodeIds = nodes.map((n) => n.meshtastic_node_id);
   const params = roundDateParams(dateRange);
   const keyValue = getKeyValue(params);
   const queryKey = ['nodes', 'metrics-bulk', nodeIds.sort().join(','), keyValue];
@@ -68,7 +68,7 @@ export function useMultiNodeMetrics(nodes: ObservedNode[], dateRange?: DateRange
 export function useMultiNodeMetricsSuspense(nodes: ObservedNode[], params?: DateRangeParams) {
   const api = useMeshtasticApi();
   const roundedParams = roundDateParams(params);
-  const nodeIds = nodes.map((n) => n.node_id);
+  const nodeIds = nodes.map((n) => n.meshtastic_node_id);
   const keyValue = getKeyValue(roundedParams);
   const queryKey = ['nodes', 'metrics-bulk', nodeIds.sort().join(','), keyValue];
 

@@ -8,7 +8,7 @@ function makeManaged(
   constellation: { id: number; name?: string; map_color?: string }
 ): ManagedNode {
   return {
-    node_id: nodeId,
+    meshtastic_node_id: nodeId,
     long_name: null,
     short_name: 'S',
     last_heard: null,

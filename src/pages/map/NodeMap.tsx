@@ -214,7 +214,7 @@ function NodeMapContent() {
           )}
 
           <NodeDetailSheet
-            nodeId={selectedNode?.node_id ?? null}
+            nodeId={selectedNode?.meshtastic_node_id ?? null}
             open={selectedNode != null}
             onOpenChange={(open) => !open && setSelectedNode(null)}
           />

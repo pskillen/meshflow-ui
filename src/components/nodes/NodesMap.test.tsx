@@ -56,7 +56,7 @@ function nodeWithPosition(
 ): ObservedNode {
   return {
     internal_id: id,
-    node_id: id,
+    meshtastic_node_id: id,
     node_id_str: `!${id.toString(16).padStart(8, '0')}`,
     mac_addr: null,
     long_name: 'A',

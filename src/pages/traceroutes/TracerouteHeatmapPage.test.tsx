@@ -27,7 +27,7 @@ describe('TracerouteHeatmapPage URL → API', () => {
     mockUseManaged.mockReturnValue({
       managedNodes: [
         {
-          node_id: 99,
+          meshtastic_node_id: 99,
           short_name: 'Feed',
           node_id_str: '!00000063',
           long_name: null,

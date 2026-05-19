@@ -4,7 +4,7 @@ import { ObservedNode } from '@/lib/models';
 // Type for storing recent nodes in local storage
 interface RecentNode {
   internal_id: number; // internal_id from ObservedNode
-  node_id: number; // node_id from ObservedNode
+  meshtastic_node_id: number; // meshtastic_node_id from ObservedNode
   node_id_str: string; // node_id_str from ObservedNode
   short_name: string | null;
   long_name: string | null;
@@ -53,7 +53,7 @@ export function useRecentNodes() {
       // Create a new node entry
       const newNode: RecentNode = {
         internal_id: node.internal_id,
-        node_id: node.node_id,
+        meshtastic_node_id: node.meshtastic_node_id,
         node_id_str: node.node_id_str,
         short_name: node.short_name,
         long_name: node.long_name,

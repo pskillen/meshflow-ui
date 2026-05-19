@@ -42,7 +42,7 @@ export default function MonitorNodesPage() {
     const m = new Map<number, string>();
     for (const w of sortedWatches) {
       const st = deriveWatchMonitoringStatus(w);
-      m.set(w.observed_node.node_id, WATCH_STATUS_MAP_COLOR[st]);
+      m.set(w.observed_node.meshtastic_node_id, WATCH_STATUS_MAP_COLOR[st]);
     }
     return m;
   }, [sortedWatches]);
@@ -80,9 +80,9 @@ export default function MonitorNodesPage() {
   const modalManagedNodes = useMemo(() => {
     const triggerable = triggerableQuery.data ?? [];
     const pages = managedPages.data?.pages.flatMap((p) => p.results) ?? [];
-    const byId = new Map(pages.map((m) => [m.node_id, m]));
+    const byId = new Map(pages.map((m) => [m.meshtastic_node_id, m]));
     return triggerable.map((t) => {
-      const full = byId.get(t.node_id);
+      const full = byId.get(t.meshtastic_node_id);
       return full ? { ...t, ...full } : t;
     });
   }, [triggerableQuery.data, managedPages.data?.pages]);

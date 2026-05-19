@@ -23,7 +23,7 @@ vi.mock('@/components/traceroutes/AutoTargetPreviewMap', () => ({
 function makeObservedNode(overrides: Partial<ObservedNode> = {}): ObservedNode {
   return {
     internal_id: 1,
-    node_id: 42,
+    meshtastic_node_id: 42,
     node_id_str: '!0000002a',
     mac_addr: null,
     long_name: 'Fixed target',
@@ -52,7 +52,7 @@ function sampleGeo(): GeoClassification {
 
 function makeManagedNode(overrides: Partial<ManagedNode> = {}): ManagedNode {
   return {
-    node_id: 7,
+    meshtastic_node_id: 7,
     long_name: 'Source',
     short_name: 'SRC',
     last_heard: null,

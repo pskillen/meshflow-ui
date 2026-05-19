@@ -14,7 +14,7 @@ function makeWatch(overrides: {
 }): NodeWatch {
   const node: ObservedNodeWatchSummary = {
     internal_id: 1,
-    node_id: 42,
+    meshtastic_node_id: 42,
     node_id_str: '!0000002a',
     mac_addr: null,
     long_name: null,
@@ -111,7 +111,7 @@ describe('sortWatchesByMonitoringStatus', () => {
     const online = makeWatch({
       watch: { id: 1, offline_after: 3600 },
       node: {
-        node_id: 1,
+        meshtastic_node_id: 1,
         last_heard: new Date('2026-01-01T14:30:00.000Z'),
         monitoring_offline_confirmed_at: null,
         monitoring_verification_started_at: null,
@@ -120,7 +120,7 @@ describe('sortWatchesByMonitoringStatus', () => {
     const offline = makeWatch({
       watch: { id: 2, offline_after: 3600 },
       node: {
-        node_id: 2,
+        meshtastic_node_id: 2,
         monitoring_offline_confirmed_at: '2026-01-01T14:00:00Z',
         last_heard: new Date('2026-01-01T14:30:00.000Z'),
       },
@@ -141,7 +141,7 @@ describe('countWatchesByMonitoringStatus', () => {
       }),
       makeWatch({
         watch: { id: 2, offline_after: 7200 },
-        node: { node_id: 3, last_heard: new Date('2026-01-01T12:30:00.000Z') },
+        node: { meshtastic_node_id: 3, last_heard: new Date('2026-01-01T12:30:00.000Z') },
       }),
     ];
     expect(countWatchesByMonitoringStatus(watches, now)).toEqual({
@@ -159,11 +159,11 @@ describe('compareWatchesByMonitoringStatus', () => {
     const now = new Date('2026-01-01T15:00:00.000Z').getTime();
     const newerUnknown = makeWatch({
       watch: { id: 1, offline_after: 60 },
-      node: { node_id: 10, last_heard: new Date('2026-01-01T14:50:00.000Z') },
+      node: { meshtastic_node_id: 10, last_heard: new Date('2026-01-01T14:50:00.000Z') },
     });
     const olderUnknown = makeWatch({
       watch: { id: 2, offline_after: 60 },
-      node: { node_id: 11, last_heard: new Date('2026-01-01T14:00:00.000Z') },
+      node: { meshtastic_node_id: 11, last_heard: new Date('2026-01-01T14:00:00.000Z') },
     });
     const sorted = [newerUnknown, olderUnknown].sort((a, b) => compareWatchesByMonitoringStatus(a, b, now));
     expect(sorted[0].id).toBe(2);

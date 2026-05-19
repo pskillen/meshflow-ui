@@ -74,11 +74,11 @@ export function TracerouteTopologyPage({ edgeMetric }: { edgeMetric: EdgeMetric 
   const selectedRaw = searchParams.get('selected');
   const selectedNodeId = selectedRaw && /^\d+$/.test(selectedRaw.trim()) ? Number.parseInt(selectedRaw, 10) : null;
   const selectedNode: HeatmapNode | null =
-    selectedNodeId != null ? (nodes.find((n) => n.node_id === selectedNodeId) ?? null) : null;
+    selectedNodeId != null ? (nodes.find((n) => n.meshtastic_node_id === selectedNodeId) ?? null) : null;
 
   useEffect(() => {
     if (selectedNodeId == null || nodes.length === 0) return;
-    if (!nodes.some((n) => n.node_id === selectedNodeId)) {
+    if (!nodes.some((n) => n.meshtastic_node_id === selectedNodeId)) {
       updateParams({ selected: null });
     }
   }, [nodes, selectedNodeId, updateParams]);
@@ -124,7 +124,9 @@ export function TracerouteTopologyPage({ edgeMetric }: { edgeMetric: EdgeMetric 
                 edgeMetric={edgeMetric}
                 staleThresholdHours={HEATMAP_STALE_THRESHOLD_HOURS}
                 selectedNodeId={selectedNodeId}
-                onSelectedNodeChange={(node) => updateParams({ selected: node ? String(node.node_id) : null })}
+                onSelectedNodeChange={(node) =>
+                  updateParams({ selected: node ? String(node.meshtastic_node_id) : null })
+                }
               />
             )}
           </CardContent>

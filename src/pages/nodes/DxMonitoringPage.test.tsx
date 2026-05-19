@@ -120,7 +120,7 @@ describe('DxMonitoringPage', () => {
   it('shows exploration attempt counts on the list', () => {
     const destination: DxEventListItem['destination'] = {
       internal_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
-      node_id: 123,
+      meshtastic_node_id: 123,
       node_id_str: '!0000007b',
       short_name: 'T',
       long_name: 'Target',
@@ -159,7 +159,7 @@ describe('DxMonitoringPage', () => {
     const user = userEvent.setup();
     const destination: DxEventListItem['destination'] = {
       internal_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
-      node_id: 123,
+      meshtastic_node_id: 123,
       node_id_str: '!0000007b',
       short_name: 'T',
       long_name: 'Target',
@@ -167,7 +167,7 @@ describe('DxMonitoringPage', () => {
     };
     const hop = {
       internal_id: destination.internal_id,
-      node_id: destination.node_id,
+      meshtastic_node_id: destination.meshtastic_node_id,
       node_id_str: destination.node_id_str,
       short_name: destination.short_name,
       long_name: destination.long_name,
@@ -223,7 +223,7 @@ describe('DxMonitoringPage', () => {
           updated_at: '2026-01-15T10:05:00.000Z',
           source_node: {
             internal_id: 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee',
-            node_id: 456,
+            meshtastic_node_id: 456,
             node_id_str: '!000001c8',
             name: 'Source MN',
           },
@@ -284,7 +284,7 @@ describe('DxMonitoringPage', () => {
     const user = userEvent.setup();
     const destination: DxEventListItem['destination'] = {
       internal_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
-      node_id: 123,
+      meshtastic_node_id: 123,
       node_id_str: '!0000007b',
       short_name: 'T',
       long_name: 'Target',

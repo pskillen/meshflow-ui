@@ -114,13 +114,13 @@ export function NodeSearch({ onNodeSelect, displayValue, onClearSelection, lastH
               {filteredSearchResults.map((node) => (
                 <li key={node.internal_id}>
                   <Link
-                    to={onNodeSelect ? '#' : `/nodes/${node.node_id}`}
+                    to={onNodeSelect ? '#' : `/nodes/${node.meshtastic_node_id}`}
                     className="block px-4 py-2 hover:bg-accent"
                     onClick={() => {
                       setIsOpen(false);
                       setQuery('');
                       if (onNodeSelect) {
-                        onNodeSelect(node.node_id, node);
+                        onNodeSelect(node.meshtastic_node_id, node);
                       }
                     }}
                   >

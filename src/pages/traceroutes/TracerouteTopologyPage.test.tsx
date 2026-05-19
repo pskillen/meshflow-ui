@@ -22,7 +22,7 @@ const mockUseHeatmap = vi.mocked(useHeatmapEdges);
 const mockUseManaged = vi.mocked(useManagedNodesSuspense);
 
 const sampleNode = {
-  node_id: 0x11a,
+  meshtastic_node_id: 0x11a,
   node_id_str: '!0000011a',
   short_name: 'A',
   long_name: 'Node A',
@@ -40,7 +40,7 @@ describe('TracerouteTopologyPage URL → API', () => {
     mockUseManaged.mockReturnValue({
       managedNodes: [
         {
-          node_id: 99,
+          meshtastic_node_id: 99,
           short_name: 'Feed',
           node_id_str: '!00000063',
           long_name: null,
@@ -84,7 +84,7 @@ describe('TracerouteTopologyPage URL → API', () => {
   });
 
   it('shows node panel when selected query matches a loaded node', () => {
-    renderPage(`/traceroutes/map/topology/heat?selected=${sampleNode.node_id}`);
+    renderPage(`/traceroutes/map/topology/heat?selected=${sampleNode.meshtastic_node_id}`);
     expect(screen.getByTestId('topology-node-panel')).toBeInTheDocument();
     expect(screen.getByText('Open details')).toBeInTheDocument();
   });

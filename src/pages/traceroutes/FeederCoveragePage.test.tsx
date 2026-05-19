@@ -23,15 +23,15 @@ vi.mock('@/components/traceroutes/FeederCoverageMap', () => ({
     enabledLayers,
     minAttempts,
   }: {
-    feeder: { node_id: number };
-    targets: { node_id: number }[];
+    feeder: { meshtastic_node_id: number };
+    targets: { meshtastic_node_id: number }[];
     heardGhosts: unknown[];
     enabledLayers: string[];
     minAttempts: number;
   }) => (
     <div
       data-testid="feeder-coverage-map-mock"
-      data-feeder={feeder.node_id}
+      data-feeder={feeder.meshtastic_node_id}
       data-target-count={targets.length}
       data-heard-ghost-count={heardGhosts.length}
       data-enabled-layers={enabledLayers.join(',')}
@@ -49,7 +49,7 @@ const mockedUseFeederReach = vi.mocked(useFeederReach);
 
 function makeManagedNode(overrides: Partial<ManagedNode> = {}): ManagedNode {
   return {
-    node_id: 200,
+    meshtastic_node_id: 200,
     long_name: 'Source node',
     short_name: 'SRC',
     last_heard: null,
@@ -101,12 +101,12 @@ describe('FeederCoveragePage', () => {
   it('hydrates the selected feeder from the ?feeder= URL parameter', () => {
     setupHooks({
       managedNodes: [
-        makeManagedNode({ node_id: 100, short_name: 'AAA' }),
-        makeManagedNode({ node_id: 200, short_name: 'BBB' }),
+        makeManagedNode({ meshtastic_node_id: 100, short_name: 'AAA' }),
+        makeManagedNode({ meshtastic_node_id: 200, short_name: 'BBB' }),
       ],
       data: {
         feeder: {
-          node_id: 200,
+          meshtastic_node_id: 200,
           node_id_str: '!000000c8',
           short_name: 'BBB',
           long_name: 'Source node',
@@ -136,7 +136,7 @@ describe('FeederCoveragePage', () => {
     setupHooks({
       data: {
         feeder: {
-          node_id: 200,
+          meshtastic_node_id: 200,
           node_id_str: '!000000c8',
           short_name: 'SRC',
           long_name: 'Source',
@@ -146,7 +146,7 @@ describe('FeederCoveragePage', () => {
         window: { triggered_at_after: null, triggered_at_before: null },
         targets: [
           {
-            node_id: 1,
+            meshtastic_node_id: 1,
             node_id_str: '!00000001',
             short_name: 'A',
             long_name: null,
@@ -156,7 +156,7 @@ describe('FeederCoveragePage', () => {
             successes: 4,
           },
           {
-            node_id: 2,
+            meshtastic_node_id: 2,
             node_id_str: '!00000002',
             short_name: 'B',
             long_name: null,
@@ -182,7 +182,7 @@ describe('FeederCoveragePage', () => {
     setupHooks({
       data: {
         feeder: {
-          node_id: 200,
+          meshtastic_node_id: 200,
           node_id_str: '!000000c8',
           short_name: 'SRC',
           long_name: 'Source',

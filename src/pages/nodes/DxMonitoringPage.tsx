@@ -104,8 +104,8 @@ function explorationKindLabel(row: DxEventTracerouteExplorationRow): string {
 }
 
 function explorationHistoryHref(row: DxEventTracerouteExplorationRow): string {
-  const targetNodeId = row.destination.node_id;
-  const sourceNodeId = row.source_node?.node_id ?? null;
+  const targetNodeId = row.destination.meshtastic_node_id;
+  const sourceNodeId = row.source_node?.meshtastic_node_id ?? null;
   if (row.link_kind === 'new_node_baseline') {
     return buildDxTracerouteHistoryLink({
       targetNodeId,
@@ -202,7 +202,7 @@ export default function DxMonitoringPage() {
     if (!excludeTarget) return;
     exclusionMutation.mutate(
       {
-        node_id: excludeTarget.destination.node_id,
+        meshtastic_node_id: excludeTarget.destination.meshtastic_node_id,
         exclude_from_detection: true,
         exclude_notes: excludeNotes.trim() || undefined,
       },
@@ -431,7 +431,7 @@ export default function DxMonitoringPage() {
                       <TableCell>
                         <div className="flex flex-col gap-1 max-w-[16rem]">
                           <NodeLinkLabel
-                            to={`/nodes/${row.destination.node_id}`}
+                            to={`/nodes/${row.destination.meshtastic_node_id}`}
                             {...formatDestinationLabel(row.destination)}
                           />
                           {row.destination.dx_metadata.exclude_from_detection && (
@@ -444,7 +444,7 @@ export default function DxMonitoringPage() {
                       <TableCell className="text-sm max-w-[12rem]">
                         {row.last_observer ? (
                           <NodeLinkLabel
-                            to={`/nodes/${row.last_observer.node_id}`}
+                            to={`/nodes/${row.last_observer.meshtastic_node_id}`}
                             {...formatObserverLabel(row.last_observer)}
                           />
                         ) : (
@@ -535,7 +535,7 @@ export default function DxMonitoringPage() {
                 <div className="text-muted-foreground">Destination</div>
                 <div className="flex flex-wrap items-center gap-2 mt-1">
                   <NodeLinkLabel
-                    to={`/nodes/${detailQuery.data.destination.node_id}`}
+                    to={`/nodes/${detailQuery.data.destination.meshtastic_node_id}`}
                     {...formatDestinationLabel(detailQuery.data.destination)}
                   />
                   {detailQuery.data.destination.dx_metadata.exclude_from_detection && (
@@ -574,7 +574,7 @@ export default function DxMonitoringPage() {
                             <TableCell className="text-xs whitespace-nowrap">{formatWhen(o.observed_at)}</TableCell>
                             <TableCell className="text-xs max-w-[12rem]">
                               <NodeLinkLabel
-                                to={`/nodes/${o.observer.node_id}`}
+                                to={`/nodes/${o.observer.meshtastic_node_id}`}
                                 primary={obsLabel.primary}
                                 idSecondary={obsLabel.idSecondary}
                               />
@@ -683,7 +683,7 @@ export default function DxMonitoringPage() {
                                     <TableCell className="text-xs max-w-[10rem]">
                                       {row.source_node ? (
                                         <NodeLinkLabel
-                                          to={`/nodes/${row.source_node.node_id}`}
+                                          to={`/nodes/${row.source_node.meshtastic_node_id}`}
                                           {...formatObserverLabel(row.source_node)}
                                         />
                                       ) : (
@@ -692,7 +692,7 @@ export default function DxMonitoringPage() {
                                     </TableCell>
                                     <TableCell className="text-xs max-w-[10rem]">
                                       <NodeLinkLabel
-                                        to={`/nodes/${row.destination.node_id}`}
+                                        to={`/nodes/${row.destination.meshtastic_node_id}`}
                                         {...formatHopLabel(row.destination)}
                                       />
                                     </TableCell>

@@ -35,7 +35,7 @@ function makeObserved(overrides: Partial<ObservedNode> = {}): ObservedNode {
   const now = new Date();
   return {
     internal_id: 1,
-    node_id: 99,
+    meshtastic_node_id: 99,
     node_id_str: '!00000063',
     mac_addr: null,
     long_name: 'T',
@@ -73,7 +73,7 @@ describe('tracerouteTargetGeometry', () => {
   it('classifyCandidate intra includes point on envelope boundary', () => {
     const geo = makeGeo();
     const onRing = makeObserved({
-      node_id: 501,
+      meshtastic_node_id: 501,
       latest_position: {
         latitude: destinationPoint(geo.envelope!.centroid_lat, geo.envelope!.centroid_lon, 0, geo.envelope!.radius_km)[0],
         longitude: destinationPoint(geo.envelope!.centroid_lat, geo.envelope!.centroid_lon, 0, geo.envelope!.radius_km)[1],
@@ -98,7 +98,7 @@ describe('tracerouteTargetGeometry', () => {
   it('classifyCandidate dx excludes inside envelope', () => {
     const geo = makeGeo();
     const inside = makeObserved({
-      node_id: 502,
+      meshtastic_node_id: 502,
       latest_position: {
         latitude: 55.01,
         longitude: -4.25,
@@ -123,7 +123,7 @@ describe('tracerouteTargetGeometry', () => {
   it('classifyCandidate excludes stale last_heard', () => {
     const geo = makeGeo();
     const stale = makeObserved({
-      node_id: 503,
+      meshtastic_node_id: 503,
       last_heard: new Date(Date.now() - 5 * 60 * 60 * 1000),
     });
     const ctx = {
@@ -144,7 +144,7 @@ describe('tracerouteTargetGeometry', () => {
       selection_centroid: { lat: 55.0, lon: -4.25 },
     });
     const north = makeObserved({
-      node_id: 504,
+      meshtastic_node_id: 504,
       latest_position: {
         latitude: 56.0,
         longitude: -4.25,
@@ -155,7 +155,7 @@ describe('tracerouteTargetGeometry', () => {
       },
     });
     const south = makeObserved({
-      node_id: 505,
+      meshtastic_node_id: 505,
       latest_position: {
         latitude: 53.5,
         longitude: -4.25,
@@ -184,7 +184,7 @@ describe('tracerouteTargetGeometry', () => {
       applicable_strategies: ['intra_zone', 'dx_across'],
     });
     const insideIntra = makeObserved({
-      node_id: 505,
+      meshtastic_node_id: 505,
       latest_position: {
         latitude: 55.05,
         longitude: -4.25,

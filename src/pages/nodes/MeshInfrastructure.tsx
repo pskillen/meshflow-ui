@@ -141,7 +141,7 @@ function MeshInfrastructureContent() {
     includeStatus: true,
     includeGeoClassification: true,
   });
-  const managedByMeshId = useMemo(() => new Map(managedNodes.map((m) => [m.node_id, m])), [managedNodes]);
+  const managedByMeshId = useMemo(() => new Map(managedNodes.map((m) => [m.meshtastic_node_id, m])), [managedNodes]);
   const managedNodesForMap = useMemo(() => filterManagedNodesForMapDisplay(managedNodes), [managedNodes]);
 
   const { metricsMap } = useMultiNodeMetricsSuspense(nodes, chartDateRange);
@@ -190,7 +190,7 @@ function MeshInfrastructureContent() {
     const m = new Map<number, 'diamond' | 'rounded-square'>();
     for (const n of allInfraNodes) {
       if (!hasMeshInfraMapBatteryOrPresenceAlert(n)) continue;
-      m.set(n.node_id, n.node_id % 2 === 0 ? 'diamond' : 'rounded-square');
+      m.set(n.meshtastic_node_id, n.meshtastic_node_id % 2 === 0 ? 'diamond' : 'rounded-square');
     }
     return m;
   }, [allInfraNodes]);
@@ -206,7 +206,7 @@ function MeshInfrastructureContent() {
   );
 
   const chartNodes = useMemo(
-    () => nodes.filter((n) => selectedChartNodeIds.has(n.node_id)),
+    () => nodes.filter((n) => selectedChartNodeIds.has(n.meshtastic_node_id)),
     [nodes, selectedChartNodeIds]
   );
 
@@ -316,13 +316,16 @@ function MeshInfrastructureContent() {
                     !node.last_heard ||
                     (node.last_heard instanceof Date ? node.last_heard : new Date(node.last_heard)) < cutoff;
                   const watch = watchesByNodeIdStr.get(node.node_id_str);
-                  const managed = managedByMeshId.get(node.node_id);
+                  const managed = managedByMeshId.get(node.meshtastic_node_id);
                   return (
                     <TableRow key={node.internal_id}>
                       <TableCell>
                         <div className="flex flex-col gap-0.5">
                           <div className="flex items-center gap-2">
-                            <Link to={`/nodes/${node.node_id}`} className="font-medium text-primary hover:underline">
+                            <Link
+                              to={`/nodes/${node.meshtastic_node_id}`}
+                              className="font-medium text-primary hover:underline"
+                            >
                               {node.long_name} ({node.short_name || node.node_id_str})
                             </Link>
                             {isOffline && (
@@ -376,19 +379,22 @@ function MeshInfrastructureContent() {
                           node={node}
                           watch={watch}
                           watchesQuery={watchesQuery}
-                          idPrefix={`infra-no-loc-${node.node_id}`}
+                          idPrefix={`infra-no-loc-${node.meshtastic_node_id}`}
                         />
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-col items-start gap-1 sm:flex-row sm:items-center sm:gap-3">
-                          <Link to={`/nodes/${node.node_id}`} className="text-primary text-sm hover:underline">
+                          <Link
+                            to={`/nodes/${node.meshtastic_node_id}`}
+                            className="text-primary text-sm hover:underline"
+                          >
                             View details
                           </Link>
                           {managed != null && (
                             <Link
-                              to={`/traceroutes/map/coverage?feeder=${node.node_id}`}
+                              to={`/traceroutes/map/coverage?feeder=${node.meshtastic_node_id}`}
                               className="text-muted-foreground text-sm underline-offset-4 hover:text-primary hover:underline"
-                              data-testid={`infra-no-loc-coverage-link-${node.node_id}`}
+                              data-testid={`infra-no-loc-coverage-link-${node.meshtastic_node_id}`}
                             >
                               Coverage map
                             </Link>
@@ -500,7 +506,7 @@ function MeshInfrastructureContent() {
                     const reportedAt = getBatteryMetricsReportedAt(node);
                     const level = node.latest_device_metrics?.battery_level;
                     const watch = watchesByNodeIdStr.get(node.node_id_str);
-                    const managed = managedByMeshId.get(node.node_id);
+                    const managed = managedByMeshId.get(node.meshtastic_node_id);
                     const cutoff = subDays(new Date(), 7);
                     const isOffline =
                       !node.last_heard ||
@@ -513,7 +519,10 @@ function MeshInfrastructureContent() {
                         <TableCell>
                           <div className="flex flex-col gap-0.5">
                             <div className="flex items-center gap-2">
-                              <Link to={`/nodes/${node.node_id}`} className="font-medium text-primary hover:underline">
+                              <Link
+                                to={`/nodes/${node.meshtastic_node_id}`}
+                                className="font-medium text-primary hover:underline"
+                              >
                                 {node.long_name} ({node.short_name || node.node_id_str})
                               </Link>
                               {isOffline && (
@@ -595,19 +604,22 @@ function MeshInfrastructureContent() {
                             node={node}
                             watch={watch}
                             watchesQuery={watchesQuery}
-                            idPrefix={`infra-batt-${node.node_id}`}
+                            idPrefix={`infra-batt-${node.meshtastic_node_id}`}
                           />
                         </TableCell>
                         <TableCell>
                           <div className="flex flex-col items-start gap-1 sm:flex-row sm:items-center sm:gap-3">
-                            <Link to={`/nodes/${node.node_id}`} className="text-primary text-sm hover:underline">
+                            <Link
+                              to={`/nodes/${node.meshtastic_node_id}`}
+                              className="text-primary text-sm hover:underline"
+                            >
                               View details
                             </Link>
                             {managed != null && (
                               <Link
-                                to={`/traceroutes/map/coverage?feeder=${node.node_id}`}
+                                to={`/traceroutes/map/coverage?feeder=${node.meshtastic_node_id}`}
                                 className="text-muted-foreground text-sm underline-offset-4 hover:text-primary hover:underline"
-                                data-testid={`infra-batt-coverage-link-${node.node_id}`}
+                                data-testid={`infra-batt-coverage-link-${node.meshtastic_node_id}`}
                               >
                                 Coverage map
                               </Link>
@@ -646,8 +658,8 @@ function MeshInfrastructureContent() {
             <InfrastructureNodeCard
               key={node.internal_id}
               node={node}
-              managedNode={managedByMeshId.get(node.node_id)}
-              metrics={metricsMap[node.node_id] ?? []}
+              managedNode={managedByMeshId.get(node.meshtastic_node_id)}
+              metrics={metricsMap[node.meshtastic_node_id] ?? []}
               dateRange={chartDateRange}
               onCompareToggle={handleCompareToggle}
               watch={watchesByNodeIdStr.get(node.node_id_str)}

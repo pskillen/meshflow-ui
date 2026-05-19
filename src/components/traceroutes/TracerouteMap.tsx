@@ -268,8 +268,12 @@ export function TracerouteMap({ traceroute }: { traceroute: AutoTraceRoute }) {
 
       const intermediateByNodeId = new Map<number, { pos: LatLng; label: string }>();
       for (const node of [...routeNodes, ...routeBackNodes]) {
-        if (node.position && node.node_id !== UNKNOWN_NODE_ID && !intermediateByNodeId.has(node.node_id)) {
-          intermediateByNodeId.set(node.node_id, {
+        if (
+          node.position &&
+          node.meshtastic_node_id !== UNKNOWN_NODE_ID &&
+          !intermediateByNodeId.has(node.meshtastic_node_id)
+        ) {
+          intermediateByNodeId.set(node.meshtastic_node_id, {
             pos: [node.position.latitude, node.position.longitude],
             label: node.short_name ?? node.node_id_str,
           });

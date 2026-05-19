@@ -28,7 +28,7 @@ function sampleGeo(overrides: Partial<GeoClassification> = {}): GeoClassificatio
 
 function makeFeeder(overrides: Partial<ManagedNode> = {}): ManagedNode {
   return {
-    node_id: 7,
+    meshtastic_node_id: 7,
     long_name: 'Source',
     short_name: 'SRC',
     last_heard: null,
@@ -45,7 +45,7 @@ function makeFeeder(overrides: Partial<ManagedNode> = {}): ManagedNode {
 const now = new Date();
 const candidate: ObservedNode = {
   internal_id: 1,
-  node_id: 99,
+  meshtastic_node_id: 99,
   node_id_str: '!00000063',
   mac_addr: null,
   long_name: 'Obs',

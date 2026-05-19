@@ -26,7 +26,7 @@ function FlowEndpointBadge({
 }
 
 function NodeBadge({ node }: { node: TracerouteRouteNode }) {
-  const isPlaceholderUnknown = node.node_id === UNKNOWN_NODE_ID;
+  const isPlaceholderUnknown = node.meshtastic_node_id === UNKNOWN_NODE_ID;
   const useMutedStyle = isPlaceholderUnknown || !node.position;
   const label = node.short_name ?? node.node_id_str;
   const badge = (
@@ -50,7 +50,7 @@ function NodeBadge({ node }: { node: TracerouteRouteNode }) {
 
   return (
     <Link
-      to={`/nodes/${node.node_id}`}
+      to={`/nodes/${node.meshtastic_node_id}`}
       onClick={(e) => e.stopPropagation()}
       className="inline-flex max-w-full rounded-md focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
     >
@@ -78,7 +78,7 @@ function FlowRow({
     <div className="flex flex-wrap items-center gap-1">
       <FlowEndpointBadge label={startLabel} nodeId={startNodeId} directionColor={directionColor} />
       {nodes.map((node, i) => (
-        <span key={`${node.node_id}-${i}`} className="flex items-center gap-1">
+        <span key={`${node.meshtastic_node_id}-${i}`} className="flex items-center gap-1">
           <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground" />
           <NodeBadge node={node} />
         </span>
@@ -94,8 +94,8 @@ export function TracerouteFlowDiagram({ traceroute }: { traceroute: AutoTraceRou
   const routeBackNodes = traceroute.route_back_nodes ?? [];
   const sourceLabel = traceroute.source_node?.short_name ?? traceroute.source_node?.node_id_str ?? 'Source';
   const targetLabel = traceroute.target_node?.short_name ?? traceroute.target_node?.node_id_str ?? 'Target';
-  const sourceNodeId = traceroute.source_node.node_id;
-  const targetNodeId = traceroute.target_node.node_id;
+  const sourceNodeId = traceroute.source_node.meshtastic_node_id;
+  const targetNodeId = traceroute.target_node.meshtastic_node_id;
 
   if (routeNodes.length === 0 && routeBackNodes.length === 0) {
     if (traceroute.status !== 'completed') {

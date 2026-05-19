@@ -46,7 +46,7 @@ export function MonitoredNodesTable({
           </TableHeader>
           <TableBody>
             {nodes.map((node) => (
-              <TableRow key={node.node_id}>
+              <TableRow key={node.meshtastic_node_id}>
                 <TableCell>
                   <div>
                     {node.short_name || node.node_id_str}
@@ -90,7 +90,12 @@ export function MonitoredNodesTable({
                 </TableCell>
                 <TableCell>
                   {editable && (
-                    <Button variant="ghost" size="icon" onClick={() => onRemoveNode(node.node_id)} className="h-8 w-8">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => onRemoveNode(node.meshtastic_node_id)}
+                      className="h-8 w-8"
+                    >
                       <X className="h-4 w-4" />
                     </Button>
                   )}

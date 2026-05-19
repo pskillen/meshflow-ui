@@ -32,7 +32,7 @@ vi.mock('@/components/map/DeckMapboxMap', () => ({
 }));
 
 const nodeA: NodeTracerouteLinkNode = {
-  node_id: 0x11a,
+  meshtastic_node_id: 0x11a,
   node_id_str: '!0000011a',
   short_name: 'A',
   long_name: 'Node A',
@@ -41,7 +41,7 @@ const nodeA: NodeTracerouteLinkNode = {
 };
 
 const nodeB: NodeTracerouteLinkNode = {
-  node_id: 0x11b,
+  meshtastic_node_id: 0x11b,
   node_id_str: '!0000011b',
   short_name: 'B',
   long_name: 'Node B',
@@ -50,8 +50,8 @@ const nodeB: NodeTracerouteLinkNode = {
 };
 
 const edge: NodeTracerouteLinkEdge = {
-  from_node_id: nodeA.node_id,
-  to_node_id: nodeB.node_id,
+  from_node_id: nodeA.meshtastic_node_id,
+  to_node_id: nodeB.meshtastic_node_id,
   from_lng: -4.2,
   from_lat: 55.9,
   to_lng: -4.15,
@@ -69,7 +69,7 @@ describe('NodeTracerouteLinksMap', () => {
   it('passes lon/lat/zoom initialViewState when multiple nodes have positions (not bounds)', () => {
     render(
       <MemoryRouter>
-        <NodeTracerouteLinksMap edges={[edge]} nodes={[nodeA, nodeB]} focusNodeId={nodeA.node_id} />
+        <NodeTracerouteLinksMap edges={[edge]} nodes={[nodeA, nodeB]} focusNodeId={nodeA.meshtastic_node_id} />
       </MemoryRouter>
     );
 

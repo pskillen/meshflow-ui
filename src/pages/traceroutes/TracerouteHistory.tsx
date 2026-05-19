@@ -186,11 +186,11 @@ export function TracerouteHistory() {
     includeStatus: true,
     includeGeoClassification: true,
   });
-  const managedByMeshId = useMemo(() => new Map(managedNodes.map((m) => [m.node_id, m])), [managedNodes]);
+  const managedByMeshId = useMemo(() => new Map(managedNodes.map((m) => [m.meshtastic_node_id, m])), [managedNodes]);
   const modalManagedNodes = useMemo(
     () =>
       triggerableNodes.map((t) => {
-        const full = managedByMeshId.get(t.node_id);
+        const full = managedByMeshId.get(t.meshtastic_node_id);
         return full ? { ...t, ...full } : t;
       }),
     [triggerableNodes, managedByMeshId]
@@ -245,8 +245,8 @@ export function TracerouteHistory() {
               <SelectContent>
                 <SelectItem value="all">All sources</SelectItem>
                 {triggerableNodes.map((n) => (
-                  <SelectItem key={n.node_id} value={String(n.node_id)}>
-                    {n.short_name ?? n.node_id_str ?? String(n.node_id)}
+                  <SelectItem key={n.meshtastic_node_id} value={String(n.meshtastic_node_id)}>
+                    {n.short_name ?? n.node_id_str ?? String(n.meshtastic_node_id)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -433,7 +433,7 @@ export function TracerouteHistory() {
                       </TableCell>
                       {canTrigger && (
                         <TableCell onClick={(e) => e.stopPropagation()}>
-                          {triggerableNodes.some((n) => n.node_id === tr.source_node.node_id) ? (
+                          {triggerableNodes.some((n) => n.meshtastic_node_id === tr.source_node.meshtastic_node_id) ? (
                             <Button
                               variant="ghost"
                               size="icon"
@@ -441,8 +441,8 @@ export function TracerouteHistory() {
                               onClick={() =>
                                 triggerMutation.mutate(
                                   {
-                                    managedNodeId: tr.source_node.node_id,
-                                    targetNodeId: tr.target_node.node_id,
+                                    managedNodeId: tr.source_node.meshtastic_node_id,
+                                    targetNodeId: tr.target_node.meshtastic_node_id,
                                     targetStrategy:
                                       tr.target_strategy === 'intra_zone' ||
                                       tr.target_strategy === 'dx_across' ||
@@ -549,9 +549,9 @@ function SearchableNodeFilter({ nodes, value, onChange, placeholder, allLabel, c
     }
   }, [open]);
 
-  const selected = value != null ? nodes.find((n) => n.node_id === value) : null;
+  const selected = value != null ? nodes.find((n) => n.meshtastic_node_id === value) : null;
   const selectedLabel = selected
-    ? (selected.short_name ?? selected.node_id_str ?? String(selected.node_id))
+    ? (selected.short_name ?? selected.node_id_str ?? String(selected.meshtastic_node_id))
     : placeholder;
 
   const filtered = useMemo(() => {
@@ -559,7 +559,7 @@ function SearchableNodeFilter({ nodes, value, onChange, placeholder, allLabel, c
     if (!q) return nodes.slice(0, 200);
     return nodes
       .filter((n) => {
-        const haystack = [n.short_name, n.long_name, n.node_id_str, String(n.node_id)]
+        const haystack = [n.short_name, n.long_name, n.node_id_str, String(n.meshtastic_node_id)]
           .filter((s): s is string => !!s)
           .join(' ')
           .toLowerCase();
@@ -611,15 +611,15 @@ function SearchableNodeFilter({ nodes, value, onChange, placeholder, allLabel, c
               <li className="px-3 py-2 text-sm text-muted-foreground">No nodes match “{query}”</li>
             )}
             {filtered.map((n) => {
-              const label = n.short_name ?? n.node_id_str ?? String(n.node_id);
-              const isSelected = value === n.node_id;
+              const label = n.short_name ?? n.node_id_str ?? String(n.meshtastic_node_id);
+              const isSelected = value === n.meshtastic_node_id;
               return (
-                <li key={n.node_id}>
+                <li key={n.meshtastic_node_id}>
                   <button
                     type="button"
                     className={`w-full text-left px-3 py-1.5 text-sm hover:bg-accent ${isSelected ? 'bg-accent/50 font-medium' : ''}`}
                     onClick={() => {
-                      onChange(n.node_id);
+                      onChange(n.meshtastic_node_id);
                       setOpen(false);
                     }}
                   >

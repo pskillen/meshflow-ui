@@ -167,7 +167,7 @@ function WeatherContent() {
             <WeatherNodeCard
               key={node.internal_id}
               node={node}
-              metrics={metricsMap[node.node_id] ?? []}
+              metrics={metricsMap[node.meshtastic_node_id] ?? []}
               dateRange={chartDateRange}
             />
           ))}

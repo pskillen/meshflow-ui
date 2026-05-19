@@ -28,7 +28,7 @@ const DX_SAME_FILL: [number, number, number, number] = [245, 158, 11, 55];
 const DX_SAME_LINE: [number, number, number, number] = [217, 119, 6, 220];
 
 function nodeLabel(n: ObservedNode): string {
-  return n.short_name ?? n.long_name ?? n.node_id_str ?? String(n.node_id);
+  return n.short_name ?? n.long_name ?? n.node_id_str ?? String(n.meshtastic_node_id);
 }
 
 function reasonLabel(r: ExclusionReason): string {
@@ -89,14 +89,14 @@ export function AutoTargetPreviewMap({
     const hours = mergedGeo.selector_params!.last_heard_within_hours;
     const cutoff = new Date(Date.now() - hours * 60 * 60 * 1000);
     return {
-      feederNodeId: feeder.node_id,
+      feederNodeId: feeder.meshtastic_node_id,
       managedNodeIds,
       lastHeardCutoff: cutoff,
       geo: mergedGeo,
       feederLat,
       feederLon: feederLng,
     };
-  }, [feeder.node_id, feederLat, feederLng, geo, managedNodeIds]);
+  }, [feeder.meshtastic_node_id, feederLat, feederLng, geo, managedNodeIds]);
 
   const { envelope, centroid } = useMemo(() => {
     const env = geo?.envelope ?? null;
@@ -184,10 +184,10 @@ export function AutoTargetPreviewMap({
       .filter((x): x is PlotRow => x != null);
   }, [excludedData, includedData]);
 
-  const includedSet = useMemo(() => new Set(includedData.map((n) => n.node_id)), [includedData]);
+  const includedSet = useMemo(() => new Set(includedData.map((n) => n.meshtastic_node_id)), [includedData]);
 
   const excludedLayer = useMemo(() => {
-    const data = positions.filter((p) => !includedSet.has(p.node.node_id));
+    const data = positions.filter((p) => !includedSet.has(p.node.meshtastic_node_id));
     if (data.length === 0) return null;
     return new ScatterplotLayer<PlotRow>({
       id: 'auto-target-excluded',
@@ -204,7 +204,7 @@ export function AutoTargetPreviewMap({
   }, [includedSet, positions]);
 
   const includedLayer = useMemo(() => {
-    const data = positions.filter((p) => includedSet.has(p.node.node_id));
+    const data = positions.filter((p) => includedSet.has(p.node.meshtastic_node_id));
     if (data.length === 0) return null;
     return new ScatterplotLayer<PlotRow>({
       id: 'auto-target-included',
@@ -243,11 +243,11 @@ export function AutoTargetPreviewMap({
         {
           lat: feederLat,
           lng: feederLng,
-          node_id: feeder.node_id,
+          meshtastic_node_id: feeder.meshtastic_node_id,
           node_id_str: feeder.node_id_str,
           short_name: feeder.short_name,
           long_name: feeder.long_name,
-          managed_node_id: String(feeder.node_id),
+          managed_node_id: String(feeder.meshtastic_node_id),
         },
       ],
       { id: 'auto-target-feeder-icons', size: 36, pickable: true }

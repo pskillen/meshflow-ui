@@ -51,7 +51,7 @@ vi.mock('@/components/map/DeckMapboxMap', () => ({
 }));
 
 const nodeA: HeatmapNode = {
-  node_id: 0x11a,
+  meshtastic_node_id: 0x11a,
   node_id_str: '!0000011a',
   short_name: 'A',
   long_name: 'Node A',
@@ -60,7 +60,7 @@ const nodeA: HeatmapNode = {
 };
 
 const nodeB: HeatmapNode = {
-  node_id: 0x11b,
+  meshtastic_node_id: 0x11b,
   node_id_str: '!0000011b',
   short_name: 'B',
   long_name: 'Node B',
@@ -69,8 +69,8 @@ const nodeB: HeatmapNode = {
 };
 
 const edge: HeatmapEdge = {
-  from_node_id: nodeA.node_id,
-  to_node_id: nodeB.node_id,
+  from_node_id: nodeA.meshtastic_node_id,
+  to_node_id: nodeB.meshtastic_node_id,
   from_lng: -4.2,
   from_lat: 55.9,
   to_lng: -4.15,
@@ -80,7 +80,7 @@ const edge: HeatmapEdge = {
 };
 
 const hub: HeatmapNode = {
-  node_id: 0x11c,
+  meshtastic_node_id: 0x11c,
   node_id_str: '!0000011c',
   short_name: 'Hub',
   long_name: 'Hub',
@@ -92,7 +92,7 @@ const hub: HeatmapNode = {
 };
 
 const spoke: HeatmapNode = {
-  node_id: 0x11d,
+  meshtastic_node_id: 0x11d,
   node_id_str: '!0000011d',
   short_name: 'Spoke',
   long_name: 'Spoke',
@@ -104,7 +104,7 @@ const spoke: HeatmapNode = {
 };
 
 const peer: HeatmapNode = {
-  node_id: 0x11e,
+  meshtastic_node_id: 0x11e,
   node_id_str: '!0000011e',
   short_name: 'Peer',
   long_name: 'Peer',
@@ -116,8 +116,8 @@ const peer: HeatmapNode = {
 };
 
 const edgeHubSpoke: HeatmapEdge = {
-  from_node_id: hub.node_id,
-  to_node_id: spoke.node_id,
+  from_node_id: hub.meshtastic_node_id,
+  to_node_id: spoke.meshtastic_node_id,
   from_lng: hub.lng,
   from_lat: hub.lat,
   to_lng: spoke.lng,
@@ -127,8 +127,8 @@ const edgeHubSpoke: HeatmapEdge = {
 };
 
 const edgeHubPeer: HeatmapEdge = {
-  from_node_id: hub.node_id,
-  to_node_id: peer.node_id,
+  from_node_id: hub.meshtastic_node_id,
+  to_node_id: peer.meshtastic_node_id,
   from_lng: hub.lng,
   from_lat: hub.lat,
   to_lng: peer.lng,

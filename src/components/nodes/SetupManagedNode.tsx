@@ -37,7 +37,7 @@ interface SetupManagedNodeProps {
 function formatManagedNodeCreateError(err: unknown): string {
   if (axios.isAxiosError(err) && err.response?.data && typeof err.response.data === 'object') {
     const data = err.response.data as Record<string, unknown>;
-    const nid = data.node_id;
+    const nid = data.meshtastic_node_id;
     if (Array.isArray(nid) && nid.length > 0) {
       return String(nid[0]);
     }
@@ -110,7 +110,7 @@ export function SetupManagedNode({ node, isOpen, onClose }: SetupManagedNodeProp
   });
 
   // Get the node's observed node data to check for existing location
-  const observedNode = useNodeSuspense(node.node_id);
+  const observedNode = useNodeSuspense(node.meshtastic_node_id);
 
   // Reset state when dialog opens
   useEffect(() => {
@@ -296,23 +296,29 @@ export function SetupManagedNode({ node, isOpen, onClose }: SetupManagedNodeProp
 
     try {
       // Create the managed node with location and channel mappings
-      const managedNode = await api.createManagedNode(node.node_id, selectedConstellation, nodeName, user.id, {
-        defaultLocationLatitude: nodeLocation?.lat,
-        defaultLocationLongitude: nodeLocation?.lng,
-        channels: channelMappings,
-      });
+      const managedNode = await api.createManagedNode(
+        node.meshtastic_node_id,
+        selectedConstellation,
+        nodeName,
+        user.id,
+        {
+          defaultLocationLatitude: nodeLocation?.lat,
+          defaultLocationLongitude: nodeLocation?.lng,
+          channels: channelMappings,
+        }
+      );
 
       // Handle API key
       if (apiKeyOption === 'existing' && selectedApiKey) {
         // Add node to existing API key
-        await api.addNodeToApiKey(selectedApiKey, managedNode.node_id);
+        await api.addNodeToApiKey(selectedApiKey, managedNode.meshtastic_node_id);
       } else if (apiKeyOption === 'new' && newApiKeyName) {
         // Create new API key
         const apiKey = await api.createApiKey(newApiKeyName, selectedConstellation);
         setCreatedApiKey(apiKey);
 
         // Add node to new API key
-        await api.addNodeToApiKey(apiKey.id, managedNode.node_id);
+        await api.addNodeToApiKey(apiKey.id, managedNode.meshtastic_node_id);
       }
 
       // Move to instructions step
@@ -628,7 +634,7 @@ export function SetupManagedNode({ node, isOpen, onClose }: SetupManagedNodeProp
         <Button variant="outline" onClick={onClose}>
           Close
         </Button>
-        <Button onClick={() => navigate(`/nodes/${node.node_id}`)}>Go to Node Details</Button>
+        <Button onClick={() => navigate(`/nodes/${node.meshtastic_node_id}`)}>Go to Node Details</Button>
       </DialogFooter>
     </>
   );

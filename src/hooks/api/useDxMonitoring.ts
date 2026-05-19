@@ -70,7 +70,7 @@ export function useDxNodeExclusionMutation() {
   const api = useMeshtasticApi();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (body: { node_id: number; exclude_from_detection: boolean; exclude_notes?: string }) =>
+    mutationFn: (body: { meshtastic_node_id: number; exclude_from_detection: boolean; exclude_notes?: string }) =>
       api.postDxNodeExclusion(body),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['dx'] });

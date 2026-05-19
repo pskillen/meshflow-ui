@@ -29,11 +29,11 @@ const POLYGON_STROKE: [number, number, number, number] = [99, 102, 241, 200];
 const H3_RESOLUTION = 6;
 
 function getTargetLabel(t: FeederReachTarget): string {
-  return t.short_name || t.long_name || t.node_id_str || `!${t.node_id.toString(16)}`;
+  return t.short_name || t.long_name || t.node_id_str || `!${t.meshtastic_node_id.toString(16)}`;
 }
 
 function feederPopupTitle(f: FeederReachFeeder): string {
-  return f.short_name || f.long_name || f.node_id_str || `!${f.node_id.toString(16)}`;
+  return f.short_name || f.long_name || f.node_id_str || `!${f.meshtastic_node_id.toString(16)}`;
 }
 
 interface HexBin {
@@ -52,7 +52,7 @@ export interface FeederCoverageMapProps {
 }
 
 function ghostLabel(g: CoverageHeardGhost): string {
-  return g.short_name || g.long_name || g.node_id_str || `!${g.node_id.toString(16)}`;
+  return g.short_name || g.long_name || g.node_id_str || `!${g.meshtastic_node_id.toString(16)}`;
 }
 
 export function FeederCoverageMap({
@@ -253,7 +253,7 @@ export function FeederCoverageMap({
                   : getTargetLabel(selectedTarget)}
               </div>
               <div className="mt-0.5 text-xs text-slate-400">
-                {selectedTarget.node_id_str || `!${selectedTarget.node_id.toString(16)}`}
+                {selectedTarget.node_id_str || `!${selectedTarget.meshtastic_node_id.toString(16)}`}
               </div>
               <div className="mt-1 text-xs">
                 {selectedTarget.successes} / {selectedTarget.attempts} (
@@ -266,7 +266,7 @@ export function FeederCoverageMap({
                 Smoothed: {(smoothedRate(selectedTarget.successes, selectedTarget.attempts) * 100).toFixed(0)}%
               </div>
               <Link
-                to={`/nodes/${selectedTarget.node_id}`}
+                to={`/nodes/${selectedTarget.meshtastic_node_id}`}
                 className="mt-1 inline-block text-xs text-emerald-400 hover:text-emerald-300 hover:underline"
               >
                 Open details
@@ -301,10 +301,10 @@ export function FeederCoverageMap({
               </div>
               <div className="mt-0.5 font-semibold">{ghostLabel(selectedHeardGhost)}</div>
               <div className="mt-0.5 text-xs text-slate-400">
-                {selectedHeardGhost.node_id_str || `!${selectedHeardGhost.node_id.toString(16)}`}
+                {selectedHeardGhost.node_id_str || `!${selectedHeardGhost.meshtastic_node_id.toString(16)}`}
               </div>
               <Link
-                to={`/nodes/${selectedHeardGhost.node_id}`}
+                to={`/nodes/${selectedHeardGhost.meshtastic_node_id}`}
                 className="mt-1 inline-block text-xs text-emerald-400 hover:text-emerald-300 hover:underline"
               >
                 Open details
@@ -337,10 +337,10 @@ export function FeederCoverageMap({
               <div className="text-xs font-medium uppercase tracking-wide text-amber-400">Managed node (feeder)</div>
               <div className="mt-0.5 font-semibold">{feederPopupTitle(selectedFeederMarker)}</div>
               <div className="mt-0.5 text-xs text-slate-400">
-                {selectedFeederMarker.node_id_str || `!${selectedFeederMarker.node_id.toString(16)}`}
+                {selectedFeederMarker.node_id_str || `!${selectedFeederMarker.meshtastic_node_id.toString(16)}`}
               </div>
               <Link
-                to={`/nodes/${selectedFeederMarker.node_id}`}
+                to={`/nodes/${selectedFeederMarker.meshtastic_node_id}`}
                 className="mt-1 inline-block text-xs text-emerald-400 hover:text-emerald-300 hover:underline"
               >
                 Open details

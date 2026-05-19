@@ -21,7 +21,7 @@ export interface RfPropagationSectionProps {
 }
 
 export function RfPropagationSection({ node, className = 'mb-6' }: RfPropagationSectionProps) {
-  const nodeId = node.node_id;
+  const nodeId = node.meshtastic_node_id;
   const canEdit = node.rf_profile_editable === true;
   const hasProfile = node.has_rf_profile === true;
   const showSection = canEdit || hasProfile;
