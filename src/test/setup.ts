@@ -3,6 +3,30 @@ import { expect, afterEach, vi } from 'vitest';
 import { cleanup } from '@testing-library/react';
 import * as matchers from '@testing-library/jest-dom/matchers';
 
+// Node 26+ may expose window in jsdom without localStorage unless --localstorage-file is set.
+if (typeof globalThis.localStorage === 'undefined') {
+  const store = new Map<string, string>();
+  Object.defineProperty(globalThis, 'localStorage', {
+    value: {
+      getItem: (key: string) => store.get(key) ?? null,
+      setItem: (key: string, value: string) => {
+        store.set(key, value);
+      },
+      removeItem: (key: string) => {
+        store.delete(key);
+      },
+      clear: () => {
+        store.clear();
+      },
+      get length() {
+        return store.size;
+      },
+      key: (index: number) => Array.from(store.keys())[index] ?? null,
+    },
+    configurable: true,
+  });
+}
+
 // Mock ResizeObserver
 class ResizeObserver {
   observe() {}
