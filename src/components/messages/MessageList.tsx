@@ -23,13 +23,13 @@ export function MessageList({ channel, constellationId, nodeId }: MessageListPro
   });
 
   // Group messages by packet_id for threading and emoji reactions
-  const mainMessages = useMemo(() => messages.filter((msg) => !msg.reply_to_message_id), [messages]);
+  const mainMessages = useMemo(() => messages.filter((msg) => !msg.reply_to_meshtastic_packet_id), [messages]);
   const repliesByPacketId = useMemo(() => {
     const map: Record<number, typeof messages> = {};
     for (const msg of messages) {
-      if (msg.reply_to_message_id && !msg.is_emoji) {
-        if (!map[msg.reply_to_message_id]) map[msg.reply_to_message_id] = [];
-        map[msg.reply_to_message_id].push(msg);
+      if (msg.reply_to_meshtastic_packet_id && !msg.is_emoji) {
+        if (!map[msg.reply_to_meshtastic_packet_id]) map[msg.reply_to_meshtastic_packet_id] = [];
+        map[msg.reply_to_meshtastic_packet_id].push(msg);
       }
     }
     return map;
@@ -37,9 +37,9 @@ export function MessageList({ channel, constellationId, nodeId }: MessageListPro
   const emojiReactionsByPacketId = useMemo(() => {
     const map: Record<number, typeof messages> = {};
     for (const msg of messages) {
-      if (msg.reply_to_message_id && msg.is_emoji) {
-        if (!map[msg.reply_to_message_id]) map[msg.reply_to_message_id] = [];
-        map[msg.reply_to_message_id].push(msg);
+      if (msg.reply_to_meshtastic_packet_id && msg.is_emoji) {
+        if (!map[msg.reply_to_meshtastic_packet_id]) map[msg.reply_to_meshtastic_packet_id] = [];
+        map[msg.reply_to_meshtastic_packet_id].push(msg);
       }
     }
     return map;
