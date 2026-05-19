@@ -56,10 +56,10 @@ const inputSurfaceClass = 'border border-slate-300 bg-background shadow-sm dark:
 const FREQ_BAND_UNSET = '__freq_unset__';
 
 export function RfProfileModal({ open, onOpenChange, node }: RfProfileModalProps) {
-  const nodeId = node.meshtastic_node_id;
-  const { data: profile, isLoading } = useRfProfile(nodeId, { enabled: open });
-  const updateMutation = useUpdateRfProfile(nodeId);
-  const recomputeMutation = useRecomputeRfPropagation(nodeId);
+  const internalId = node.internal_id;
+  const { data: profile, isLoading } = useRfProfile(internalId, { enabled: open });
+  const updateMutation = useUpdateRfProfile(internalId);
+  const recomputeMutation = useRecomputeRfPropagation(internalId);
   const { url: tileUrl, attribution } = useMapTileUrl();
 
   const [antennaHeight, setAntennaHeight] = useState('');

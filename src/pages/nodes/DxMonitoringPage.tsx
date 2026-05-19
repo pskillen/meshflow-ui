@@ -431,7 +431,7 @@ export default function DxMonitoringPage() {
                       <TableCell>
                         <div className="flex flex-col gap-1 max-w-[16rem]">
                           <NodeLinkLabel
-                            to={`/nodes/${row.destination.meshtastic_node_id}`}
+                            to={`/nodes/${row.destination.internal_id}`}
                             {...formatDestinationLabel(row.destination)}
                           />
                           {row.destination.dx_metadata.exclude_from_detection && (
@@ -444,7 +444,7 @@ export default function DxMonitoringPage() {
                       <TableCell className="text-sm max-w-[12rem]">
                         {row.last_observer ? (
                           <NodeLinkLabel
-                            to={`/nodes/${row.last_observer.meshtastic_node_id}`}
+                            to={`/nodes/${row.last_observer.internal_id}`}
                             {...formatObserverLabel(row.last_observer)}
                           />
                         ) : (
@@ -535,7 +535,7 @@ export default function DxMonitoringPage() {
                 <div className="text-muted-foreground">Destination</div>
                 <div className="flex flex-wrap items-center gap-2 mt-1">
                   <NodeLinkLabel
-                    to={`/nodes/${detailQuery.data.destination.meshtastic_node_id}`}
+                    to={`/nodes/${detailQuery.data.destination.internal_id}`}
                     {...formatDestinationLabel(detailQuery.data.destination)}
                   />
                   {detailQuery.data.destination.dx_metadata.exclude_from_detection && (
@@ -574,7 +574,7 @@ export default function DxMonitoringPage() {
                             <TableCell className="text-xs whitespace-nowrap">{formatWhen(o.observed_at)}</TableCell>
                             <TableCell className="text-xs max-w-[12rem]">
                               <NodeLinkLabel
-                                to={`/nodes/${o.observer.meshtastic_node_id}`}
+                                to={`/nodes/${o.observer.internal_id}`}
                                 primary={obsLabel.primary}
                                 idSecondary={obsLabel.idSecondary}
                               />
@@ -683,7 +683,7 @@ export default function DxMonitoringPage() {
                                     <TableCell className="text-xs max-w-[10rem]">
                                       {row.source_node ? (
                                         <NodeLinkLabel
-                                          to={`/nodes/${row.source_node.meshtastic_node_id}`}
+                                          to={`/nodes/${row.source_node.internal_id}`}
                                           {...formatObserverLabel(row.source_node)}
                                         />
                                       ) : (
@@ -692,7 +692,7 @@ export default function DxMonitoringPage() {
                                     </TableCell>
                                     <TableCell className="text-xs max-w-[10rem]">
                                       <NodeLinkLabel
-                                        to={`/nodes/${row.destination.meshtastic_node_id}`}
+                                        to={`/nodes/${row.destination.internal_id}`}
                                         {...formatHopLabel(row.destination)}
                                       />
                                     </TableCell>

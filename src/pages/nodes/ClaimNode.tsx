@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useNodeSuspense, useManagedNodesSuspense } from '@/hooks/api/useNodes';
-import { useMeshtasticApi } from '@/hooks/api/useApi';
+import { useMeshflowApi } from '@/hooks/api/useApi';
 import { ConstellationsMap } from '@/components/nodes/ConstellationsMap';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -13,9 +13,9 @@ import { filterManagedNodesForMapDisplay } from '@/lib/managed-node-status';
 
 export function ClaimNode() {
   const { id } = useParams<{ id: string }>();
-  const nodeId = parseInt(id || '0', 10);
+  const internalId = id ?? '';
   const navigate = useNavigate();
-  const api = useMeshtasticApi();
+  const api = useMeshflowApi();
 
   const [claimKey, setClaimKey] = useState<string | null>(null);
   const [claimStatus, setClaimStatus] = useState<NodeClaim | undefined>(undefined);
@@ -23,7 +23,7 @@ export function ClaimNode() {
   const [error, setError] = useState<string | null>(null);
   const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null);
 
-  const node = useNodeSuspense(nodeId);
+  const node = useNodeSuspense(internalId);
   const { managedNodes } = useManagedNodesSuspense({ includeStatus: true });
   const managedNodesForMap = useMemo(
     () => (managedNodes ? filterManagedNodesForMapDisplay(managedNodes) : []),
@@ -37,7 +37,7 @@ export function ClaimNode() {
     let cancelled = false;
     async function checkInitialClaim() {
       try {
-        const status = await api.getClaimStatus(nodeId);
+        const status = await api.getClaimStatus(internalId);
         if (cancelled) return;
         if (status) {
           setClaimStatus(status);
@@ -55,14 +55,14 @@ export function ClaimNode() {
     return () => {
       cancelled = true;
     };
-  }, [nodeId]);
+  }, [internalId]);
 
   // Function to initiate the claim
   const initiateNodeClaim = async () => {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await api.claimNode(nodeId);
+      const response = await api.claimNode(internalId);
       setClaimKey(response.claim_key);
       // Start polling for status updates
       startStatusPolling();
@@ -77,7 +77,7 @@ export function ClaimNode() {
   // Function to check claim status
   const checkClaimStatus = async () => {
     try {
-      const status = await api.getClaimStatus(nodeId);
+      const status = await api.getClaimStatus(internalId);
       setClaimStatus(status);
 
       if (status && status.accepted_at) {
@@ -86,7 +86,7 @@ export function ClaimNode() {
           setPollingInterval(null);
         }
         setTimeout(() => {
-          navigate(`/nodes/${nodeId}`);
+          navigate(`/nodes/${internalId}`);
         }, 3000);
       }
     } catch (err) {
@@ -124,7 +124,7 @@ export function ClaimNode() {
             This node is already claimed by {node.owner.username}. You will be redirected to the node details page.
           </AlertDescription>
         </Alert>
-        <Button onClick={() => navigate(`/nodes/${nodeId}`)}>Go to Node Details</Button>
+        <Button onClick={() => navigate(`/nodes/${internalId}`)}>Go to Node Details</Button>
       </div>
     );
   }
@@ -138,7 +138,7 @@ export function ClaimNode() {
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
-      <Link to={`/nodes/${nodeId}`} replace={true} className="text-blue-500 hover:text-blue-700 mb-4 inline-block">
+      <Link to={`/nodes/${internalId}`} replace={true} className="text-blue-500 hover:text-blue-700 mb-4 inline-block">
         ← Back to Node Details
       </Link>
 

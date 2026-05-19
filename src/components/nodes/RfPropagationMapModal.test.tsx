@@ -20,7 +20,7 @@ describe('RfPropagationMapModal', () => {
     const client = new QueryClient();
     render(
       <QueryClientProvider client={client}>
-        <RfPropagationMapModal open onOpenChange={() => {}} nodeId={1} />
+        <RfPropagationMapModal open onOpenChange={() => {}} internalId="00000000-0000-4000-8000-000000000001" />
       </QueryClientProvider>
     );
     expect(screen.getByText(/map not rendered yet/i)).toBeInTheDocument();
@@ -44,7 +44,7 @@ describe('RfPropagationMapModal', () => {
       </QueryClientProvider>
     );
     expect(useRfPropagation).toHaveBeenCalledWith(
-      0,
+      '',
       expect.objectContaining({ enabled: false })
     );
     expect(screen.getByRole('dialog').querySelector('.map-container')).not.toBeNull();

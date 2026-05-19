@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useMeshtasticApi } from '@/hooks/api/useApi';
+import { useMeshflowApi } from '@/hooks/api/useApi';
 import type { EnvironmentExposureSlug, WeatherUseSlug } from '@/lib/models';
 
 const EXPOSURE_OPTIONS: EnvironmentExposureSlug[] = ['unknown', 'indoor', 'outdoor', 'sheltered'];
@@ -50,7 +50,7 @@ function labelWeatherUse(v: WeatherUseSlug): string {
 export interface NodeEnvironmentSettingsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  nodeId: number;
+  internalId: string;
   initialEnvironmentExposure: EnvironmentExposureSlug;
   initialWeatherUse: WeatherUseSlug;
 }
@@ -58,11 +58,11 @@ export interface NodeEnvironmentSettingsDialogProps {
 export function NodeEnvironmentSettingsDialog({
   open,
   onOpenChange,
-  nodeId,
+  internalId,
   initialEnvironmentExposure,
   initialWeatherUse,
 }: NodeEnvironmentSettingsDialogProps) {
-  const api = useMeshtasticApi();
+  const api = useMeshflowApi();
   const queryClient = useQueryClient();
   const [environmentExposure, setEnvironmentExposure] = useState<EnvironmentExposureSlug>(initialEnvironmentExposure);
   const [weatherUse, setWeatherUse] = useState<WeatherUseSlug>(initialWeatherUse);
@@ -76,12 +76,12 @@ export function NodeEnvironmentSettingsDialog({
 
   const mutation = useMutation({
     mutationFn: () =>
-      api.patchObservedNodeEnvironmentSettings(nodeId, {
+      api.patchObservedNodeEnvironmentSettings(internalId, {
         environment_exposure: environmentExposure,
         weather_use: weatherUse,
       }),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['nodes', nodeId] });
+      void queryClient.invalidateQueries({ queryKey: ['nodes', internalId] });
       void queryClient.invalidateQueries({ queryKey: ['nodes', 'weather'] });
       toast.success('Node settings saved');
       onOpenChange(false);

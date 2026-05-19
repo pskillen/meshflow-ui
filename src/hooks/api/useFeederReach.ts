@@ -1,6 +1,6 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 
-import type { FeederReachData } from '@/lib/api/meshtastic-api';
+import type { FeederReachData } from '@/lib/api/meshflow-api';
 
 import { useMeshtasticApi } from './useApi';
 

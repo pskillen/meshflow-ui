@@ -21,17 +21,17 @@ export interface RfPropagationSectionProps {
 }
 
 export function RfPropagationSection({ node, className = 'mb-6' }: RfPropagationSectionProps) {
-  const nodeId = node.meshtastic_node_id;
+  const internalId = node.internal_id;
   const canEdit = node.rf_profile_editable === true;
   const hasProfile = node.has_rf_profile === true;
   const showSection = canEdit || hasProfile;
 
   const [profileOpen, setProfileOpen] = useState(false);
   const [maximiseOpen, setMaximiseOpen] = useState(false);
-  const { data: profile } = useRfProfile(nodeId, { enabled: showSection });
-  const { data: propagation, isLoading: propLoading } = useRfPropagation(nodeId, { enabled: showSection });
-  const recompute = useRecomputeRfPropagation(nodeId);
-  const dismiss = useDismissRfPropagation(nodeId);
+  const { data: profile } = useRfProfile(internalId, { enabled: showSection });
+  const { data: propagation, isLoading: propLoading } = useRfPropagation(internalId, { enabled: showSection });
+  const recompute = useRecomputeRfPropagation(internalId);
+  const dismiss = useDismissRfPropagation(internalId);
 
   if (!showSection) {
     return null;

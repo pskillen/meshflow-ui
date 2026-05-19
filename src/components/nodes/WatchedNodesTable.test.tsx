@@ -34,7 +34,7 @@ vi.mock('@/hooks/api/useMultiNodeMetrics', () => ({
 
 function makeObservedNode(overrides: Partial<ObservedNodeWatchSummary> = {}): ObservedNode {
   return {
-    internal_id: 1,
+    internal_id: '00000000-0000-4000-8000-000000000001',
     meshtastic_node_id: 100,
     node_id_str: '!00000064',
     mac_addr: null,
@@ -52,7 +52,7 @@ function makeWatch(overrides: Partial<NodeWatch> & { node?: Partial<ObservedNode
   const { node: nodeOverrides, id: idOverride, ...rest } = overrides;
   const id = idOverride ?? 1;
   const node = makeObservedNode({
-    internal_id: id,
+    internal_id: `00000000-0000-4000-8000-${String(id).padStart(12, '0')}`,
     meshtastic_node_id: 100 + id,
     short_name: `SN${id}`,
     ...nodeOverrides,
@@ -79,7 +79,7 @@ function renderTable(props: Partial<ComponentProps<typeof WatchedNodesTable>> & 
         id: 1,
         node: {
           meshtastic_node_id: 1,
-          internal_id: 10,
+          internal_id: '00000000-0000-4000-8000-000000000001',
           node_id_str: '!00000001',
           short_name: 'OnlineN',
           last_heard: recentLastHeard,
@@ -91,7 +91,7 @@ function renderTable(props: Partial<ComponentProps<typeof WatchedNodesTable>> & 
         id: 2,
         node: {
           meshtastic_node_id: 2,
-          internal_id: 20,
+          internal_id: '00000000-0000-4000-8000-000000000001',
           node_id_str: '!00000002',
           short_name: 'OffN',
           monitoring_offline_confirmed_at: '2026-04-21T11:00:00Z',

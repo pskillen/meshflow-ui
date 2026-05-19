@@ -44,7 +44,7 @@ function makeFeeder(overrides: Partial<ManagedNode> = {}): ManagedNode {
 
 const now = new Date();
 const candidate: ObservedNode = {
-  internal_id: 1,
+  internal_id: '00000000-0000-4000-8000-000000000001',
   meshtastic_node_id: 99,
   node_id_str: '!00000063',
   mac_addr: null,
@@ -59,7 +59,7 @@ const candidate: ObservedNode = {
     reported_time: now,
     logged_time: now,
     altitude: null,
-    location_source: 'gps',
+    meshtastic_location_source: 'gps',
   },
 } as ObservedNode;
 

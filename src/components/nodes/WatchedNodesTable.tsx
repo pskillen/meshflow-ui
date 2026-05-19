@@ -286,7 +286,7 @@ function WatchCard({
         <div>
           <FieldLabel>Node</FieldLabel>
           <Link
-            to={`/nodes/${node.meshtastic_node_id}`}
+            to={`/nodes/${node.internal_id}`}
             className="font-medium text-teal-600 dark:text-teal-400 hover:underline"
           >
             {node.short_name || node.node_id_str}

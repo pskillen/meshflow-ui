@@ -3,7 +3,7 @@ import { ObservedNode } from '@/lib/models';
 
 // Type for storing recent nodes in local storage
 interface RecentNode {
-  internal_id: number; // internal_id from ObservedNode
+  internal_id: string; // internal_id from ObservedNode
   meshtastic_node_id: number; // meshtastic_node_id from ObservedNode
   node_id_str: string; // node_id_str from ObservedNode
   short_name: string | null;

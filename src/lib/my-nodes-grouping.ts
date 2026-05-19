@@ -217,7 +217,7 @@ function positionFromManaged(m: ManagedNode): Position | null {
     reported_time: null,
     logged_time: null,
     altitude: null,
-    location_source: 'managed',
+    meshtastic_location_source: 'managed',
   };
 }
 
@@ -233,7 +233,7 @@ function hasValidObservedPosition(p: Position | null | undefined): boolean {
 export function managedNodeToObservedNode(m: ManagedNode): ObservedNode {
   const latest_position = positionFromManaged(m);
   return {
-    internal_id: 0,
+    internal_id: '',
     meshtastic_node_id: m.meshtastic_node_id,
     node_id_str: m.node_id_str,
     mac_addr: null,

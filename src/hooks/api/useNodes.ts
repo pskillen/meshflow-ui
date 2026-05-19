@@ -9,7 +9,7 @@ import {
   useSuspenseInfiniteQuery,
   useSuspenseQuery,
 } from '@tanstack/react-query';
-import { useMeshtasticApi } from './useApi';
+import { useMeshflowApi } from './useApi';
 import {
   DeviceMetrics,
   EnvironmentMetrics,
@@ -34,7 +34,7 @@ export interface UseNodesOptions {
  * Hook to fetch and manage nodes data
  */
 export function useNodes(options?: UseNodesOptions) {
-  const api = useMeshtasticApi();
+  const api = useMeshflowApi();
   const queryClient = useQueryClient();
   const pageSize = options?.pageSize || 100;
 
@@ -171,14 +171,14 @@ export function useNodes(options?: UseNodesOptions) {
  * Hook to fetch a single node by ID
  */
 export function useNode(
-  id: number,
+  internalId: string,
   options?: Omit<UseQueryOptions<ObservedNode>, 'queryKey' | 'queryFn'>
 ): UseQueryResult<ObservedNode> {
-  const api = useMeshtasticApi();
+  const api = useMeshflowApi();
   return useQuery({
-    queryKey: ['nodes', id],
-    queryFn: () => api.getNode(id),
-    enabled: !!id,
+    queryKey: ['nodes', internalId],
+    queryFn: () => api.getObservedNode(internalId),
+    enabled: !!internalId,
     ...options,
   });
 }
@@ -190,7 +190,7 @@ export function useManagedNode(
   id: number,
   options?: Omit<UseQueryOptions<ManagedNode>, 'queryKey' | 'queryFn'>
 ): UseQueryResult<ManagedNode> {
-  const api = useMeshtasticApi();
+  const api = useMeshflowApi();
   return useQuery({
     refetchInterval: 1000 * 60, // 1 minute
     queryKey: ['managed-nodes', id],
@@ -203,34 +203,34 @@ export function useManagedNode(
 /**
  * Hook to fetch device metrics for a node
  */
-export function useNodeMetrics(id: number, params?: DateRangeParams): UseQueryResult<DeviceMetrics[]> {
-  const api = useMeshtasticApi();
+export function useNodeMetrics(internalId: string, params?: DateRangeParams): UseQueryResult<DeviceMetrics[]> {
+  const api = useMeshflowApi();
   params = roundDateParams(params);
   const keyValue = getKeyValue(params);
-  const key = ['nodes', id, 'metrics', keyValue];
+  const key = ['nodes', internalId, 'metrics', keyValue];
 
   return useQuery({
     refetchInterval: 1000 * 60, // 1 minute
     queryKey: key,
-    queryFn: () => api.getNodeDeviceMetrics(id, params),
-    enabled: !!id,
+    queryFn: () => api.getNodeDeviceMetrics(internalId, params),
+    enabled: !!internalId,
   });
 }
 
 /**
  * Hook to fetch positions for a node
  */
-export function useNodePositions(id: number, params?: DateRangeParams): UseQueryResult<Position[]> {
-  const api = useMeshtasticApi();
+export function useNodePositions(internalId: string, params?: DateRangeParams): UseQueryResult<Position[]> {
+  const api = useMeshflowApi();
   params = roundDateParams(params);
   const keyValue = getKeyValue(params);
-  const key = ['nodes', id, 'positions', keyValue];
+  const key = ['nodes', internalId, 'positions', keyValue];
 
   return useQuery({
     refetchInterval: 1000 * 60, // 1 minute
     queryKey: key,
-    queryFn: () => api.getNodePositions(id, params),
-    enabled: !!id,
+    queryFn: () => api.getNodePositions(internalId, params),
+    enabled: !!internalId,
   });
 }
 
@@ -238,7 +238,7 @@ export function useNodePositions(id: number, params?: DateRangeParams): UseQuery
  * Hook to search for nodes
  */
 export function useNodeSearch() {
-  const api = useMeshtasticApi();
+  const api = useMeshflowApi();
   const queryClient = useQueryClient();
 
   const searchMutation = useMutation({
@@ -263,7 +263,7 @@ export type RecentNodeCounts = Record<string, number>;
  * Returns: { "2": n, "24": n, "168": n, "720": n, "2160": n, "all": n }
  */
 export function useRecentNodeCountsSuspense() {
-  const api = useMeshtasticApi();
+  const api = useMeshflowApi();
   const query = useSuspenseQuery<RecentNodeCounts, Error>({
     refetchInterval: 1000 * 60, // 1 minute
     queryKey: ['nodes', 'recent-counts'],
@@ -284,7 +284,7 @@ function roundToFiveMinutes(date: Date): string {
  * Note: Suspense hooks do not support the 'enabled' option.
  */
 export function useNodesSuspense(options?: UseNodesOptions) {
-  const api = useMeshtasticApi();
+  const api = useMeshflowApi();
   const pageSize = options?.pageSize || 500;
   const lastHeardAfterKey = options?.lastHeardAfter ? roundToFiveMinutes(options.lastHeardAfter) : null;
 
@@ -336,7 +336,7 @@ export interface UseManagedNodesSuspenseOptions {
  * Suspense-enabled hook to fetch infrastructure nodes (router, repeater, etc.)
  */
 export function useInfrastructureNodesSuspense(options?: UseInfrastructureNodesOptions) {
-  const api = useMeshtasticApi();
+  const api = useMeshflowApi();
   const pageSize = options?.pageSize || 500;
   const lastHeardAfterKey = options?.lastHeardAfter ? roundToFiveMinutes(options.lastHeardAfter) : null;
 
@@ -381,7 +381,7 @@ const INFRASTRUCTURE_FULL_FETCH_PAGE_SIZE = 1000;
  * Use {@link useInfrastructureNodesSuspense} with a small page size for the card grid and "Load more".
  */
 export function useAllInfrastructureNodesSuspense(options?: UseInfrastructureNodesOptions) {
-  const api = useMeshtasticApi();
+  const api = useMeshflowApi();
   const lastHeardAfterKey = options?.lastHeardAfter ? roundToFiveMinutes(options.lastHeardAfter) : null;
   const includeClientBase = options?.includeClientBase ?? false;
 
@@ -421,7 +421,7 @@ export interface UseWeatherNodesOptions {
  * Suspense-enabled hook to fetch weather nodes (nodes with environment metrics within cutoff).
  */
 export function useWeatherNodesSuspense(options?: UseWeatherNodesOptions) {
-  const api = useMeshtasticApi();
+  const api = useMeshflowApi();
   const pageSize = options?.pageSize || 100;
   const environmentReportedAfterKey = options?.environmentReportedAfter
     ? roundToFiveMinutes(options.environmentReportedAfter)
@@ -467,7 +467,7 @@ export function useWeatherNodesSuspense(options?: UseWeatherNodesOptions) {
  * Suspense-enabled hook to fetch managed nodes with pagination
  */
 export function useManagedNodesSuspense(options?: UseManagedNodesSuspenseOptions) {
-  const api = useMeshtasticApi();
+  const api = useMeshflowApi();
   const pageSize = options?.pageSize ?? 500;
   const includeStatus = options?.includeStatus ?? false;
   const includeGeoClassification = options?.includeGeoClassification ?? false;
@@ -507,7 +507,7 @@ export function useManagedNodesSuspense(options?: UseManagedNodesSuspenseOptions
  * Hook to fetch user's managed nodes with pagination
  */
 export function useMyManagedNodes(pageSize = 500) {
-  const api = useMeshtasticApi();
+  const api = useMeshflowApi();
   const myManagedNodesQuery = useInfiniteQuery<PaginatedResponse<OwnedManagedNode>, Error>({
     refetchInterval: 1000 * 60, // 1 minute
     queryKey: ['managed-nodes', 'mine', pageSize],
@@ -533,7 +533,7 @@ export function useMyManagedNodes(pageSize = 500) {
  * Suspense-enabled hook to fetch user's managed nodes with pagination
  */
 export function useMyManagedNodesSuspense(pageSize = 500) {
-  const api = useMeshtasticApi();
+  const api = useMeshflowApi();
   const myManagedNodesQuery = useSuspenseInfiniteQuery<PaginatedResponse<OwnedManagedNode>, Error>({
     refetchInterval: 1000 * 60, // 1 minute
     queryKey: ['managed-nodes', 'mine', pageSize],
@@ -562,7 +562,7 @@ export function useMyManagedNodesSuspense(pageSize = 500) {
  * Suspense-enabled hook to fetch user's claimed nodes with pagination
  */
 export function useMyClaimedNodesSuspense(pageSize = 500) {
-  const api = useMeshtasticApi();
+  const api = useMeshflowApi();
   const myClaimedNodesQuery = useSuspenseInfiniteQuery<PaginatedResponse<ObservedNode>, Error>({
     refetchInterval: 1000 * 60, // 1 minute
     queryKey: ['observed-nodes', 'mine', pageSize],
@@ -591,16 +591,16 @@ export function useMyClaimedNodesSuspense(pageSize = 500) {
  * Suspense-enabled hook to fetch device metrics for a node
  * Use inside a <Suspense> boundary. No isLoading or error states are returned.
  */
-export function useNodeMetricsSuspense(id: number, params?: DateRangeParams) {
-  const api = useMeshtasticApi();
+export function useNodeMetricsSuspense(internalId: string, params?: DateRangeParams) {
+  const api = useMeshflowApi();
   params = roundDateParams(params);
   const keyValue = getKeyValue(params);
-  const key = ['nodes', id, 'metrics', keyValue];
+  const key = ['nodes', internalId, 'metrics', keyValue];
 
   const query = useSuspenseQuery<DeviceMetrics[], Error>({
     refetchInterval: 1000 * 60, // 1 minute
     queryKey: key,
-    queryFn: () => api.getNodeDeviceMetrics(id, params),
+    queryFn: () => api.getNodeDeviceMetrics(internalId, params),
   });
   return { metrics: query.data };
 }
@@ -609,16 +609,16 @@ export function useNodeMetricsSuspense(id: number, params?: DateRangeParams) {
  * Suspense-enabled hook to fetch environment metrics for a node
  * Use inside a <Suspense> boundary. No isLoading or error states are returned.
  */
-export function useNodeEnvironmentMetricsSuspense(id: number, params?: DateRangeParams) {
-  const api = useMeshtasticApi();
+export function useNodeEnvironmentMetricsSuspense(internalId: string, params?: DateRangeParams) {
+  const api = useMeshflowApi();
   params = roundDateParams(params);
   const keyValue = getKeyValue(params);
-  const key = ['nodes', id, 'environment-metrics', keyValue];
+  const key = ['nodes', internalId, 'environment-metrics', keyValue];
 
   const query = useSuspenseQuery<EnvironmentMetrics[], Error>({
     refetchInterval: 1000 * 60, // 1 minute
     queryKey: key,
-    queryFn: () => api.getNodeEnvironmentMetrics(id, params),
+    queryFn: () => api.getNodeEnvironmentMetrics(internalId, params),
   });
   return { metrics: query.data };
 }
@@ -627,16 +627,16 @@ export function useNodeEnvironmentMetricsSuspense(id: number, params?: DateRange
  * Suspense-enabled hook to fetch power metrics for a node
  * Use inside a <Suspense> boundary. No isLoading or error states are returned.
  */
-export function useNodePowerMetricsSuspense(id: number, params?: DateRangeParams) {
-  const api = useMeshtasticApi();
+export function useNodePowerMetricsSuspense(internalId: string, params?: DateRangeParams) {
+  const api = useMeshflowApi();
   params = roundDateParams(params);
   const keyValue = getKeyValue(params);
-  const key = ['nodes', id, 'power-metrics', keyValue];
+  const key = ['nodes', internalId, 'power-metrics', keyValue];
 
   const query = useSuspenseQuery<PowerMetrics[], Error>({
     refetchInterval: 1000 * 60, // 1 minute
     queryKey: key,
-    queryFn: () => api.getNodePowerMetrics(id, params),
+    queryFn: () => api.getNodePowerMetrics(internalId, params),
   });
   return { metrics: query.data };
 }
@@ -645,11 +645,11 @@ export function useNodePowerMetricsSuspense(id: number, params?: DateRangeParams
  * Suspense-enabled hook to fetch a single node by ID
  * Use inside a <Suspense> boundary. No isLoading or error states are returned.
  */
-export function useNodeSuspense(id: number) {
-  const api = useMeshtasticApi();
+export function useNodeSuspense(internalId: string) {
+  const api = useMeshflowApi();
   const query = useSuspenseQuery<ObservedNode, Error>({
-    queryKey: ['nodes', id],
-    queryFn: () => api.getNode(id),
+    queryKey: ['nodes', internalId],
+    queryFn: () => api.getObservedNode(internalId),
   });
   return query.data;
 }
