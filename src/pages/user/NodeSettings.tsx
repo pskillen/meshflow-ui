@@ -23,7 +23,14 @@ import {
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ObservedNode, type MessageChannel, type OwnedManagedNode, type NodeApiKey } from '@/lib/models';
+import {
+  ObservedNode,
+  type McChannelApplyEntry,
+  type McChannelSnapshot,
+  type MessageChannel,
+  type OwnedManagedNode,
+  type NodeApiKey,
+} from '@/lib/models';
 import { SetupManagedNode } from '@/components/nodes/SetupManagedNode';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMeshtasticApi } from '@/hooks/api/useApi';
@@ -467,6 +474,166 @@ function channelMappingsEqual(a: ChannelMappings, b: ChannelMappings): boolean {
   });
 }
 
+function mcChannelsFromNode(node: OwnedManagedNode): McChannelApplyEntry[] {
+  return (node.mc_channels ?? []).map((ch) => ({
+    mc_channel_idx: ch.mc_channel_idx,
+    name: ch.name,
+    mc_channel_type: ch.mc_channel_type,
+    mc_hashtag: ch.mc_hashtag,
+  }));
+}
+
+function MeshCoreChannelSettings({ node }: { node: OwnedManagedNode }) {
+  const api = useMeshtasticApi();
+  const queryClient = useQueryClient();
+  const internalId = node.internal_id;
+  const [rows, setRows] = useState<McChannelApplyEntry[]>(() => mcChannelsFromNode(node));
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    setRows(mcChannelsFromNode(node));
+  }, [node]);
+
+  const applyToRadio = useMutation({
+    mutationFn: () => {
+      if (!internalId) {
+        throw new Error('Missing feeder internal_id');
+      }
+      return api.applyMcChannelConfig(internalId, rows);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['managed-nodes', 'mine'] });
+      setOpen(false);
+    },
+  });
+
+  const updateRow = (index: number, patch: Partial<McChannelApplyEntry>) => {
+    setRows((prev) => prev.map((r, i) => (i === index ? { ...r, ...patch } : r)));
+  };
+
+  const addRow = () => {
+    const used = new Set(rows.map((r) => r.mc_channel_idx));
+    let idx = 0;
+    while (used.has(idx) && idx < 63) idx += 1;
+    setRows((prev) => [
+      ...prev,
+      { mc_channel_idx: idx, name: `Channel ${idx}`, mc_channel_type: 'PUBLIC', mc_hashtag: null },
+    ]);
+  };
+
+  const removeRow = (index: number) => {
+    setRows((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const syncedLabel = node.mc_channels_synced_at
+    ? `Last synced from radio: ${new Date(node.mc_channels_synced_at).toLocaleString()}`
+    : 'Not synced yet — start the bot with upload enabled to mirror device channels.';
+
+  return (
+    <div className="border rounded-md bg-slate-50/50 dark:bg-slate-900/30 overflow-hidden">
+      <button
+        type="button"
+        aria-expanded={open}
+        className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left text-sm font-medium hover:bg-slate-100/80 dark:hover:bg-slate-800/50 transition-colors"
+        onClick={() => setOpen((o) => !o)}
+      >
+        <span className="flex min-w-0 items-center gap-2">
+          <ChevronDown
+            className={cn('h-4 w-4 shrink-0 text-muted-foreground transition-transform', open && 'rotate-180')}
+          />
+          <span className="truncate">MeshCore channels</span>
+        </span>
+        <span className="shrink-0 text-xs font-normal text-muted-foreground">
+          {(node.mc_channels ?? []).length} on radio
+        </span>
+      </button>
+      {open ? (
+        <div className="space-y-3 border-t border-slate-200/80 dark:border-slate-700/80 px-4 pb-4 pt-3">
+          <p className="text-xs text-muted-foreground">{syncedLabel}</p>
+          <p className="text-xs text-muted-foreground">
+            The radio is the source of truth. Edits here are sent to the device when you apply; the bot re-syncs the API
+            mirror afterward. The feeder bot must be online (WebSocket).
+          </p>
+          {rows.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No channels in the API mirror yet.</p>
+          ) : (
+            <div className="space-y-3">
+              {rows.map((row, index) => (
+                <div key={`${row.mc_channel_idx}-${index}`} className="grid gap-2 sm:grid-cols-2">
+                  <div>
+                    <Label className="text-xs">Index</Label>
+                    <p className="text-sm font-mono">{row.mc_channel_idx}</p>
+                  </div>
+                  <div>
+                    <Label className="text-xs">Name</Label>
+                    <input
+                      className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+                      value={row.name}
+                      onChange={(e) => updateRow(index, { name: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Type</Label>
+                    <Select
+                      value={row.mc_channel_type}
+                      onValueChange={(v) =>
+                        updateRow(index, {
+                          mc_channel_type: v as McChannelSnapshot['mc_channel_type'],
+                          mc_hashtag: v === 'HASHTAG' ? row.mc_hashtag : null,
+                        })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="PUBLIC">Public</SelectItem>
+                        <SelectItem value="HASHTAG">Hashtag</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {row.mc_channel_type === 'HASHTAG' ? (
+                    <div>
+                      <Label className="text-xs">Hashtag</Label>
+                      <input
+                        className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+                        value={row.mc_hashtag ?? ''}
+                        onChange={(e) => updateRow(index, { mc_hashtag: e.target.value })}
+                        placeholder="galloway"
+                      />
+                    </div>
+                  ) : null}
+                  <div className="sm:col-span-2">
+                    <Button type="button" variant="ghost" size="sm" onClick={() => removeRow(index)}>
+                      Remove
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" variant="outline" size="sm" onClick={addRow}>
+              Add channel
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              disabled={!internalId || applyToRadio.isPending || rows.length === 0}
+              onClick={() => applyToRadio.mutate()}
+            >
+              {applyToRadio.isPending ? 'Applying…' : 'Apply to radio'}
+            </Button>
+            {applyToRadio.isError && (
+              <span className="text-sm text-destructive">Could not apply. Is the bot connected?</span>
+            )}
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function ManagedNodeSettings({
   node,
   nodeApiKeys,
@@ -549,102 +716,111 @@ function ManagedNodeSettings({
         ) : null}
       </div>
 
-      <div className="border rounded-md bg-slate-50/50 dark:bg-slate-900/30 overflow-hidden">
-        <button
-          type="button"
-          aria-expanded={channelMapOpen}
-          className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left text-sm font-medium hover:bg-slate-100/80 dark:hover:bg-slate-800/50 transition-colors"
-          onClick={() => setChannelMapOpen((o) => !o)}
-        >
-          <span className="flex min-w-0 items-center gap-2">
-            <ChevronDown
-              className={cn(
-                'h-4 w-4 shrink-0 text-muted-foreground transition-transform',
-                channelMapOpen && 'rotate-180'
+      {node.protocol === 2 ? <MeshCoreChannelSettings node={node} /> : null}
+
+      {node.protocol !== 2 ? (
+        <div className="border rounded-md bg-slate-50/50 dark:bg-slate-900/30 overflow-hidden">
+          <button
+            type="button"
+            aria-expanded={channelMapOpen}
+            className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left text-sm font-medium hover:bg-slate-100/80 dark:hover:bg-slate-800/50 transition-colors"
+            onClick={() => setChannelMapOpen((o) => !o)}
+          >
+            <span className="flex min-w-0 items-center gap-2">
+              <ChevronDown
+                className={cn(
+                  'h-4 w-4 shrink-0 text-muted-foreground transition-transform',
+                  channelMapOpen && 'rotate-180'
+                )}
+              />
+              <span className="truncate">Meshtastic channel mapping</span>
+            </span>
+            <span className="shrink-0 text-xs font-normal text-muted-foreground">
+              {countMappedSlots(mappings)} / 8 mapped
+              {isChannelMapDirty ? ' · unsaved' : ''}
+            </span>
+          </button>
+          {channelMapOpen ? (
+            <div className="space-y-3 border-t border-slate-200/80 dark:border-slate-700/80 px-4 pb-4 pt-3">
+              <p className="text-xs text-muted-foreground">
+                Map each radio slot (0–7) to a message channel in{' '}
+                <span className="font-medium">{node.constellation.name}</span>. Used to attribute packets and text from
+                this node.
+              </p>
+              {channelsLoading ? (
+                <div className="flex justify-center py-4">
+                  <Loader2 className="h-6 w-6 animate-spin text-slate-500 dark:text-slate-400" />
+                </div>
+              ) : constellationChannels.length === 0 ? (
+                <Alert>
+                  <Info className="h-4 w-4" />
+                  <AlertTitle>No channels in this constellation</AlertTitle>
+                  <AlertDescription className="text-xs">
+                    Add message channels to the constellation first, or continue with all slots unmapped.
+                  </AlertDescription>
+                </Alert>
+              ) : (
+                <>
+                  <div className="space-y-2">
+                    {CHANNEL_SLOT_INDEXES.map((i) => {
+                      const slotKey = `meshtastic_channel_${i}` as keyof ChannelMappings;
+                      const cur = mappings[slotKey];
+                      return (
+                        <div key={i} className="flex items-center gap-2">
+                          <Label
+                            htmlFor={`managed-ch-${node.meshtastic_node_id}-${i}`}
+                            className="w-24 shrink-0 text-sm"
+                          >
+                            Slot {i}
+                          </Label>
+                          <Select value={cur == null ? 'none' : String(cur)} onValueChange={(v) => setSlot(i, v)}>
+                            <SelectTrigger id={`managed-ch-${node.meshtastic_node_id}-${i}`} className="flex-1">
+                              <SelectValue placeholder="Unmapped" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="none">None (unmapped)</SelectItem>
+                              {constellationChannels.map((ch: MessageChannel) => (
+                                <SelectItem key={ch.id} value={String(ch.id)}>
+                                  {ch.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2 pt-1">
+                    <Button
+                      type="button"
+                      size="sm"
+                      disabled={saveChannels.isPending}
+                      onClick={() => saveChannels.mutate()}
+                    >
+                      {saveChannels.isPending ? 'Saving…' : 'Save channel mappings'}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled={!isChannelMapDirty || saveChannels.isPending}
+                      onClick={() => {
+                        setMappings(savedMappings);
+                        saveChannels.reset();
+                      }}
+                    >
+                      Revert
+                    </Button>
+                    {saveChannels.isError && (
+                      <span className="text-sm text-destructive">Could not save. Try again.</span>
+                    )}
+                  </div>
+                </>
               )}
-            />
-            <span className="truncate">Meshtastic channel mapping</span>
-          </span>
-          <span className="shrink-0 text-xs font-normal text-muted-foreground">
-            {countMappedSlots(mappings)} / 8 mapped
-            {isChannelMapDirty ? ' · unsaved' : ''}
-          </span>
-        </button>
-        {channelMapOpen ? (
-          <div className="space-y-3 border-t border-slate-200/80 dark:border-slate-700/80 px-4 pb-4 pt-3">
-            <p className="text-xs text-muted-foreground">
-              Map each radio slot (0–7) to a message channel in{' '}
-              <span className="font-medium">{node.constellation.name}</span>. Used to attribute packets and text from
-              this node.
-            </p>
-            {channelsLoading ? (
-              <div className="flex justify-center py-4">
-                <Loader2 className="h-6 w-6 animate-spin text-slate-500 dark:text-slate-400" />
-              </div>
-            ) : constellationChannels.length === 0 ? (
-              <Alert>
-                <Info className="h-4 w-4" />
-                <AlertTitle>No channels in this constellation</AlertTitle>
-                <AlertDescription className="text-xs">
-                  Add message channels to the constellation first, or continue with all slots unmapped.
-                </AlertDescription>
-              </Alert>
-            ) : (
-              <>
-                <div className="space-y-2">
-                  {CHANNEL_SLOT_INDEXES.map((i) => {
-                    const slotKey = `meshtastic_meshtastic_channel_${i}` as keyof ChannelMappings;
-                    const cur = mappings[slotKey];
-                    return (
-                      <div key={i} className="flex items-center gap-2">
-                        <Label htmlFor={`managed-ch-${node.meshtastic_node_id}-${i}`} className="w-24 shrink-0 text-sm">
-                          Slot {i}
-                        </Label>
-                        <Select value={cur == null ? 'none' : String(cur)} onValueChange={(v) => setSlot(i, v)}>
-                          <SelectTrigger id={`managed-ch-${node.meshtastic_node_id}-${i}`} className="flex-1">
-                            <SelectValue placeholder="Unmapped" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="none">None (unmapped)</SelectItem>
-                            {constellationChannels.map((ch: MessageChannel) => (
-                              <SelectItem key={ch.id} value={String(ch.id)}>
-                                {ch.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    );
-                  })}
-                </div>
-                <div className="flex flex-wrap items-center gap-2 pt-1">
-                  <Button
-                    type="button"
-                    size="sm"
-                    disabled={saveChannels.isPending}
-                    onClick={() => saveChannels.mutate()}
-                  >
-                    {saveChannels.isPending ? 'Saving…' : 'Save channel mappings'}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    disabled={!isChannelMapDirty || saveChannels.isPending}
-                    onClick={() => {
-                      setMappings(savedMappings);
-                      saveChannels.reset();
-                    }}
-                  >
-                    Revert
-                  </Button>
-                  {saveChannels.isError && <span className="text-sm text-destructive">Could not save. Try again.</span>}
-                </div>
-              </>
-            )}
-          </div>
-        ) : null}
-      </div>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
 
       <div className="space-y-3">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
