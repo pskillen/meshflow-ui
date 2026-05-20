@@ -204,8 +204,27 @@ export interface ManagedNode {
   };
 }
 
+/** MeshCore channel row mirrored from device (GET managed-nodes/mine). */
+export interface McChannelSnapshot {
+  id: number;
+  name: string;
+  mc_channel_idx: number;
+  mc_channel_type: 'PUBLIC' | 'HASHTAG';
+  mc_hashtag: string | null;
+}
+
+export interface McChannelApplyEntry {
+  mc_channel_idx: number;
+  name: string;
+  mc_channel_type: 'PUBLIC' | 'HASHTAG';
+  mc_hashtag?: string | null;
+}
+
 // OwnedManagedNode extends ManagedNode with channel mappings
 export interface OwnedManagedNode extends ManagedNode {
+  internal_id?: string;
+  mc_channels?: McChannelSnapshot[];
+  mc_channels_synced_at?: string | null;
   meshtastic_channel_0?: { id: number; name?: string } | null;
   meshtastic_channel_1?: { id: number; name?: string } | null;
   meshtastic_channel_2?: { id: number; name?: string } | null;
