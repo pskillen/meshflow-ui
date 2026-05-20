@@ -92,6 +92,21 @@ function autoTracerouteBadge(node: ManagedNode) {
   return node.is_eligible_traceroute_source ? <Badge>eligible</Badge> : <Badge variant="secondary">stale-source</Badge>;
 }
 
+function renderBotVersionCell(node: ManagedNode) {
+  if (!node.bot_version) {
+    return '—';
+  }
+  const reportedAt = node.bot_version_reported_at ? new Date(node.bot_version_reported_at) : null;
+  return (
+    <div className="flex flex-col">
+      <span>{node.bot_version}</span>
+      {reportedAt ? (
+        <StaleReportedTime at={reportedAt} className="text-xs text-muted-foreground" variant="neutral" />
+      ) : null}
+    </div>
+  );
+}
+
 function ManagedNodesStatusContent() {
   const { managedNodes } = useManagedNodesSuspense({ pageSize: 500, includeStatus: true });
   const [searchParams, setSearchParams] = useSearchParams();
@@ -400,6 +415,7 @@ function ManagedNodesStatusContent() {
                     <TableHead>Packets / 24h</TableHead>
                     <TableHead>Radio last heard</TableHead>
                     <TableHead>Owner</TableHead>
+                    <TableHead>Bot version</TableHead>
                     <TableHead>Auto-TR</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -428,6 +444,7 @@ function ManagedNodesStatusContent() {
                         <TableCell>{node.packets_last_24h ?? 0}</TableCell>
                         <TableCell>{renderTimestampCell(node.radio_last_heard)}</TableCell>
                         <TableCell>{node.owner.username}</TableCell>
+                        <TableCell>{renderBotVersionCell(node)}</TableCell>
                         <TableCell>{autoTracerouteBadge(node)}</TableCell>
                       </TableRow>
                     );

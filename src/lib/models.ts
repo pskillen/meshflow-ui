@@ -194,6 +194,9 @@ export interface ManagedNode {
     bot_default_meshtastic_hop_limit?: number | null;
   };
   allow_auto_traceroute?: boolean;
+  /** Last meshflow-bot version reported on connect (null if never reported). */
+  bot_version?: string | null;
+  bot_version_reported_at?: Date | string | null;
   position: {
     latitude: number | null;
     longitude: number | null;
