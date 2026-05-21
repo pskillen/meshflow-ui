@@ -463,7 +463,8 @@ export interface GlobalStatsInterval {
 export interface PacketStatsInterval {
   start_date: string;
   end_date: string;
-  packet_types: Array<{
+  /** Omitted on some MeshCore stats responses. */
+  packet_types?: Array<{
     packet_type: string;
     count: number;
   }>;

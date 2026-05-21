@@ -101,7 +101,7 @@ export function ReceivedPacketTypeChart({
 
       // Set the actual counts for each packet type if we found a matching interval
       if (matchingInterval) {
-        matchingInterval.packet_types.forEach(({ packet_type, count }) => {
+        (matchingInterval.packet_types ?? []).forEach(({ packet_type, count }) => {
           data[packet_type] = count;
         });
       }
