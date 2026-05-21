@@ -138,7 +138,17 @@ export abstract class BaseApi {
           throw new NotFoundError(error.message || 'Not Found', error.response?.data);
         }
 
-        // Handle 5xx errors with ServerError
+        // 503 with structured body (e.g. feeder bot offline) — preserve detail/code for callers
+        if (error.response?.status === 503) {
+          const apiError: ApiError = {
+            message: error.response?.data?.detail || 'Service unavailable',
+            status: 503,
+            data: error.response?.data,
+          };
+          throw apiError;
+        }
+
+        // Handle other 5xx errors with ServerError
         if (error.response?.status >= 500 && error.response?.status < 600) {
           throw new ServerError(error.message || 'Server Error', error.response?.status, error.response?.data);
         }

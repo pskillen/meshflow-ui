@@ -522,6 +522,19 @@ export class MeshflowApi extends BaseApi {
   /**
    * Partially update a managed node (e.g. Meshtastic channel slot → MessageChannel mappings).
    */
+  /**
+   * Push MeshCore channel config to the connected feeder radio (WebSocket → device → API re-sync).
+   */
+  async applyMcChannelConfig(
+    internalId: string,
+    channels: import('../models').McChannelApplyEntry[]
+  ): Promise<{ status: string; message?: string }> {
+    return this.post<{ status: string; message?: string }>(
+      `/meshcore/managed-nodes/${internalId}/apply-mc-channel-config/`,
+      { channels }
+    );
+  }
+
   async patchManagedNode(
     nodeId: number,
     body: {
