@@ -1,4 +1,5 @@
-import { TextMessage, type PacketObservation } from '@/lib/models';
+import { TextMessage, type PacketObservation, type MeshCoreHeardObservation } from '@/lib/models';
+import { messageProtocol } from '@/lib/message-protocol';
 import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -9,12 +10,18 @@ import { Link } from 'react-router-dom';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ExternalLink } from 'lucide-react';
 
+function isMeshCoreHeard(obs: PacketObservation | MeshCoreHeardObservation): obs is MeshCoreHeardObservation {
+  return typeof (obs as MeshCoreHeardObservation).observer === 'string';
+}
+
 function HeardDialog({
   observations,
+  protocol,
   size = 'sm',
   className,
 }: {
-  observations: PacketObservation[] | undefined;
+  observations: TextMessage['heard'] | undefined;
+  protocol: ReturnType<typeof messageProtocol>;
   size?: 'sm' | 'xs';
   className?: string;
 }) {
@@ -41,37 +48,50 @@ function HeardDialog({
         </DialogHeader>
         <div className="space-y-4 mt-4">
           {observations?.length ? (
-            observations.map((observation) => (
-              <div
-                key={observation.observer.meshtastic_node_id}
-                className="flex items-start space-x-4 p-2 border rounded-md"
-              >
-                <div className="flex-1">
-                  <div className="font-semibold">
-                    {observation.observer.short_name || observation.observer.node_id_str}
-                  </div>
-                  {observation.observer.long_name && (
-                    <div className="text-sm text-muted-foreground">{observation.observer.long_name}</div>
-                  )}
-                  <div className="text-xs text-muted-foreground">
-                    {format(new Date(observation.rx_time), 'MMM d, yyyy h:mm a')}
-                  </div>
-                </div>
-                <div className="text-right">
-                  {observation.direct_from_sender ? (
-                    <div>
-                      <Badge variant="secondary">Direct</Badge>
-                      {observation.rx_rssi && (
-                        <div className="text-xs mt-1">RSSI: {observation.rx_rssi.toFixed(1)}</div>
-                      )}
-                      {observation.rx_snr && <div className="text-xs">SNR: {observation.rx_snr.toFixed(1)}</div>}
+            observations.map((observation, index) => {
+              if (protocol === 'meshcore' || isMeshCoreHeard(observation)) {
+                const mc = observation as MeshCoreHeardObservation;
+                return (
+                  <div key={`${mc.observer}-${index}`} className="flex items-start space-x-4 p-2 border rounded-md">
+                    <div className="flex-1">
+                      <div className="font-semibold">{mc.observer}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {format(new Date(mc.rx_time), 'MMM d, yyyy h:mm a')}
+                      </div>
                     </div>
-                  ) : (
-                    <Badge variant="outline">Hop: {observation.hop_count}</Badge>
-                  )}
+                    <div className="text-right text-xs">
+                      {mc.rx_rssi != null && <div>RSSI: {mc.rx_rssi.toFixed(1)}</div>}
+                      {mc.rx_snr != null && <div>SNR: {mc.rx_snr.toFixed(1)}</div>}
+                    </div>
+                  </div>
+                );
+              }
+              const mt = observation as PacketObservation;
+              return (
+                <div key={mt.observer.meshtastic_node_id} className="flex items-start space-x-4 p-2 border rounded-md">
+                  <div className="flex-1">
+                    <div className="font-semibold">{mt.observer.short_name || mt.observer.node_id_str}</div>
+                    {mt.observer.long_name && (
+                      <div className="text-sm text-muted-foreground">{mt.observer.long_name}</div>
+                    )}
+                    <div className="text-xs text-muted-foreground">
+                      {format(new Date(mt.rx_time), 'MMM d, yyyy h:mm a')}
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    {mt.direct_from_sender ? (
+                      <div>
+                        <Badge variant="secondary">Direct</Badge>
+                        {mt.rx_rssi != null && <div className="text-xs mt-1">RSSI: {mt.rx_rssi.toFixed(1)}</div>}
+                        {mt.rx_snr != null && <div className="text-xs">SNR: {mt.rx_snr.toFixed(1)}</div>}
+                      </div>
+                    ) : (
+                      <Badge variant="outline">Hop: {mt.hop_count}</Badge>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))
+              );
+            })
           ) : (
             <div className="text-center text-muted-foreground">No observation data available</div>
           )}
@@ -102,7 +122,8 @@ export const MessageItem = memo(function MessageItem({
   emojiReactions = [],
   continuationMessages = [],
 }: MessageItemProps) {
-  const nodeId = useMemo(() => parseNodeId(message.sender.node_id_str), [message.sender.node_id_str]);
+  const proto = messageProtocol(message);
+  const nodeId = useMemo(() => (message.sender ? parseNodeId(message.sender.node_id_str) : null), [message.sender]);
   const fullTime = useMemo(() => {
     return message.sent_at ? format(new Date(message.sent_at), 'MMM d, yyyy h:mm a') : 'Unknown time';
   }, [message.sent_at]);
@@ -114,12 +135,12 @@ export const MessageItem = memo(function MessageItem({
       const key = emoji.message_text;
       if (!map[key]) map[key] = { count: 0, senders: [] };
       map[key].count++;
-      map[key].senders.push(emoji.sender.short_name || emoji.sender.node_id_str);
+      map[key].senders.push(emoji.sender?.short_name || emoji.sender?.node_id_str || 'Unknown');
     }
     return map;
   }, [emojiReactions]);
 
-  const senderName = message.sender.short_name || message.sender.node_id_str;
+  const senderName = message.sender?.short_name || message.sender?.node_id_str || 'Anonymous';
 
   return (
     <article className="mb-3 rounded-lg border border-slate-200 dark:border-slate-600 bg-card p-3">
@@ -160,7 +181,7 @@ export const MessageItem = memo(function MessageItem({
             title={fullTime}
           />
         ) : null}
-        <HeardDialog observations={message.heard} />
+        <HeardDialog observations={message.heard} protocol={proto} />
       </header>
       <div className="pl-8">
         <p className="whitespace-pre-wrap text-sm">{message.message_text}</p>
@@ -179,12 +200,14 @@ export const MessageItem = memo(function MessageItem({
           <div className="mt-2 ml-3 border-l-2 border-muted pl-3 space-y-1">
             {replies.map((reply) => (
               <div key={reply.id} className="text-sm flex flex-wrap items-baseline gap-1.5">
-                <span className="font-medium">{reply.sender.short_name || reply.sender.node_id_str}:</span>
+                <span className="font-medium">
+                  {reply.sender?.short_name || reply.sender?.node_id_str || 'Unknown'}:
+                </span>
                 <span>{reply.message_text}</span>
                 <span className="text-xs text-muted-foreground">
                   {reply.sent_at ? format(new Date(reply.sent_at), 'MMM d, h:mm a') : ''}
                 </span>
-                <HeardDialog observations={reply.heard} size="xs" />
+                <HeardDialog observations={reply.heard} protocol={proto} size="xs" />
               </div>
             ))}
           </div>
@@ -197,7 +220,7 @@ export const MessageItem = memo(function MessageItem({
             const key = emoji.message_text;
             if (!contEmojiCounts[key]) contEmojiCounts[key] = { count: 0, senders: [] };
             contEmojiCounts[key].count++;
-            contEmojiCounts[key].senders.push(emoji.sender.short_name || emoji.sender.node_id_str);
+            contEmojiCounts[key].senders.push(emoji.sender?.short_name || emoji.sender?.node_id_str || 'Unknown');
           }
           const contTime = contMsg.sent_at ? format(new Date(contMsg.sent_at), 'h:mm a') : '';
           return (
@@ -215,18 +238,20 @@ export const MessageItem = memo(function MessageItem({
               {contMsg.is_emoji && <span className="ml-1 text-xs text-muted-foreground">(emoji)</span>}
               <div className="mt-1 flex items-center gap-2">
                 <span className="text-xs text-muted-foreground">{contTime}</span>
-                <HeardDialog observations={contMsg.heard} size="xs" />
+                <HeardDialog observations={contMsg.heard} protocol={messageProtocol(contMsg)} size="xs" />
               </div>
               {contReplies.length > 0 && (
                 <div className="mt-2 ml-3 border-l-2 border-muted pl-3 space-y-1">
                   {contReplies.map((reply) => (
                     <div key={reply.id} className="text-sm flex flex-wrap items-baseline gap-1.5">
-                      <span className="font-medium">{reply.sender.short_name || reply.sender.node_id_str}:</span>
+                      <span className="font-medium">
+                        {reply.sender?.short_name || reply.sender?.node_id_str || 'Unknown'}:
+                      </span>
                       <span>{reply.message_text}</span>
                       <span className="text-xs text-muted-foreground">
                         {reply.sent_at ? format(new Date(reply.sent_at), 'MMM d, h:mm a') : ''}
                       </span>
-                      <HeardDialog observations={reply.heard} size="xs" />
+                      <HeardDialog observations={reply.heard} protocol={proto} size="xs" />
                     </div>
                   ))}
                 </div>
