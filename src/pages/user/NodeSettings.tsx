@@ -474,13 +474,33 @@ function channelMappingsEqual(a: ChannelMappings, b: ChannelMappings): boolean {
   });
 }
 
+function stripHashtagPrefix(value: string): string {
+  return value.replace(/^#+/, '').trim();
+}
+
 function mcChannelsFromNode(node: OwnedManagedNode): McChannelApplyEntry[] {
   return (node.mc_channels ?? []).map((ch) => ({
     mc_channel_idx: ch.mc_channel_idx,
     name: ch.name,
     mc_channel_type: ch.mc_channel_type,
-    mc_hashtag: ch.mc_hashtag,
+    mc_hashtag: ch.mc_channel_type === 'HASHTAG' ? (ch.mc_hashtag ?? stripHashtagPrefix(ch.name)) : ch.mc_hashtag,
   }));
+}
+
+function applyMcChannelErrorMessage(err: unknown): string {
+  const data = (err as { data?: { detail?: string; code?: string } })?.data as
+    | { detail?: string; code?: string }
+    | undefined;
+  if (data?.code === 'feeder_bot_not_connected') {
+    return data.detail ?? 'Feeder bot is not connected via WebSocket.';
+  }
+  if (data?.code === 'command_dispatch_unavailable') {
+    return data.detail ?? 'Could not dispatch the command (channel layer unavailable).';
+  }
+  if (data?.detail) {
+    return String(data.detail);
+  }
+  return 'Could not apply channel config to the radio.';
 }
 
 function MeshCoreChannelSettings({ node }: { node: OwnedManagedNode }) {
@@ -508,7 +528,17 @@ function MeshCoreChannelSettings({ node }: { node: OwnedManagedNode }) {
   });
 
   const updateRow = (index: number, patch: Partial<McChannelApplyEntry>) => {
-    setRows((prev) => prev.map((r, i) => (i === index ? { ...r, ...patch } : r)));
+    setRows((prev) =>
+      prev.map((r, i) => {
+        if (i !== index) return r;
+        const next = { ...r, ...patch };
+        if (next.mc_channel_type === 'HASHTAG') {
+          const tag = stripHashtagPrefix(next.mc_hashtag ?? next.name);
+          return { ...next, name: tag, mc_hashtag: tag || null };
+        }
+        return { ...next, mc_hashtag: null };
+      })
+    );
   };
 
   const addRow = () => {
@@ -565,23 +595,22 @@ function MeshCoreChannelSettings({ node }: { node: OwnedManagedNode }) {
                     <p className="text-sm font-mono">{row.mc_channel_idx}</p>
                   </div>
                   <div>
-                    <Label className="text-xs">Name</Label>
-                    <input
-                      className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-                      value={row.name}
-                      onChange={(e) => updateRow(index, { name: e.target.value })}
-                    />
-                  </div>
-                  <div>
                     <Label className="text-xs">Type</Label>
                     <Select
                       value={row.mc_channel_type}
-                      onValueChange={(v) =>
-                        updateRow(index, {
-                          mc_channel_type: v as McChannelSnapshot['mc_channel_type'],
-                          mc_hashtag: v === 'HASHTAG' ? row.mc_hashtag : null,
-                        })
-                      }
+                      onValueChange={(v) => {
+                        const type = v as McChannelSnapshot['mc_channel_type'];
+                        if (type === 'HASHTAG') {
+                          const tag = stripHashtagPrefix(row.mc_hashtag ?? row.name);
+                          updateRow(index, {
+                            mc_channel_type: type,
+                            name: tag,
+                            mc_hashtag: tag || null,
+                          });
+                        } else {
+                          updateRow(index, { mc_channel_type: type, mc_hashtag: null });
+                        }
+                      }}
                     >
                       <SelectTrigger>
                         <SelectValue />
@@ -593,16 +622,37 @@ function MeshCoreChannelSettings({ node }: { node: OwnedManagedNode }) {
                     </Select>
                   </div>
                   {row.mc_channel_type === 'HASHTAG' ? (
-                    <div>
+                    <div className="sm:col-span-2">
                       <Label className="text-xs">Hashtag</Label>
+                      <div className="flex">
+                        <span
+                          className="inline-flex h-9 items-center rounded-l-md border border-r-0 border-input bg-muted px-3 text-sm text-muted-foreground"
+                          aria-hidden
+                        >
+                          #
+                        </span>
+                        <input
+                          className="flex h-9 w-full rounded-r-md border border-input bg-background px-3 text-sm"
+                          value={row.mc_hashtag ?? ''}
+                          onChange={(e) => updateRow(index, { mc_hashtag: e.target.value })}
+                          placeholder="galloway"
+                          aria-label="Hashtag name"
+                        />
+                      </div>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Stored on the radio as #{row.mc_hashtag || '…'} (name and hashtag are the same).
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="sm:col-span-2">
+                      <Label className="text-xs">Name</Label>
                       <input
                         className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-                        value={row.mc_hashtag ?? ''}
-                        onChange={(e) => updateRow(index, { mc_hashtag: e.target.value })}
-                        placeholder="galloway"
+                        value={row.name}
+                        onChange={(e) => updateRow(index, { name: e.target.value })}
                       />
                     </div>
-                  ) : null}
+                  )}
                   <div className="sm:col-span-2">
                     <Button type="button" variant="ghost" size="sm" onClick={() => removeRow(index)}>
                       Remove
@@ -625,7 +675,9 @@ function MeshCoreChannelSettings({ node }: { node: OwnedManagedNode }) {
               {applyToRadio.isPending ? 'Applying…' : 'Apply to radio'}
             </Button>
             {applyToRadio.isError && (
-              <span className="text-sm text-destructive">Could not apply. Is the bot connected?</span>
+              <span className="text-sm text-destructive" role="alert">
+                {applyMcChannelErrorMessage(applyToRadio.error)}
+              </span>
             )}
           </div>
         </div>
