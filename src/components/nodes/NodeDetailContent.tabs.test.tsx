@@ -142,4 +142,24 @@ describe('NodeDetailContent tabbed layout', () => {
     await user.click(screen.getByTestId('node-detail-tab-overview'));
     expect(screen.getByTestId('url-search')).toHaveTextContent('');
   });
+
+  it('hides traceroutes and monitoring tabs for MeshCore nodes', () => {
+    mockedUseNodeSuspense.mockReturnValue({
+      ...minimalNode,
+      protocol: 2,
+      meshtastic_node_id: 0,
+      node_id_str: 'mc:abc',
+    });
+    render(
+      <MemoryRouter initialEntries={[`/nodes/${TEST_OBSERVED_INTERNAL_ID}?tab=traceroutes`]}>
+        <Routes>
+          <Route path="/nodes/:id" element={<PageWithSearchEcho />} />
+        </Routes>
+      </MemoryRouter>
+    );
+    expect(screen.queryByTestId('node-detail-tab-traceroutes')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('node-detail-tab-monitoring')).not.toBeInTheDocument();
+    expect(screen.getByTestId('node-detail-panel-overview')).toBeInTheDocument();
+    expect(screen.getByTestId('url-search')).toHaveTextContent('');
+  });
 });

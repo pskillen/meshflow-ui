@@ -102,6 +102,14 @@ describe('NodesMap', () => {
     await waitFor(() => expect(mapMocks.fitBounds).toHaveBeenCalled());
   });
 
+  it('shows MeshCore node type legend when roleLegend is meshcore', () => {
+    render(<NodesMap nodes={[nodeWithPosition(1, 55.1, -4.2, { protocol: 2 })]} roleLegend="meshcore" />);
+    const legend = screen.getByRole('region', { name: /Map marker colours/i });
+    expect(legend).toHaveTextContent('MeshCore node type');
+    expect(legend).toHaveTextContent('Repeater');
+    expect(screen.queryByText('ROUTER')).not.toBeInTheDocument();
+  });
+
   it('shows watch status legend instead of node role when status colours are provided', () => {
     render(
       <NodesMap

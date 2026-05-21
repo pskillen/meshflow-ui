@@ -105,6 +105,8 @@ export interface ObservedNode {
   meshtastic_public_key: string | null;
   /** Meshtastic RoleSource enum integer; null for MeshCore. */
   meshtastic_role?: number | null;
+  /** MeshCore ADVERT adv_type (1=chat, 2=repeater, 3=room, 4=sensor); null when unknown. */
+  meshcore_adv_type?: number | null;
   meshtastic_is_licensed?: boolean | null;
   meshtastic_is_unmessagable?: boolean | null;
   /** Meshtastic-only: inferred max hops from hop_start; null for MeshCore. */
@@ -461,7 +463,8 @@ export interface GlobalStatsInterval {
 export interface PacketStatsInterval {
   start_date: string;
   end_date: string;
-  packet_types: Array<{
+  /** Omitted on some MeshCore stats responses. */
+  packet_types?: Array<{
     packet_type: string;
     count: number;
   }>;
