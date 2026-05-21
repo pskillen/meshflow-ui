@@ -23,6 +23,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useManagedNodesSuspense } from '@/hooks/api/useNodes';
+import { useMeshCoreManagedNodesSuspense } from '@/hooks/api/useMeshCore';
+import type { ProtocolPageConfig } from '@/lib/mesh-protocol';
+import { MESHTASTIC_CONFIG, MESHCORE_CONFIG } from '@/lib/mesh-protocol';
 import {
   ManagedNodeStatusTier,
   filterManagedNodesForMapDisplay,
@@ -107,8 +110,13 @@ function renderBotVersionCell(node: ManagedNode) {
   );
 }
 
-function ManagedNodesStatusContent() {
-  const { managedNodes } = useManagedNodesSuspense({ pageSize: 500, includeStatus: true });
+function ProtocolManagedNodesPageContent({
+  config,
+  managedNodes,
+}: {
+  config: ProtocolPageConfig;
+  managedNodes: ManagedNode[];
+}) {
   const [searchParams, setSearchParams] = useSearchParams();
   const [queryInput, setQueryInput] = useState(() => parseManagedNodesUrlState(searchParams).query);
   const filters = useMemo(() => parseManagedNodesUrlState(searchParams), [searchParams]);
@@ -230,13 +238,21 @@ function ManagedNodesStatusContent() {
     <div className="container mx-auto p-4 space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Managed Nodes</CardTitle>
+          <CardTitle>{config.labels.managedNodesTitle}</CardTitle>
           <CardDescription>
-            Operator view of feeder fleet health. For RF-side observed infrastructure, use{' '}
-            <Link to="/nodes/infrastructure" className="underline">
-              Mesh Infrastructure
-            </Link>
-            .
+            Operator view of feeder fleet health.
+            {config.features.showInfrastructureLink ? (
+              <>
+                {' '}
+                For RF-side observed infrastructure, use{' '}
+                <Link to="/nodes/infrastructure" className="underline">
+                  Mesh Infrastructure
+                </Link>
+                .
+              </>
+            ) : (
+              <> MeshCore feeders reporting packets to the API.</>
+            )}
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-3 sm:grid-cols-5">
@@ -386,13 +402,15 @@ function ManagedNodesStatusContent() {
             </Select>
           </div>
 
-          <div className="flex items-center gap-2 lg:col-span-5">
-            <Switch
-              checked={filters.allowAutoTraceroute === true}
-              onCheckedChange={(checked) => updateFilters({ allowAutoTraceroute: checked ? true : null })}
-            />
-            <Label>Allow auto traceroute only</Label>
-          </div>
+          {config.features.autoTracerouteFilters ? (
+            <div className="flex items-center gap-2 lg:col-span-5">
+              <Switch
+                checked={filters.allowAutoTraceroute === true}
+                onCheckedChange={(checked) => updateFilters({ allowAutoTraceroute: checked ? true : null })}
+              />
+              <Label>Allow auto traceroute only</Label>
+            </div>
+          ) : null}
         </CardContent>
       </Card>
 
@@ -416,7 +434,7 @@ function ManagedNodesStatusContent() {
                     <TableHead>Radio last heard</TableHead>
                     <TableHead>Owner</TableHead>
                     <TableHead>Bot version</TableHead>
-                    <TableHead>Auto-TR</TableHead>
+                    {config.features.autoTracerouteFilters ? <TableHead>Auto-TR</TableHead> : null}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -445,7 +463,9 @@ function ManagedNodesStatusContent() {
                         <TableCell>{renderTimestampCell(node.radio_last_heard)}</TableCell>
                         <TableCell>{node.owner.username}</TableCell>
                         <TableCell>{renderBotVersionCell(node)}</TableCell>
-                        <TableCell>{autoTracerouteBadge(node)}</TableCell>
+                        {config.features.autoTracerouteFilters ? (
+                          <TableCell>{autoTracerouteBadge(node)}</TableCell>
+                        ) : null}
                       </TableRow>
                     );
                   })}
@@ -459,16 +479,44 @@ function ManagedNodesStatusContent() {
   );
 }
 
+function MeshtasticManagedNodesLoader({ config }: { config: ProtocolPageConfig }) {
+  const { managedNodes: all } = useManagedNodesSuspense({ pageSize: 500, includeStatus: true });
+  const managedNodes = useMemo(() => all.filter((n) => n.protocol === 1 || n.protocol == null), [all]);
+  return <ProtocolManagedNodesPageContent config={config} managedNodes={managedNodes} />;
+}
+
+function MeshCoreManagedNodesLoader({ config }: { config: ProtocolPageConfig }) {
+  const { feeders } = useMeshCoreManagedNodesSuspense({ pageSize: 500 });
+  return <ProtocolManagedNodesPageContent config={config} managedNodes={feeders} />;
+}
+
+export function ProtocolManagedNodesPage({ config }: { config: ProtocolPageConfig }) {
+  if (config.slug === 'meshcore') {
+    return <MeshCoreManagedNodesLoader config={config} />;
+  }
+  return <MeshtasticManagedNodesLoader config={config} />;
+}
+
+function ManagedNodesSuspenseFallback() {
+  return (
+    <div className="flex items-center justify-center min-h-screen">
+      <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+    </div>
+  );
+}
+
 export function ManagedNodesStatus() {
   return (
-    <Suspense
-      fallback={
-        <div className="flex items-center justify-center min-h-screen">
-          <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
-        </div>
-      }
-    >
-      <ManagedNodesStatusContent />
+    <Suspense fallback={<ManagedNodesSuspenseFallback />}>
+      <ProtocolManagedNodesPage config={MESHTASTIC_CONFIG} />
+    </Suspense>
+  );
+}
+
+export function MeshCoreManagedNodesStatus() {
+  return (
+    <Suspense fallback={<ManagedNodesSuspenseFallback />}>
+      <ProtocolManagedNodesPage config={MESHCORE_CONFIG} />
     </Suspense>
   );
 }

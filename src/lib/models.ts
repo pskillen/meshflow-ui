@@ -105,6 +105,8 @@ export interface ObservedNode {
   meshtastic_public_key: string | null;
   /** Meshtastic RoleSource enum integer; null for MeshCore. */
   meshtastic_role?: number | null;
+  /** MeshCore ADVERT adv_type (1=chat, 2=repeater, 3=room, 4=sensor); null when unknown. */
+  meshcore_adv_type?: number | null;
   meshtastic_is_licensed?: boolean | null;
   meshtastic_is_unmessagable?: boolean | null;
   /** Meshtastic-only: inferred max hops from hop_start; null for MeshCore. */

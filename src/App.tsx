@@ -34,6 +34,9 @@ import { MeshCoreMap } from '@/pages/meshcore/MeshCoreMap';
 import { MeshCoreNodesList } from '@/pages/meshcore/MeshCoreNodesList';
 
 const ManagedNodesStatus = lazy(() => import('@/pages/nodes/ManagedNodesStatus'));
+const MeshCoreManagedNodesStatus = lazy(() =>
+  import('@/pages/nodes/ManagedNodesStatus').then((m) => ({ default: m.MeshCoreManagedNodesStatus }))
+);
 
 function App() {
   return (
@@ -75,6 +78,14 @@ function App() {
                   <Route path="/map" element={<NodeMap />} />
                   <Route path="/meshcore/map" element={<MeshCoreMap />} />
                   <Route path="/meshcore/nodes" element={<MeshCoreNodesList />} />
+                  <Route
+                    path="/meshcore/managed-nodes"
+                    element={
+                      <Suspense fallback={<div>Loading managed nodes...</div>}>
+                        <MeshCoreManagedNodesStatus />
+                      </Suspense>
+                    }
+                  />
                   <Route path="/messages" element={<MessageHistory />} />
                   <Route path="/traceroutes/history" element={<TracerouteHistory />} />
                   <Route path="/traceroutes" element={<TraceroutesLanding />} />

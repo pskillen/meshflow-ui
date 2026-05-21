@@ -3,15 +3,18 @@ import L from 'leaflet';
 import { useEffect, useMemo, useRef } from 'react';
 import 'leaflet/dist/leaflet.css';
 import { useMapTileUrl } from '@/hooks/useMapTileUrl';
-import { createNodeIcon, getRoleColor, buildNodePopupHtml } from './map-utils';
+import { createNodeIcon, buildNodePopupHtml } from './map-utils';
 import { MapMarkerLegend } from './MapMarkerLegend';
-import { meshRoleLegendSwatches } from './map-role-legend';
+import { roleLegendSwatchesForProtocol } from './map-role-legend';
 import type { RoleLegendSwatch } from './map-role-legend';
+import { getObservedNodePinColor } from '@/lib/map-node-entity';
 
 interface NodesMapProps {
   nodes: ObservedNode[];
   /** Default true: role-colour key for marker pins. */
   showMapLegend?: boolean;
+  /** Which role legend and pin colours to use. Default meshtastic. */
+  roleLegend?: 'meshtastic' | 'meshcore';
   /** When set, marker pins use these colours by `meshtastic_node_id` instead of Meshtastic role. */
   markerColorsByNodeId?: ReadonlyMap<number, string> | Record<number, string>;
   /** Legend rows when using `markerColorsByNodeId` (e.g. watch monitoring status). */
@@ -34,6 +37,7 @@ function colorMapFromProp(
 export function NodesMap({
   nodes,
   showMapLegend = true,
+  roleLegend = 'meshtastic',
   markerColorsByNodeId,
   mapLegendStatusSwatches,
   mapLegendStatusTitle,
@@ -43,7 +47,8 @@ export function NodesMap({
   const tileLayerRef = useRef<L.TileLayer | null>(null);
   const markersRef = useRef<L.Marker[]>([]);
   const { url: tileUrl, attribution } = useMapTileUrl();
-  const roleSwatches = useMemo(() => meshRoleLegendSwatches(), []);
+  const roleSwatches = useMemo(() => roleLegendSwatchesForProtocol(roleLegend), [roleLegend]);
+  const roleSectionTitle = roleLegend === 'meshcore' ? 'MeshCore node type' : 'Node role';
   const colorByNodeId = useMemo(() => colorMapFromProp(markerColorsByNodeId), [markerColorsByNodeId]);
   const useStatusLegend = Boolean(colorByNodeId?.size && mapLegendStatusSwatches?.length);
 
@@ -169,7 +174,7 @@ export function NodesMap({
     nodesWithPosition.forEach((node) => {
       const position: L.LatLngExpression = [node.latest_position!.latitude!, node.latest_position!.longitude!];
 
-      const pinColor = colorByNodeId?.get(node.meshtastic_node_id) ?? getRoleColor(node.meshtastic_role);
+      const pinColor = colorByNodeId?.get(node.meshtastic_node_id) ?? getObservedNodePinColor(node);
 
       const marker = L.marker(position, {
         icon: createNodeIcon(node.short_name || node.node_id_str.toString(), pinColor, false),
@@ -190,7 +195,7 @@ export function NodesMap({
         maxZoom: 15,
       });
     }
-  }, [nodes, colorByNodeId]);
+  }, [nodes, colorByNodeId, roleLegend]);
 
   return (
     <div className="relative h-full w-full min-h-[400px]">
@@ -199,7 +204,7 @@ export function NodesMap({
           constellationItems={[]}
           showRoleSwatches={!useStatusLegend}
           roleSwatches={roleSwatches}
-          roleSectionTitle="Node role"
+          roleSectionTitle={roleSectionTitle}
           statusSwatches={useStatusLegend ? mapLegendStatusSwatches : undefined}
           statusSectionTitle={mapLegendStatusTitle}
         />
