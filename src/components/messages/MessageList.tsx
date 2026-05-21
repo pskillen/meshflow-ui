@@ -4,6 +4,7 @@ import { useMessagesWithWebSocket } from '@/hooks/useMessagesWithWebSocket';
 import { MessageItem } from './MessageItem';
 import { Button } from '@/components/ui/button';
 import type { TextMessage } from '@/lib/models';
+import type { ProtocolSlug } from '@/lib/mesh-protocol';
 
 const CONSECUTIVE_THRESHOLD_MINUTES = 15;
 
@@ -11,35 +12,38 @@ interface MessageListProps {
   channel?: number; // channelId
   constellationId?: number;
   nodeId?: number;
+  protocol?: ProtocolSlug;
 }
 
-export function MessageList({ channel, constellationId, nodeId }: MessageListProps) {
-  // Use the WebSocket-enabled hook for fetching messages with real-time updates
+export function MessageList({ channel, constellationId, nodeId, protocol }: MessageListProps) {
   const { messages, fetchNextPage, hasNextPage } = useMessagesWithWebSocket({
     channelId: channel,
     constellationId: constellationId,
     nodeId: nodeId,
+    protocol,
     pageSize: 25,
   });
 
   // Group messages by packet_id for threading and emoji reactions
   const mainMessages = useMemo(() => messages.filter((msg) => !msg.reply_to_meshtastic_packet_id), [messages]);
   const repliesByPacketId = useMemo(() => {
-    const map: Record<number, typeof messages> = {};
+    const map: Record<string, typeof messages> = {};
     for (const msg of messages) {
       if (msg.reply_to_meshtastic_packet_id && !msg.is_emoji) {
-        if (!map[msg.reply_to_meshtastic_packet_id]) map[msg.reply_to_meshtastic_packet_id] = [];
-        map[msg.reply_to_meshtastic_packet_id].push(msg);
+        const key = String(msg.reply_to_meshtastic_packet_id);
+        if (!map[key]) map[key] = [];
+        map[key].push(msg);
       }
     }
     return map;
   }, [messages]);
   const emojiReactionsByPacketId = useMemo(() => {
-    const map: Record<number, typeof messages> = {};
+    const map: Record<string, typeof messages> = {};
     for (const msg of messages) {
       if (msg.reply_to_meshtastic_packet_id && msg.is_emoji) {
-        if (!map[msg.reply_to_meshtastic_packet_id]) map[msg.reply_to_meshtastic_packet_id] = [];
-        map[msg.reply_to_meshtastic_packet_id].push(msg);
+        const key = String(msg.reply_to_meshtastic_packet_id);
+        if (!map[key]) map[key] = [];
+        map[key].push(msg);
       }
     }
     return map;
@@ -55,7 +59,10 @@ export function MessageList({ channel, constellationId, nodeId }: MessageListPro
       let j = i + 1;
       while (j < mainMessages.length) {
         const next = mainMessages[j];
-        const sameSender = next.sender.node_id_str === msg.sender.node_id_str;
+        const sameSender =
+          next.sender?.node_id_str != null &&
+          msg.sender?.node_id_str != null &&
+          next.sender.node_id_str === msg.sender.node_id_str;
         const withinWindow =
           msg.sent_at &&
           next.sent_at &&
@@ -81,12 +88,12 @@ export function MessageList({ channel, constellationId, nodeId }: MessageListPro
         <MessageItem
           key={`${primary.id}-${index}`}
           message={primary}
-          replies={repliesByPacketId[primary.packet_id] || []}
-          emojiReactions={emojiReactionsByPacketId[primary.packet_id] || []}
+          replies={repliesByPacketId[String(primary.packet_id)] || []}
+          emojiReactions={emojiReactionsByPacketId[String(primary.packet_id)] || []}
           continuationMessages={continuations.map((m) => ({
             message: m,
-            replies: repliesByPacketId[m.packet_id] || [],
-            emojiReactions: emojiReactionsByPacketId[m.packet_id] || [],
+            replies: repliesByPacketId[String(m.packet_id)] || [],
+            emojiReactions: emojiReactionsByPacketId[String(m.packet_id)] || [],
           }))}
         />
       ))}

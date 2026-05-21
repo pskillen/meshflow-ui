@@ -686,6 +686,7 @@ export class MeshflowApi extends BaseApi {
     channelId?: number;
     constellationId?: number;
     nodeId?: number;
+    protocol?: 'meshtastic' | 'meshcore';
     page?: number;
     page_size?: number;
   }): Promise<TextMessageResponse> {
@@ -693,6 +694,7 @@ export class MeshflowApi extends BaseApi {
     if (params.channelId) searchParams.append('channel_id', params.channelId.toString());
     if (params.constellationId) searchParams.append('constellation_id', params.constellationId.toString());
     if (params.nodeId) searchParams.append('sender_node_id', params.nodeId.toString());
+    if (params.protocol) searchParams.append('protocol', params.protocol);
     if (params.page) searchParams.append('page', params.page.toString());
     if (params.page_size) searchParams.append('page_size', params.page_size.toString());
     return this.get<TextMessageResponse>('/messages/text/', searchParams);

@@ -1,11 +1,13 @@
 import { useQuery, useInfiniteQuery, InfiniteData, useSuspenseInfiniteQuery } from '@tanstack/react-query';
 import { useMeshtasticApi } from './useApi';
 import { TextMessage, TextMessageResponse } from '@/lib/models';
+import type { ProtocolSlug } from '@/lib/mesh-protocol';
 
 interface UseMessagesOptions {
   channelId?: number;
   constellationId?: number;
   nodeId?: number;
+  protocol?: ProtocolSlug;
   pageSize?: number;
   enabled?: boolean;
 }
@@ -23,15 +25,16 @@ export function useMessages(options?: UseMessagesOptions) {
     TextMessageResponse,
     Error,
     InfiniteData<TextMessageResponse>,
-    [string, number | undefined, number | undefined, number | undefined, number],
+    [string, ProtocolSlug | undefined, number | undefined, number | undefined, number | undefined, number],
     number
   >({
-    queryKey: ['messages', options?.channelId, options?.constellationId, options?.nodeId, pageSize],
+    queryKey: ['messages', options?.protocol, options?.channelId, options?.constellationId, options?.nodeId, pageSize],
     queryFn: async ({ pageParam = 1 }) => {
       return api.getTextMessages({
         channelId: options?.channelId,
         constellationId: options?.constellationId,
         nodeId: options?.nodeId,
+        protocol: options?.protocol,
         page: pageParam,
         page_size: pageSize,
       });
@@ -87,12 +90,13 @@ export function useMessagesSuspense(options?: UseMessagesOptions) {
   const pageSize = options?.pageSize || 250;
 
   const messagesQuery = useSuspenseInfiniteQuery<TextMessageResponse, Error>({
-    queryKey: ['messages', options?.channelId, options?.constellationId, options?.nodeId, pageSize],
+    queryKey: ['messages', options?.protocol, options?.channelId, options?.constellationId, options?.nodeId, pageSize],
     queryFn: async ({ pageParam = 1 }) =>
       api.getTextMessages({
         channelId: options?.channelId,
         constellationId: options?.constellationId,
         nodeId: options?.nodeId,
+        protocol: options?.protocol,
         page: pageParam as number,
         page_size: pageSize,
       }),

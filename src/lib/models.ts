@@ -319,17 +319,26 @@ export interface PacketObservation {
   hop_count: number | null;
 }
 
+/** MeshCore heard row shape from text message API (observer is node_id_str string). */
+export interface MeshCoreHeardObservation {
+  observer: string;
+  rx_time: string;
+  rx_rssi: number | null;
+  rx_snr: number | null;
+}
+
 export interface TextMessage {
   id: string; // UUID
-  packet_id: number;
-  sender: TextMessageSender;
+  packet_id: number | string;
+  protocol?: MeshProtocol | 'meshtastic' | 'meshcore' | string;
+  sender: TextMessageSender | null;
   recipient_meshtastic_node_id: number | null;
   channel: number;
   sent_at: string; // ISO date string
   message_text: string;
   is_emoji: boolean;
   reply_to_meshtastic_packet_id: number | null;
-  heard: PacketObservation[];
+  heard: PacketObservation[] | MeshCoreHeardObservation[];
 }
 
 export interface TextMessageResponse {
@@ -525,6 +534,9 @@ export interface MessageChannel {
   id: number;
   name: string;
   constellation: number;
+  protocol?: MeshProtocol | 'meshtastic' | 'meshcore' | string;
+  mc_channel_idx?: number | null;
+  mc_channel_type?: string | null;
 }
 
 export interface Constellation {

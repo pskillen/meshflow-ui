@@ -1,10 +1,8 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { NodesAndConstellationsMap, MapNode } from '@/components/nodes/NodesAndConstellationsMap';
-import { NodesMap } from '@/components/nodes/NodesMap';
 import { NodeDetailSheet } from '@/components/nodes/NodeDetailSheet';
 import { useProtocolObservedNodesSuspense } from '@/hooks/api/useProtocolNodes';
 import { useManagedNodesSuspense } from '@/hooks/api/useNodes';
-import { useMeshCoreManagedNodesSuspense } from '@/hooks/api/useMeshCore';
 import type { ProtocolPageConfig } from '@/lib/mesh-protocol';
 import { NODE_TIME_RANGE_OPTIONS, getLastHeardAfterForRange, type NodeTimeRangeOption } from '@/lib/node-time-range';
 import { filterManagedNodesForMapDisplay } from '@/lib/managed-node-status';
@@ -13,8 +11,6 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { useMemo, useState } from 'react';
-import type { ManagedNode } from '@/lib/models';
-
 type ProtocolMapPageProps = {
   config: ProtocolPageConfig;
 };
@@ -227,74 +223,6 @@ function MeshtasticMapContent({ config }: ProtocolMapPageProps) {
   );
 }
 
-function MeshCoreMapContent({ config }: ProtocolMapPageProps) {
-  const [timeRange, setTimeRange] = useState<NodeTimeRangeOption>('30d');
-  const lastHeardAfter = useMemo(() => getLastHeardAfterForRange(timeRange), [timeRange]);
-  const { nodes } = useProtocolObservedNodesSuspense(config, { pageSize: 500, lastHeardAfter });
-  const { feeders } = useMeshCoreManagedNodesSuspense({ pageSize: 200 });
-
-  const nodesWithPosition = useMemo(
-    () => nodes.filter((n) => n.latest_position?.latitude != null && n.latest_position?.longitude != null),
-    [nodes]
-  );
-
-  const feedersWithPosition = feeders.filter(
-    (f) => f.position?.latitude != null && f.position?.longitude != null
-  ) as ManagedNode[];
-
-  return (
-    <div className="space-y-4 container mx-auto px-4 py-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>{config.labels.mapTitle}</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center gap-2">
-            <Label htmlFor="mc-time-range" className="text-sm text-muted-foreground">
-              Time range:
-            </Label>
-            <Select value={timeRange} onValueChange={(v) => setTimeRange(v as NodeTimeRangeOption)}>
-              <SelectTrigger className="w-[140px]" id="mc-time-range">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {NODE_TIME_RANGE_OPTIONS.map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <p className="text-sm text-muted-foreground">
-            Observed MeshCore nodes with a known position (from ADVERT). Feeders with a default location are listed
-            below.
-          </p>
-          <div className="h-[480px] w-full">
-            <NodesMap nodes={nodesWithPosition} showMapLegend roleLegend={config.features.roleLegend} />
-          </div>
-          {feedersWithPosition.length > 0 && (
-            <div>
-              <h3 className="mb-2 text-sm font-medium">Feeders (default location)</h3>
-              <ul className="list-inside list-disc text-sm text-muted-foreground">
-                {feedersWithPosition.map((f) => (
-                  <li key={f.meshtastic_node_id}>
-                    {f.long_name || f.node_id_str} — {f.position.latitude?.toFixed(4)},{' '}
-                    {f.position.longitude?.toFixed(4)}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
-
 export function ProtocolMapPage({ config }: ProtocolMapPageProps) {
-  if (config.features.constellationsOnMap) {
-    return <MeshtasticMapContent config={config} />;
-  }
-  return <MeshCoreMapContent config={config} />;
+  return <MeshtasticMapContent config={config} />;
 }

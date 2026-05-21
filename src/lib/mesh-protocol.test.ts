@@ -9,8 +9,13 @@ describe('mesh-protocol config', () => {
   });
 
   it('meshcore routes use meshcore prefix', () => {
-    expect(MESHCORE_CONFIG.routes.map).toBe('/meshcore/map');
+    expect(MESHCORE_CONFIG.routes.map).toBeUndefined();
+    expect(MESHCORE_CONFIG.routes.messages).toBe('/meshcore/messages');
     expect(MESHCORE_CONFIG.routes.managedNodes).toBe('/meshcore/managed-nodes');
+  });
+
+  it('meshtastic messages route', () => {
+    expect(MESHTASTIC_CONFIG.routes.messages).toBe('/messages');
   });
 
   it('meshcore uses meshcore role legend', () => {

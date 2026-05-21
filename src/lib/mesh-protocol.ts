@@ -10,11 +10,13 @@ export type ProtocolPageConfig = {
     nodesTitle: string;
     mapTitle: string;
     managedNodesTitle: string;
+    messagesTitle: string;
   };
   routes: {
-    map: string;
+    map?: string;
     nodes: string;
     managedNodes: string;
+    messages: string;
     nodeDetail: (internalId: string) => string;
   };
   features: {
@@ -35,11 +37,13 @@ export const MESHTASTIC_CONFIG: ProtocolPageConfig = {
     nodesTitle: 'Meshtastic Nodes',
     mapTitle: 'Nodes and Constellations Map',
     managedNodesTitle: 'Managed Nodes',
+    messagesTitle: 'Meshtastic Messages',
   },
   routes: {
     map: '/map',
     nodes: '/nodes',
     managedNodes: '/nodes/managed-nodes',
+    messages: '/messages',
     nodeDetail: (internalId) => `/nodes/${internalId}`,
   },
   features: {
@@ -60,11 +64,12 @@ export const MESHCORE_CONFIG: ProtocolPageConfig = {
     nodesTitle: 'MeshCore Nodes',
     mapTitle: 'MeshCore map',
     managedNodesTitle: 'MeshCore managed nodes',
+    messagesTitle: 'MeshCore Messages',
   },
   routes: {
-    map: '/meshcore/map',
     nodes: '/meshcore/nodes',
     managedNodes: '/meshcore/managed-nodes',
+    messages: '/meshcore/messages',
     nodeDetail: (internalId) => `/nodes/${internalId}`,
   },
   features: {

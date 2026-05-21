@@ -1,30 +1,34 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from 'react';
 import { useConfig } from './ConfigProvider';
 import { useLocation } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { websocketService, WebSocketEventType, ConnectionState } from '@/lib/websocket/websocketService';
 import { TextMessage } from '@/lib/models';
 import { eventService } from '@/lib/events/eventService';
+import { messageProtocol, isOnMessagesPage, type MessageProtocolSlug } from '@/lib/message-protocol';
 
-// Define the context type
 interface WebSocketContextType {
   isConnected: boolean;
   connectionState: ConnectionState;
   unreadMessages: TextMessage[];
   markAllAsRead: () => void;
+  markAsReadForProtocol: (protocol: MessageProtocolSlug) => void;
   hasUnreadMessages: boolean;
+  unreadCountForProtocol: (protocol: MessageProtocolSlug) => number;
+  hasUnreadForProtocol: (protocol: MessageProtocolSlug) => boolean;
 }
 
-// Create the context with a default value
 const WebSocketContext = createContext<WebSocketContextType>({
   isConnected: false,
   connectionState: ConnectionState.DISCONNECTED,
   unreadMessages: [],
   markAllAsRead: () => {},
+  markAsReadForProtocol: () => {},
   hasUnreadMessages: false,
+  unreadCountForProtocol: () => 0,
+  hasUnreadForProtocol: () => false,
 });
 
-// Hook to use the WebSocket context
 export function useWebSocket() {
   return useContext(WebSocketContext);
 }
@@ -34,19 +38,31 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const { toast } = useToast();
 
-  // State for connection status and unread messages
   const [connectionState, setConnectionState] = useState<ConnectionState>(ConnectionState.DISCONNECTED);
   const [unreadMessages, setUnreadMessages] = useState<TextMessage[]>([]);
 
-  // Initialize WebSocket service when the component mounts
-  useEffect(() => {
-    // Initialize the WebSocket service with the API URL
-    websocketService.initialize(config.apis.meshBot.baseUrl);
+  const markAsReadForProtocol = useCallback((protocol: MessageProtocolSlug) => {
+    setUnreadMessages((prev) => prev.filter((m) => messageProtocol(m) !== protocol));
+  }, []);
 
-    // Connect to the WebSocket server
+  const markAllAsRead = useCallback(() => {
+    setUnreadMessages([]);
+  }, []);
+
+  const unreadCountForProtocol = useCallback(
+    (protocol: MessageProtocolSlug) => unreadMessages.filter((m) => messageProtocol(m) === protocol).length,
+    [unreadMessages]
+  );
+
+  const hasUnreadForProtocol = useCallback(
+    (protocol: MessageProtocolSlug) => unreadMessages.some((m) => messageProtocol(m) === protocol),
+    [unreadMessages]
+  );
+
+  useEffect(() => {
+    websocketService.initialize(config.apis.meshBot.baseUrl);
     websocketService.connect();
 
-    // Set up event listeners
     const connectedHandler = () => {
       setConnectionState(ConnectionState.CONNECTED);
     };
@@ -60,57 +76,65 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
     };
 
     const messageHandler = (message: TextMessage) => {
-      // Add the message to unread messages if not on the messages page
-      if (!location.pathname.includes('/messages')) {
-        setUnreadMessages((prev) => [...prev, message]);
-
-        // Show a toast notification
-        toast({
-          title: `New message from ${message.sender.long_name || message.sender.node_id_str}`,
-          description: message.message_text,
-          duration: 5000,
-        });
+      const proto = messageProtocol(message);
+      if (isOnMessagesPage(location.pathname, proto)) {
+        return;
       }
+
+      setUnreadMessages((prev) => [...prev, message]);
+
+      const senderLabel =
+        message.sender?.long_name || message.sender?.short_name || message.sender?.node_id_str || 'Unknown';
+      toast({
+        title: `New message from ${senderLabel}`,
+        description: message.message_text,
+        duration: 5000,
+      });
     };
 
-    // Register event handlers
     eventService.subscribe(WebSocketEventType.CONNECTED, connectedHandler);
     eventService.subscribe(WebSocketEventType.DISCONNECTED, disconnectedHandler);
     eventService.subscribe(WebSocketEventType.ERROR, errorHandler);
     eventService.subscribe(WebSocketEventType.MESSAGE_RECEIVED, messageHandler);
 
-    // Clean up event listeners when the component unmounts
     return () => {
       eventService.unsubscribe(WebSocketEventType.CONNECTED, connectedHandler);
       eventService.unsubscribe(WebSocketEventType.DISCONNECTED, disconnectedHandler);
       eventService.unsubscribe(WebSocketEventType.ERROR, errorHandler);
       eventService.unsubscribe(WebSocketEventType.MESSAGE_RECEIVED, messageHandler);
-
-      // Disconnect from the WebSocket server
       websocketService.disconnect();
     };
-  }, [config.apis.meshBot.baseUrl, toast, location]);
+  }, [config.apis.meshBot.baseUrl, toast, location.pathname]);
 
-  // Clear unread messages when navigating to the messages page
   useEffect(() => {
-    if (location.pathname.includes('/messages')) {
-      setUnreadMessages([]);
+    if (isOnMessagesPage(location.pathname, 'meshtastic')) {
+      markAsReadForProtocol('meshtastic');
     }
-  }, [location.pathname]);
+    if (isOnMessagesPage(location.pathname, 'meshcore')) {
+      markAsReadForProtocol('meshcore');
+    }
+  }, [location.pathname, markAsReadForProtocol]);
 
-  // Function to mark all messages as read
-  const markAllAsRead = () => {
-    setUnreadMessages([]);
-  };
-
-  // Context value
-  const contextValue: WebSocketContextType = {
-    isConnected: connectionState === ConnectionState.CONNECTED,
-    connectionState,
-    unreadMessages,
-    markAllAsRead,
-    hasUnreadMessages: unreadMessages.length > 0,
-  };
+  const contextValue = useMemo<WebSocketContextType>(
+    () => ({
+      isConnected: connectionState === ConnectionState.CONNECTED,
+      connectionState,
+      unreadMessages,
+      markAllAsRead,
+      markAsReadForProtocol,
+      hasUnreadMessages: unreadMessages.length > 0,
+      unreadCountForProtocol,
+      hasUnreadForProtocol,
+    }),
+    [
+      connectionState,
+      unreadMessages,
+      markAllAsRead,
+      markAsReadForProtocol,
+      unreadCountForProtocol,
+      hasUnreadForProtocol,
+    ]
+  );
 
   return <WebSocketContext.Provider value={contextValue}>{children}</WebSocketContext.Provider>;
 }

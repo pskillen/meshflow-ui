@@ -29,6 +29,7 @@ import {
   SidebarMenuSubItem,
 } from '@/components/ui/sidebar';
 import { useWebSocket } from '@/providers/WebSocketProvider';
+import type { MessageProtocolSlug } from '@/lib/message-protocol';
 import { authService } from '@/lib/auth/authService';
 import { useMeshInfraMonitoringAlertsSummary } from '@/hooks/api/useNodeWatches';
 
@@ -128,19 +129,18 @@ function buildNavSections(showDxMonitoring: boolean): NavSection[] {
     {
       label: 'MeshCore',
       items: [
-        {
-          title: 'MeshCore',
-          url: '/meshcore/map',
-          icon: RadioIcon,
-          children: [
-            { title: 'Map', url: '/meshcore/map', icon: MapIcon },
-            { title: 'Nodes', url: '/meshcore/nodes', icon: ListIcon },
-            { title: 'Managed nodes', url: '/meshcore/managed-nodes', icon: ActivityIcon },
-          ],
-        },
+        { title: 'Messages', url: '/meshcore/messages', icon: MessageSquareIcon },
+        { title: 'Nodes', url: '/meshcore/nodes', icon: ListIcon },
+        { title: 'Managed nodes', url: '/meshcore/managed-nodes', icon: ActivityIcon },
       ],
     },
   ];
+}
+
+function messagesProtocolForUrl(url: string): MessageProtocolSlug | null {
+  if (url === '/messages') return 'meshtastic';
+  if (url === '/meshcore/messages') return 'meshcore';
+  return null;
 }
 
 function NavMenuItems({
@@ -148,33 +148,33 @@ function NavMenuItems({
   pathname,
   onMessagesClick,
   infraAlertCount,
-  hasUnreadMessages,
-  unreadCount,
+  unreadCountForProtocol,
+  hasUnreadForProtocol,
 }: {
   items: NavItem[];
   pathname: string;
-  onMessagesClick: (e: React.MouseEvent<HTMLAnchorElement>) => void;
+  onMessagesClick: (protocol: MessageProtocolSlug, url: string) => (e: React.MouseEvent<HTMLAnchorElement>) => void;
   infraAlertCount: number;
-  hasUnreadMessages: boolean;
-  unreadCount: number;
+  unreadCountForProtocol: (protocol: MessageProtocolSlug) => number;
+  hasUnreadForProtocol: (protocol: MessageProtocolSlug) => boolean;
 }) {
   return (
     <>
       {items.map((item) => {
         const Icon = item.icon;
         const parentActive = isPathActive(pathname, item.url, true);
-        const isMessages = item.title === 'Messages';
+        const messagesProtocol = messagesProtocolForUrl(item.url);
 
         return (
-          <SidebarMenuItem key={item.title}>
+          <SidebarMenuItem key={`${item.title}-${item.url}`}>
             <SidebarMenuButton asChild tooltip={item.tooltip ?? item.title} isActive={parentActive}>
-              {isMessages ? (
-                <Link to={item.url} className="relative" onClick={onMessagesClick}>
+              {messagesProtocol ? (
+                <Link to={item.url} className="relative" onClick={onMessagesClick(messagesProtocol, item.url)}>
                   <Icon />
                   <span>{item.title}</span>
-                  {hasUnreadMessages && (
+                  {hasUnreadForProtocol(messagesProtocol) && (
                     <span className="absolute right-2 top-2 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 p-0 text-xs text-white shadow-sm ring-2 ring-sidebar">
-                      {unreadCount > 9 ? '9+' : unreadCount}
+                      {unreadCountForProtocol(messagesProtocol) > 9 ? '9+' : unreadCountForProtocol(messagesProtocol)}
                     </span>
                   )}
                 </Link>
@@ -223,7 +223,7 @@ function NavMenuItems({
 }
 
 export function NavMain() {
-  const { hasUnreadMessages, unreadMessages, markAllAsRead } = useWebSocket();
+  const { markAsReadForProtocol, unreadCountForProtocol, hasUnreadForProtocol } = useWebSocket();
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const currentUser = authService.getCurrentUser();
@@ -231,11 +231,12 @@ export function NavMain() {
   const infraAlerts = useMeshInfraMonitoringAlertsSummary(Boolean(currentUser));
   const infraAlertCount = infraAlerts.data?.mesh_infra.alerting_nodes_count ?? 0;
 
-  const handleMessagesClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
-    e.preventDefault();
-    markAllAsRead();
-    navigate('/messages');
-  };
+  const handleMessagesClick =
+    (protocol: MessageProtocolSlug, url: string) => (e: React.MouseEvent<HTMLAnchorElement>) => {
+      e.preventDefault();
+      markAsReadForProtocol(protocol);
+      navigate(url);
+    };
 
   const sections = buildNavSections(showDxMonitoring);
 
@@ -251,8 +252,8 @@ export function NavMain() {
                 pathname={pathname}
                 onMessagesClick={handleMessagesClick}
                 infraAlertCount={infraAlertCount}
-                hasUnreadMessages={hasUnreadMessages}
-                unreadCount={unreadMessages.length}
+                unreadCountForProtocol={unreadCountForProtocol}
+                hasUnreadForProtocol={hasUnreadForProtocol}
               />
             </SidebarMenu>
           </React.Fragment>
