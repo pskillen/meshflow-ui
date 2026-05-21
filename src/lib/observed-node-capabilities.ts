@@ -8,3 +8,7 @@ export function supportsMeshtasticTraceroutes(node: Pick<ObservedNode, 'protocol
 export function isMeshCoreObservedNode(node: Pick<ObservedNode, 'protocol'>): boolean {
   return node.protocol === 2;
 }
+
+export function observedNodeMapRoleLegend(node: Pick<ObservedNode, 'protocol'>): 'meshtastic' | 'meshcore' {
+  return isMeshCoreObservedNode(node) ? 'meshcore' : 'meshtastic';
+}

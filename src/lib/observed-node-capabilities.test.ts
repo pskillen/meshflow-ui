@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { isMeshCoreObservedNode, supportsMeshtasticTraceroutes } from './observed-node-capabilities';
+import {
+  isMeshCoreObservedNode,
+  observedNodeMapRoleLegend,
+  supportsMeshtasticTraceroutes,
+} from './observed-node-capabilities';
 
 describe('supportsMeshtasticTraceroutes', () => {
   it('returns false for MeshCore nodes even with a numeric meshtastic_node_id', () => {
@@ -19,5 +23,12 @@ describe('isMeshCoreObservedNode', () => {
   it('detects protocol 2', () => {
     expect(isMeshCoreObservedNode({ protocol: 2 })).toBe(true);
     expect(isMeshCoreObservedNode({ protocol: 1 })).toBe(false);
+  });
+});
+
+describe('observedNodeMapRoleLegend', () => {
+  it('returns meshcore legend for MeshCore nodes', () => {
+    expect(observedNodeMapRoleLegend({ protocol: 2 })).toBe('meshcore');
+    expect(observedNodeMapRoleLegend({ protocol: 1 })).toBe('meshtastic');
   });
 });

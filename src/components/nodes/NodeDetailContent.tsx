@@ -28,7 +28,11 @@ import { NodeOutgoingTraceroutesSection } from '@/components/nodes/NodeOutgoingT
 import { RfPropagationSection } from '@/components/nodes/RfPropagationSection';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { NodeDetailTab } from '@/lib/node-detail-tab';
-import { isMeshCoreObservedNode, supportsMeshtasticTraceroutes } from '@/lib/observed-node-capabilities';
+import {
+  isMeshCoreObservedNode,
+  observedNodeMapRoleLegend,
+  supportsMeshtasticTraceroutes,
+} from '@/lib/observed-node-capabilities';
 
 interface NodeDetailContentProps {
   internalId: string;
@@ -136,7 +140,7 @@ function NodeLocationCard({
               )}
             </div>
             <div className={`w-full ${compact ? 'h-[200px]' : 'h-[400px]'}`}>
-              <NodesMap nodes={[node]} />
+              <NodesMap nodes={[node]} roleLegend={observedNodeMapRoleLegend(node)} />
             </div>
           </>
         ) : (
