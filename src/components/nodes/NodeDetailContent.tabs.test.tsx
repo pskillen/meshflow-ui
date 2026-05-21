@@ -143,7 +143,7 @@ describe('NodeDetailContent tabbed layout', () => {
     expect(screen.getByTestId('url-search')).toHaveTextContent('');
   });
 
-  it('shows MeshCore traceroutes placeholder instead of Meshtastic history', () => {
+  it('hides traceroutes and monitoring tabs for MeshCore nodes', () => {
     mockedUseNodeSuspense.mockReturnValue({
       ...minimalNode,
       protocol: 2,
@@ -157,7 +157,9 @@ describe('NodeDetailContent tabbed layout', () => {
         </Routes>
       </MemoryRouter>
     );
-    expect(screen.getByTestId('meshcore-traceroutes-unsupported')).toBeInTheDocument();
-    expect(screen.queryByTestId('traceroute-history-mock')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('node-detail-tab-traceroutes')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('node-detail-tab-monitoring')).not.toBeInTheDocument();
+    expect(screen.getByTestId('node-detail-panel-overview')).toBeInTheDocument();
+    expect(screen.getByTestId('url-search')).toHaveTextContent('');
   });
 });

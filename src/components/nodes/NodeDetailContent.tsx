@@ -28,7 +28,7 @@ import { NodeOutgoingTraceroutesSection } from '@/components/nodes/NodeOutgoingT
 import { RfPropagationSection } from '@/components/nodes/RfPropagationSection';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { NodeDetailTab } from '@/lib/node-detail-tab';
-import { supportsMeshtasticTraceroutes } from '@/lib/observed-node-capabilities';
+import { isMeshCoreObservedNode, supportsMeshtasticTraceroutes } from '@/lib/observed-node-capabilities';
 
 interface NodeDetailContentProps {
   internalId: string;
@@ -340,16 +340,24 @@ export function NodeDetailContent({ internalId, compact = false, activeTab, onTa
   const showRfPropagation =
     !compact && node.meshtastic_role != null && INFRASTRUCTURE_ROLE_IDS.has(node.meshtastic_role);
 
+  const isMeshCore = isMeshCoreObservedNode(node);
+  const showTraceroutesTab = supportsMeshtasticTraceroutes(node);
+  const showMonitoringTab = Boolean(currentUser) && !isMeshCore;
+
   useEffect(() => {
-    if (fullPageTabs && activeTab === 'monitoring' && !currentUser) {
+    if (!fullPageTabs || !onTabChange) return;
+    if (activeTab === 'monitoring' && !showMonitoringTab) {
+      onTabChange('overview');
+    } else if (activeTab === 'traceroutes' && !showTraceroutesTab) {
       onTabChange('overview');
     }
-  }, [fullPageTabs, activeTab, currentUser, onTabChange]);
+  }, [fullPageTabs, activeTab, showMonitoringTab, showTraceroutesTab, onTabChange]);
 
   const effectiveTab: NodeDetailTab =
-    fullPageTabs && activeTab === 'monitoring' && !currentUser ? 'overview' : (activeTab ?? 'overview');
-
-  const showMonitoringTab = Boolean(currentUser);
+    fullPageTabs &&
+    ((activeTab === 'monitoring' && !showMonitoringTab) || (activeTab === 'traceroutes' && !showTraceroutesTab))
+      ? 'overview'
+      : (activeTab ?? 'overview');
 
   const renderMetricsGrid = () => (
     <div className={`mb-6 grid grid-cols-1 ${compact ? 'gap-4' : 'gap-6 md:grid-cols-2'}`}>
@@ -628,9 +636,11 @@ export function NodeDetailContent({ internalId, compact = false, activeTab, onTa
               <TabsTrigger value="map" data-testid="node-detail-tab-map">
                 Map
               </TabsTrigger>
-              <TabsTrigger value="traceroutes" data-testid="node-detail-tab-traceroutes">
-                Traceroutes
-              </TabsTrigger>
+              {showTraceroutesTab && (
+                <TabsTrigger value="traceroutes" data-testid="node-detail-tab-traceroutes">
+                  Traceroutes
+                </TabsTrigger>
+              )}
               <TabsTrigger value="statistics" data-testid="node-detail-tab-statistics">
                 Statistics
               </TabsTrigger>
@@ -691,14 +701,16 @@ export function NodeDetailContent({ internalId, compact = false, activeTab, onTa
 
           {!compact && (
             <>
-              <NodeMeshMonitoringSection node={node} />
-              <NodeTraceroutesPanel
-                internalId={internalId}
-                meshtasticNodeId={meshtasticNodeId ?? 0}
-                isManagedNode={isManagedNode}
-                managedForThisNode={managedForThisNode}
-                node={node}
-              />
+              {showMonitoringTab ? <NodeMeshMonitoringSection node={node} /> : null}
+              {showTraceroutesTab ? (
+                <NodeTraceroutesPanel
+                  internalId={internalId}
+                  meshtasticNodeId={meshtasticNodeId ?? 0}
+                  isManagedNode={isManagedNode}
+                  managedForThisNode={managedForThisNode}
+                  node={node}
+                />
+              ) : null}
               <NodeStatsSection internalId={internalId} node={node} isManagedNode={isManagedNode} />
             </>
           )}
