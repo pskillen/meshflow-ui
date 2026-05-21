@@ -28,6 +28,7 @@ import { NodeOutgoingTraceroutesSection } from '@/components/nodes/NodeOutgoingT
 import { RfPropagationSection } from '@/components/nodes/RfPropagationSection';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { NodeDetailTab } from '@/lib/node-detail-tab';
+import { supportsMeshtasticTraceroutes } from '@/lib/observed-node-capabilities';
 
 interface NodeDetailContentProps {
   internalId: string;
@@ -248,6 +249,56 @@ function TracerouteLinksSection({
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+function MeshCoreTraceroutesPlaceholder() {
+  return (
+    <Card className="mb-6" data-testid="meshcore-traceroutes-unsupported">
+      <CardHeader>
+        <CardTitle>Traceroutes</CardTitle>
+        <CardDescription>Traceroutes for MeshCore nodes are not available yet.</CardDescription>
+      </CardHeader>
+    </Card>
+  );
+}
+
+function NodeTraceroutesPanel({
+  internalId,
+  meshtasticNodeId,
+  isManagedNode,
+  managedForThisNode,
+  node,
+}: {
+  internalId: string;
+  meshtasticNodeId: number;
+  isManagedNode: boolean;
+  managedForThisNode: ReturnType<typeof useManagedNodesSuspense>['managedNodes'][number] | undefined;
+  node: ObservedNode;
+}) {
+  if (!supportsMeshtasticTraceroutes(node)) {
+    return <MeshCoreTraceroutesPlaceholder />;
+  }
+  return (
+    <>
+      <TracerouteLinksSection
+        internalId={internalId}
+        meshtasticNodeId={meshtasticNodeId}
+        isManagedNode={isManagedNode}
+      />
+      <Suspense
+        fallback={
+          <div className="mb-6 flex min-h-[120px] items-center justify-center text-muted-foreground">
+            <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-t-2 border-teal-500" />
+          </div>
+        }
+      >
+        {isManagedNode && managedForThisNode ? (
+          <NodeOutgoingTraceroutesSection nodeId={meshtasticNodeId} managed={managedForThisNode} />
+        ) : null}
+        <NodeTracerouteHistorySection nodeId={meshtasticNodeId} observedNode={node} />
+      </Suspense>
+    </>
   );
 }
 
@@ -610,23 +661,13 @@ export function NodeDetailContent({ internalId, compact = false, activeTab, onTa
 
             {effectiveTab === 'traceroutes' && (
               <div data-testid="node-detail-panel-traceroutes">
-                <TracerouteLinksSection
+                <NodeTraceroutesPanel
                   internalId={internalId}
                   meshtasticNodeId={meshtasticNodeId ?? 0}
                   isManagedNode={isManagedNode}
+                  managedForThisNode={managedForThisNode}
+                  node={node}
                 />
-                <Suspense
-                  fallback={
-                    <div className="mb-6 flex min-h-[120px] items-center justify-center text-muted-foreground">
-                      <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-t-2 border-teal-500" />
-                    </div>
-                  }
-                >
-                  {isManagedNode && managedForThisNode ? (
-                    <NodeOutgoingTraceroutesSection nodeId={meshtasticNodeId ?? 0} managed={managedForThisNode} />
-                  ) : null}
-                  <NodeTracerouteHistorySection nodeId={meshtasticNodeId ?? 0} observedNode={node} />
-                </Suspense>
               </div>
             )}
 
@@ -651,23 +692,13 @@ export function NodeDetailContent({ internalId, compact = false, activeTab, onTa
           {!compact && (
             <>
               <NodeMeshMonitoringSection node={node} />
-              <TracerouteLinksSection
+              <NodeTraceroutesPanel
                 internalId={internalId}
                 meshtasticNodeId={meshtasticNodeId ?? 0}
                 isManagedNode={isManagedNode}
+                managedForThisNode={managedForThisNode}
+                node={node}
               />
-              <Suspense
-                fallback={
-                  <div className="mb-6 flex min-h-[120px] items-center justify-center text-muted-foreground">
-                    <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-t-2 border-teal-500" />
-                  </div>
-                }
-              >
-                {isManagedNode && managedForThisNode ? (
-                  <NodeOutgoingTraceroutesSection nodeId={meshtasticNodeId ?? 0} managed={managedForThisNode} />
-                ) : null}
-                <NodeTracerouteHistorySection nodeId={meshtasticNodeId ?? 0} observedNode={node} />
-              </Suspense>
               <NodeStatsSection internalId={internalId} node={node} isManagedNode={isManagedNode} />
             </>
           )}
