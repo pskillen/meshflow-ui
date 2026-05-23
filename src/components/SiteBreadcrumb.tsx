@@ -18,6 +18,9 @@ function getBreadcrumbSegments(pathname: string): { path: string; label: string 
     segments.push({ path: '/nodes', label: 'Nodes' });
     if (parts[1] === 'infrastructure') {
       segments.push({ path: '/nodes/infrastructure', label: 'Infrastructure' });
+      if (parts[2] === 'export') {
+        segments.push({ path: '/nodes/infrastructure/export', label: 'Export' });
+      }
     } else if (parts[1] === 'my-nodes') {
       segments.push({ path: '/nodes/my-nodes', label: 'My Nodes' });
     } else if (parts[1] === 'monitor') {
