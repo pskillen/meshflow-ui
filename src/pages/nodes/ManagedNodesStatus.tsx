@@ -25,6 +25,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { useManagedNodesSuspense } from '@/hooks/api/useNodes';
 import { useMeshCoreManagedNodesSuspense } from '@/hooks/api/useMeshCore';
 import type { ProtocolPageConfig } from '@/lib/mesh-protocol';
+import { nodeDetailPath } from '@/lib/node-detail-routes';
 import { MESHTASTIC_CONFIG, MESHCORE_CONFIG } from '@/lib/mesh-protocol';
 import {
   ManagedNodeStatusTier,
@@ -441,19 +442,33 @@ function ProtocolManagedNodesPageContent({
                   {group.nodes.map((node) => {
                     const tier = getManagedNodeStatusTier(node.last_packet_ingested_at);
                     return (
-                      <TableRow key={node.meshtastic_node_id}>
+                      <TableRow key={node.node_id_str}>
                         <TableCell>
                           <Badge style={{ backgroundColor: managedNodeStatusTierColor(tier), color: 'white' }}>
                             {tierLabel(tier)}
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <Link to={`/nodes/${node.meshtastic_node_id}`} className="text-primary hover:underline">
+                          <Link
+                            to={nodeDetailPath({
+                              meshtastic_node_id: node.meshtastic_node_id,
+                              node_id_str: node.node_id_str,
+                              protocol: node.protocol,
+                            })}
+                            className="text-primary hover:underline"
+                          >
                             {node.short_name ?? '—'}
                           </Link>
                         </TableCell>
                         <TableCell>
-                          <Link to={`/nodes/${node.meshtastic_node_id}`} className="text-primary hover:underline">
+                          <Link
+                            to={nodeDetailPath({
+                              meshtastic_node_id: node.meshtastic_node_id,
+                              node_id_str: node.node_id_str,
+                              protocol: node.protocol,
+                            })}
+                            className="text-primary hover:underline"
+                          >
                             {node.long_name ?? node.node_id_str}
                           </Link>
                         </TableCell>

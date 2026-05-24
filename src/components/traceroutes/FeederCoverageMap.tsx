@@ -8,6 +8,7 @@ import { concave, featureCollection, point as turfPoint } from '@turf/turf';
 import type { Feature, MultiPolygon, Polygon } from 'geojson';
 
 import { Link } from 'react-router-dom';
+import { isObservedNodeInternalId, nodeDetailPath } from '@/lib/node-detail-routes';
 import { X } from 'lucide-react';
 
 import { buildFeederIconLayer } from '@/components/map/FeederIconLayer';
@@ -266,7 +267,10 @@ export function FeederCoverageMap({
                 Smoothed: {(smoothedRate(selectedTarget.successes, selectedTarget.attempts) * 100).toFixed(0)}%
               </div>
               <Link
-                to={`/nodes/${selectedTarget.meshtastic_node_id}`}
+                to={nodeDetailPath({
+                  meshtastic_node_id: selectedTarget.meshtastic_node_id,
+                  node_id_str: selectedTarget.node_id_str,
+                })}
                 className="mt-1 inline-block text-xs text-emerald-400 hover:text-emerald-300 hover:underline"
               >
                 Open details
@@ -304,7 +308,10 @@ export function FeederCoverageMap({
                 {selectedHeardGhost.node_id_str || `!${selectedHeardGhost.meshtastic_node_id.toString(16)}`}
               </div>
               <Link
-                to={`/nodes/${selectedHeardGhost.meshtastic_node_id}`}
+                to={nodeDetailPath({
+                  meshtastic_node_id: selectedHeardGhost.meshtastic_node_id,
+                  node_id_str: selectedHeardGhost.node_id_str,
+                })}
                 className="mt-1 inline-block text-xs text-emerald-400 hover:text-emerald-300 hover:underline"
               >
                 Open details
@@ -340,7 +347,13 @@ export function FeederCoverageMap({
                 {selectedFeederMarker.node_id_str || `!${selectedFeederMarker.meshtastic_node_id.toString(16)}`}
               </div>
               <Link
-                to={`/nodes/${selectedFeederMarker.meshtastic_node_id}`}
+                to={nodeDetailPath({
+                  internal_id: isObservedNodeInternalId(selectedFeederMarker.managed_node_id)
+                    ? selectedFeederMarker.managed_node_id
+                    : undefined,
+                  meshtastic_node_id: selectedFeederMarker.meshtastic_node_id,
+                  node_id_str: selectedFeederMarker.node_id_str,
+                })}
                 className="mt-1 inline-block text-xs text-emerald-400 hover:text-emerald-300 hover:underline"
               >
                 Open details

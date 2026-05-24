@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
+import { nodeDetailPath } from '@/lib/node-detail-routes';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import type { HeatmapNode } from '@/hooks/api/useHeatmapEdges';
@@ -49,7 +50,10 @@ function RoleNodeTable({ nodes }: { nodes: HeatmapNode[] }) {
         {nodes.map((n) => (
           <TableRow key={n.meshtastic_node_id}>
             <TableCell>
-              <Link to={`/nodes/${n.meshtastic_node_id}`} className="font-medium text-primary hover:underline">
+              <Link
+                to={nodeDetailPath({ meshtastic_node_id: n.meshtastic_node_id, node_id_str: n.node_id_str })}
+                className="font-medium text-primary hover:underline"
+              >
                 {getHeatmapNodeLabel(n)}
               </Link>
               <div className="text-muted-foreground text-xs">

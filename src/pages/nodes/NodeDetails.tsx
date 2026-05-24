@@ -4,8 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { NodeDetailContent } from '@/components/nodes/NodeDetailContent';
 import { useNodeDetailPageTabs } from '@/pages/nodes/useNodeDetailPageTabs';
 import { useMeshflowApi } from '@/hooks/api/useApi';
-
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+import { isObservedNodeInternalId } from '@/lib/node-detail-routes';
 
 function LegacyMeshtasticNodeRedirect({ meshtasticNodeId }: { meshtasticNodeId: number }) {
   const navigate = useNavigate();
@@ -44,6 +43,40 @@ function LegacyMeshtasticNodeRedirect({ meshtasticNodeId }: { meshtasticNodeId: 
   );
 }
 
+function NodeIdStrRedirect({ nodeIdStr }: { nodeIdStr: string }) {
+  const navigate = useNavigate();
+  const api = useMeshflowApi();
+  const { data, isError } = useQuery({
+    queryKey: ['observed-node-resolve-str', nodeIdStr],
+    queryFn: async () => {
+      const results = await api.searchNodes(nodeIdStr);
+      const exact = results.find((n) => n.node_id_str === nodeIdStr);
+      const match = exact ?? results[0];
+      if (!match?.internal_id) {
+        throw new Error('Node not found');
+      }
+      return String(match.internal_id);
+    },
+    retry: false,
+  });
+
+  useEffect(() => {
+    if (data) {
+      navigate(`/nodes/${data}`, { replace: true });
+    }
+  }, [data, navigate]);
+
+  if (isError) {
+    return <div className="p-8 text-center text-muted-foreground">No observed node found for id {nodeIdStr}.</div>;
+  }
+
+  return (
+    <div className="flex min-h-screen items-center justify-center">
+      <div className="h-12 w-12 animate-spin rounded-full border-b-2 border-t-2 border-teal-500" />
+    </div>
+  );
+}
+
 export function NodeDetails() {
   const { id } = useParams<{ id: string }>();
   const { activeTab, onTabChange } = useNodeDetailPageTabs();
@@ -52,11 +85,23 @@ export function NodeDetails() {
     return null;
   }
 
-  if (/^\d+$/.test(id)) {
-    return <LegacyMeshtasticNodeRedirect meshtasticNodeId={Number(id)} />;
+  const decodedId = (() => {
+    try {
+      return decodeURIComponent(id);
+    } catch {
+      return id;
+    }
+  })();
+
+  if (/^\d+$/.test(decodedId)) {
+    return <LegacyMeshtasticNodeRedirect meshtasticNodeId={Number(decodedId)} />;
   }
 
-  if (!UUID_RE.test(id)) {
+  if (decodedId.startsWith('mc:') || decodedId.startsWith('!')) {
+    return <NodeIdStrRedirect nodeIdStr={decodedId} />;
+  }
+
+  if (!isObservedNodeInternalId(decodedId)) {
     return <div className="p-8 text-center text-muted-foreground">Invalid node id in URL.</div>;
   }
 
@@ -68,7 +113,7 @@ export function NodeDetails() {
         </div>
       }
     >
-      <NodeDetailContent internalId={id} activeTab={activeTab} onTabChange={onTabChange} />
+      <NodeDetailContent internalId={decodedId} activeTab={activeTab} onTabChange={onTabChange} />
     </Suspense>
   );
 }

@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { nodeDetailPath } from '@/lib/node-detail-routes';
 import { Badge } from '@/components/ui/badge';
 import { AutoTraceRoute, TracerouteRouteNode } from '@/lib/models';
 import { ArrowRight } from 'lucide-react';
@@ -16,7 +17,7 @@ function FlowEndpointBadge({
 }) {
   return (
     <Link
-      to={`/nodes/${nodeId}`}
+      to={nodeDetailPath({ meshtastic_node_id: nodeId })}
       onClick={(e) => e.stopPropagation()}
       className="inline-flex max-w-full rounded-md focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
     >
@@ -50,7 +51,7 @@ function NodeBadge({ node }: { node: TracerouteRouteNode }) {
 
   return (
     <Link
-      to={`/nodes/${node.meshtastic_node_id}`}
+      to={nodeDetailPath({ meshtastic_node_id: node.meshtastic_node_id, node_id_str: node.node_id_str })}
       onClick={(e) => e.stopPropagation()}
       className="inline-flex max-w-full rounded-md focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
     >

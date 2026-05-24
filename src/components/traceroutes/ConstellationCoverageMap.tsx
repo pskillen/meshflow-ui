@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { isObservedNodeInternalId, nodeDetailPath } from '@/lib/node-detail-routes';
 import { Popup } from 'react-map-gl/mapbox';
 import { ScatterplotLayer } from '@deck.gl/layers';
 import { H3HexagonLayer } from '@deck.gl/geo-layers';
@@ -207,7 +208,10 @@ export function ConstellationCoverageMap({
                 {selectedHeardGhost.node_id_str || `!${selectedHeardGhost.meshtastic_node_id.toString(16)}`}
               </div>
               <Link
-                to={`/nodes/${selectedHeardGhost.meshtastic_node_id}`}
+                to={nodeDetailPath({
+                  meshtastic_node_id: selectedHeardGhost.meshtastic_node_id,
+                  node_id_str: selectedHeardGhost.node_id_str,
+                })}
                 className="mt-1 inline-block text-xs text-emerald-400 hover:text-emerald-300 hover:underline"
               >
                 Open details
@@ -295,7 +299,10 @@ export function ConstellationCoverageMap({
                 {selectedTarget.contributing_feeders === 1 ? '' : 's'}
               </div>
               <Link
-                to={`/nodes/${selectedTarget.meshtastic_node_id}`}
+                to={nodeDetailPath({
+                  meshtastic_node_id: selectedTarget.meshtastic_node_id,
+                  node_id_str: selectedTarget.node_id_str,
+                })}
                 className="mt-1 inline-block text-xs text-emerald-400 hover:text-emerald-300 hover:underline"
               >
                 Open details
@@ -331,7 +338,13 @@ export function ConstellationCoverageMap({
                 {selectedFeeder.node_id_str || `!${selectedFeeder.meshtastic_node_id.toString(16)}`}
               </div>
               <Link
-                to={`/nodes/${selectedFeeder.meshtastic_node_id}`}
+                to={nodeDetailPath({
+                  internal_id: isObservedNodeInternalId(selectedFeeder.managed_node_id)
+                    ? selectedFeeder.managed_node_id
+                    : undefined,
+                  meshtastic_node_id: selectedFeeder.meshtastic_node_id,
+                  node_id_str: selectedFeeder.node_id_str,
+                })}
                 className="mt-1 inline-block text-xs text-emerald-400 hover:text-emerald-300 hover:underline"
               >
                 Open details
