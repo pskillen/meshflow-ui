@@ -6,9 +6,7 @@ import { useAllInfrastructureNodesSuspense, useManagedNodesSuspense } from '@/ho
 import { buildInfrastructureExportRows } from '@/lib/infrastructure-export-rows';
 import { InfrastructureExportTable } from '@/components/nodes/InfrastructureExportTable';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
 
 type NodeListTimeRange = '2h' | '24h' | '7d' | '14d' | '30d' | 'all';
 
@@ -52,13 +50,11 @@ function InfrastructureExportContent() {
   const [timeRange, setTimeRange] = useState<NodeListTimeRange>(() =>
     parseTimeRangeParam(searchParams.get('last_heard'))
   );
-  const [includeClientBase, setIncludeClientBase] = useState(() => searchParams.get('include_client_base') === 'true');
-
   const lastHeardAfter = useMemo(() => getLastHeardAfter(timeRange), [timeRange]);
 
   const { nodes } = useAllInfrastructureNodesSuspense({
     lastHeardAfter,
-    includeClientBase,
+    includeClientBase: true,
   });
 
   const { managedNodes } = useManagedNodesSuspense({
@@ -101,10 +97,6 @@ function InfrastructureExportContent() {
               ))}
             </SelectContent>
           </Select>
-        </div>
-        <div className="flex items-center gap-2">
-          <Switch id="export-include-client-base" checked={includeClientBase} onCheckedChange={setIncludeClientBase} />
-          <Label htmlFor="export-include-client-base">Include CLIENT_BASE</Label>
         </div>
       </div>
 

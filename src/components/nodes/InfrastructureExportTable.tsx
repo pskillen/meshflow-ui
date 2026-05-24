@@ -15,19 +15,28 @@ import {
 import { format } from 'date-fns';
 import { enGB } from 'date-fns/locale';
 import { toast } from 'sonner';
-import { Copy, Download, Terminal } from 'lucide-react';
+import { ChevronDown, Copy, Download, Terminal } from 'lucide-react';
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { infrastructureRowsToCsv, downloadCsv, downloadTextFile, type CsvColumnDef } from '@/lib/infrastructure-csv';
 import { buildSetFavoriteNodeCommands, countSetFavoriteNodeCommands } from '@/lib/infrastructure-meshtastic-cli';
 import type { InfrastructureExportRow } from '@/lib/infrastructure-export-rows';
 
-const INFRA_ROLE_OPTIONS = ['ROUTER', 'ROUTER_CLIENT', 'REPEATER', 'ROUTER_LATE', 'CLIENT_BASE'] as const;
+export const INFRA_EXPORT_ROLE_OPTIONS = ['ROUTER', 'ROUTER_CLIENT', 'REPEATER', 'ROUTER_LATE', 'CLIENT_BASE'] as const;
+
+/** Default role filter: standard infrastructure roles, excluding CLIENT_BASE. */
+export const DEFAULT_INCLUDED_INFRA_ROLES: readonly string[] = ['ROUTER', 'ROUTER_CLIENT', 'REPEATER', 'ROUTER_LATE'];
 
 type TriState = 'all' | 'yes' | 'no';
 
@@ -40,10 +49,16 @@ const triStateFilter: FilterFn<InfrastructureExportRow> = (row, columnId, filter
 };
 
 const roleFilter: FilterFn<InfrastructureExportRow> = (row, columnId, filterValue) => {
-  const v = filterValue as string;
-  if (!v || v === 'all') return true;
-  return String(row.getValue(columnId)) === v;
+  const allowed = filterValue as string[] | undefined;
+  if (!allowed || allowed.length === 0) return true;
+  return allowed.includes(String(row.getValue(columnId)));
 };
+
+function parseRoleFilterValue(value: unknown): string[] {
+  if (Array.isArray(value)) return value.filter((v) => typeof v === 'string');
+  if (typeof value === 'string' && value !== 'all') return [value];
+  return [];
+}
 
 export const INFRASTRUCTURE_EXPORT_CSV_COLUMNS: CsvColumnDef<InfrastructureExportRow>[] = [
   { id: 'node_id_str', header: 'Node ID', getValue: (r) => r.node_id_str },
@@ -213,9 +228,53 @@ export interface InfrastructureExportTableProps {
   rows: InfrastructureExportRow[];
 }
 
+function RoleFilterMenu({ includedRoles, onChange }: { includedRoles: string[]; onChange: (roles: string[]) => void }) {
+  const effectiveRoles = includedRoles.length === 0 ? [...INFRA_EXPORT_ROLE_OPTIONS] : includedRoles;
+
+  const label =
+    includedRoles.length === 0 || includedRoles.length === INFRA_EXPORT_ROLE_OPTIONS.length
+      ? 'All roles'
+      : `${includedRoles.length} roles`;
+
+  const toggleRole = (role: string, checked: boolean) => {
+    const base = includedRoles.length === 0 ? [...INFRA_EXPORT_ROLE_OPTIONS] : [...includedRoles];
+    if (checked) {
+      onChange([...new Set([...base, role])]);
+    } else {
+      const next = base.filter((r) => r !== role);
+      onChange(next);
+    }
+  };
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="outline" size="sm" className="h-8 w-full justify-between font-normal">
+          {label}
+          <ChevronDown className="h-3 w-3 opacity-50" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="w-48">
+        {INFRA_EXPORT_ROLE_OPTIONS.map((role) => (
+          <DropdownMenuCheckboxItem
+            key={role}
+            checked={effectiveRoles.includes(role)}
+            onCheckedChange={(checked) => toggleRole(role, checked === true)}
+            onSelect={(e) => e.preventDefault()}
+          >
+            {role}
+          </DropdownMenuCheckboxItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 export function InfrastructureExportTable({ rows }: InfrastructureExportTableProps) {
   const [sorting, setSorting] = React.useState<SortingState>([{ id: 'last_heard_iso', desc: true }]);
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
+  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([
+    { id: 'role_label', value: [...DEFAULT_INCLUDED_INFRA_ROLES] },
+  ]);
   const [routersOnly, setRoutersOnly] = React.useState(false);
   const [connectionArgs, setConnectionArgs] = React.useState('');
   const [destNodeId, setDestNodeId] = React.useState('');
@@ -223,8 +282,10 @@ export function InfrastructureExportTable({ rows }: InfrastructureExportTablePro
   React.useEffect(() => {
     setColumnFilters((prev) => {
       const withoutRole = prev.filter((f) => f.id !== 'role_label');
-      if (!routersOnly) return withoutRole;
-      return [...withoutRole, { id: 'role_label', value: 'ROUTER' }];
+      if (!routersOnly) {
+        return [...withoutRole, { id: 'role_label', value: [...DEFAULT_INCLUDED_INFRA_ROLES] }];
+      }
+      return [...withoutRole, { id: 'role_label', value: ['ROUTER'] }];
     });
   }, [routersOnly]);
 
@@ -325,7 +386,7 @@ export function InfrastructureExportTable({ rows }: InfrastructureExportTablePro
     <div className="space-y-4">
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">Meshtastic CLI options</CardTitle>
+          <CardTitle className="text-base">Meshtastic CLI tools</CardTitle>
           <CardDescription>
             Used for &quot;Copy CLI favorite commands&quot;. See{' '}
             <a
@@ -339,37 +400,41 @@ export function InfrastructureExportTable({ rows }: InfrastructureExportTablePro
             (<code className="text-xs">--set-favorite-node</code>).
           </CardDescription>
         </CardHeader>
-        <CardContent className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-2">
-            <Label htmlFor="cli-connection">Connection prefix (optional)</Label>
-            <Input
-              id="cli-connection"
-              placeholder="e.g. -b MyRadio or --host meshtastic.local"
-              value={connectionArgs}
-              onChange={(e) => setConnectionArgs(e.target.value)}
-            />
+        <CardContent className="space-y-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="cli-connection">Connection prefix (optional)</Label>
+              <Input
+                id="cli-connection"
+                placeholder="e.g. -b MyRadio or --host meshtastic.local"
+                value={connectionArgs}
+                onChange={(e) => setConnectionArgs(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="cli-dest">Admin target --dest (optional)</Label>
+              <Input
+                id="cli-dest"
+                placeholder="e.g. !a5592387"
+                value={destNodeId}
+                onChange={(e) => setDestNodeId(e.target.value)}
+              />
+            </div>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="cli-dest">Admin target --dest (optional)</Label>
-            <Input
-              id="cli-dest"
-              placeholder="e.g. !a5592387"
-              value={destNodeId}
-              onChange={(e) => setDestNodeId(e.target.value)}
-            />
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" variant="default" size="sm" onClick={handleCopyCli}>
+              <Terminal className="h-4 w-4 mr-1" />
+              Copy CLI favorite commands
+            </Button>
+            <Button type="button" variant="outline" size="sm" onClick={handleDownloadCli}>
+              <Download className="h-4 w-4 mr-1" />
+              Download .sh
+            </Button>
           </div>
         </CardContent>
       </Card>
 
       <div className="flex flex-wrap items-center gap-2">
-        <Button type="button" variant="default" size="sm" onClick={handleCopyCli}>
-          <Terminal className="h-4 w-4 mr-1" />
-          Copy CLI favorite commands
-        </Button>
-        <Button type="button" variant="outline" size="sm" onClick={handleDownloadCli}>
-          <Download className="h-4 w-4 mr-1" />
-          Download .sh
-        </Button>
         <Button type="button" variant="outline" size="sm" onClick={handleCopyCsv}>
           <Copy className="h-4 w-4 mr-1" />
           Copy CSV
@@ -432,22 +497,19 @@ export function InfrastructureExportTable({ rows }: InfrastructureExportTablePro
                 />
               </TableHead>
               <TableHead>
-                <Select
-                  value={getFilterValue('role_label') || 'all'}
-                  onValueChange={(v) => setColumnFilter('role_label', v)}
-                >
-                  <SelectTrigger className="h-8 w-full" aria-label="Filter role">
-                    <SelectValue placeholder="All" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All</SelectItem>
-                    {INFRA_ROLE_OPTIONS.map((role) => (
-                      <SelectItem key={role} value={role}>
-                        {role}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <RoleFilterMenu
+                  includedRoles={parseRoleFilterValue(columnFilters.find((f) => f.id === 'role_label')?.value)}
+                  onChange={(roles) => {
+                    setRoutersOnly(false);
+                    setColumnFilters((prev) => {
+                      const rest = prev.filter((f) => f.id !== 'role_label');
+                      if (roles.length === 0 || roles.length === INFRA_EXPORT_ROLE_OPTIONS.length) {
+                        return rest;
+                      }
+                      return [...rest, { id: 'role_label', value: roles }];
+                    });
+                  }}
+                />
               </TableHead>
               <TableHead>
                 <Input

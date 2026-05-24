@@ -259,9 +259,7 @@ function MeshInfrastructureContent() {
           </Select>
         </div>
         <Button variant="outline" size="sm" asChild>
-          <Link to={`/nodes/infrastructure/export?last_heard=${timeRange}&include_client_base=${includeClientBase}`}>
-            Export table
-          </Link>
+          <Link to={`/nodes/infrastructure/export?last_heard=${timeRange}`}>Export table</Link>
         </Button>
       </div>
 
