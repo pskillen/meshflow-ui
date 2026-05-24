@@ -13,6 +13,7 @@ import { WebSocketProvider } from '@/providers/WebSocketProvider';
 
 import { NodesList } from '@/pages/nodes/NodesList';
 import { MeshInfrastructure } from '@/pages/nodes/MeshInfrastructure';
+import { InfrastructureExport } from '@/pages/nodes/InfrastructureExport';
 import { Weather } from '@/pages/Weather';
 import { NodeMap } from '@/pages/map/NodeMap';
 import { MessageHistory } from '@/pages/messages/MessageHistory';
@@ -61,6 +62,7 @@ function App() {
                   <Route path="/" element={<Dashboard />} />
                   <Route path="/nodes" element={<NodesList />} />
                   <Route path="/nodes/infrastructure" element={<MeshInfrastructure />} />
+                  <Route path="/nodes/infrastructure/export" element={<InfrastructureExport />} />
                   <Route
                     path="/nodes/managed-nodes"
                     element={

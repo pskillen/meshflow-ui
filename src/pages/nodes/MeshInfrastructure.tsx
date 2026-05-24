@@ -258,6 +258,9 @@ function MeshInfrastructureContent() {
             </SelectContent>
           </Select>
         </div>
+        <Button variant="outline" size="sm" asChild>
+          <Link to={`/nodes/infrastructure/export?last_heard=${timeRange}`}>Export table</Link>
+        </Button>
       </div>
 
       <div className="mb-8">
