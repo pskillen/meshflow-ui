@@ -111,13 +111,18 @@ export abstract class BaseApi {
             throw apiError;
           }
         } else if (error.response?.status === 401 && !authService.getRefreshToken()) {
-          // If we get a 401 and there's no refresh token, notify authService
-          authService.handleSessionExpired({
-            message: 'Your session has expired. Please log in again.',
-            reason: 'session_expired',
-          });
+          const method = (originalRequest.method || 'get').toLowerCase();
+          const guestReadWithoutToken = !authService.getAccessToken() && method === 'get';
+          if (!guestReadWithoutToken) {
+            authService.handleSessionExpired({
+              message: 'Your session has expired. Please log in again.',
+              reason: 'session_expired',
+            });
+          }
           throw {
-            message: 'Your session has expired. Please log in again.',
+            message: guestReadWithoutToken
+              ? error.response?.data?.detail || 'Authentication required'
+              : 'Your session has expired. Please log in again.',
             status: 401,
             data: error.response?.data,
           } as ApiError;
@@ -162,10 +167,13 @@ export abstract class BaseApi {
 
         // Handle authentication errors (401)
         if (error.response?.status === 401) {
-          apiError.message = 'Your session has expired. Please log in again.';
+          const method = (originalRequest.method || 'get').toLowerCase();
+          const guestReadWithoutToken = !authService.getAccessToken() && method === 'get';
+          apiError.message = guestReadWithoutToken
+            ? error.response?.data?.detail || 'Authentication required'
+            : 'Your session has expired. Please log in again.';
 
-          // Notify authService for any 401 that wasn't handled by the refresh token logic
-          if (!originalRequest._retry) {
+          if (!originalRequest._retry && !guestReadWithoutToken) {
             authService.handleSessionExpired({
               message: apiError.message,
               reason: 'session_expired',
