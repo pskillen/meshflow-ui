@@ -1,7 +1,31 @@
-import type { MeshProtocol } from '@/lib/models';
+import type { ManagedNode, MeshProtocol, ObservedNode } from '@/lib/models';
 import { nodeDetailPath } from '@/lib/node-detail-routes';
 
 export type ProtocolSlug = 'meshtastic' | 'meshcore';
+
+type ProtocolLike = MeshProtocol | ProtocolSlug | string | number | null | undefined;
+
+/** Normalize API/UI protocol values to 1 (Meshtastic) or 2 (MeshCore). */
+export function normalizeMeshProtocol(value: ProtocolLike): MeshProtocol {
+  if (value === 2 || value === 'meshcore' || value === '2') return 2;
+  if (value === 1 || value === 'meshtastic' || value === '1') return 1;
+  return 1;
+}
+
+export function meshProtocolFromObservedNode(node: Pick<ObservedNode, 'protocol' | 'node_id_str'>): MeshProtocol {
+  if (node.node_id_str?.toLowerCase().startsWith('mc:')) return 2;
+  return normalizeMeshProtocol(node.protocol);
+}
+
+export function meshProtocolFromManagedNode(node: Pick<ManagedNode, 'protocol' | 'node_id_str'>): MeshProtocol {
+  if (node.node_id_str?.toLowerCase().startsWith('mc:')) return 2;
+  return normalizeMeshProtocol(node.protocol);
+}
+
+/** Feeders eligible to receive a claim proof for the given observed node protocol. */
+export function filterManagedNodesForClaim(nodes: ManagedNode[], claimProtocol: MeshProtocol): ManagedNode[] {
+  return nodes.filter((n) => meshProtocolFromManagedNode(n) === claimProtocol);
+}
 
 export type ProtocolPageConfig = {
   slug: ProtocolSlug;
