@@ -12,14 +12,15 @@ import { Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { NodeClaim } from '@/lib/models';
 import { StaleReportedTime } from '@/components/nodes/StaleReportedTime';
 import { filterManagedNodesForMapDisplay } from '@/lib/managed-node-status';
-import { MESHCORE_CONFIG, MESHTASTIC_CONFIG } from '@/lib/mesh-protocol';
+import {
+  filterManagedNodesForClaim,
+  meshProtocolFromObservedNode,
+  MESHCORE_CONFIG,
+  MESHTASTIC_CONFIG,
+} from '@/lib/mesh-protocol';
 import { observedNodeDetailPath } from '@/lib/node-detail-routes';
 
 const FALLBACK_POLL_MS = 30_000;
-
-function isMeshCoreNode(node: { protocol?: number; node_id_str?: string }): boolean {
-  return node.protocol === 2 || (node.node_id_str?.toLowerCase().startsWith('mc:') ?? false);
-}
 
 export function ClaimNode() {
   const { id } = useParams<{ id: string }>();
@@ -35,15 +36,16 @@ export function ClaimNode() {
   const pollingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const node = useNodeSuspense(routeId);
-  const meshCore = isMeshCoreNode(node);
+  const claimProtocol = meshProtocolFromObservedNode(node);
+  const meshCore = claimProtocol === 2;
   const protocolConfig = meshCore ? MESHCORE_CONFIG : MESHTASTIC_CONFIG;
   const lookupId = node.internal_id ?? routeId;
   const detailPath = observedNodeDetailPath(node) ?? `/nodes/${routeId}`;
 
   const { managedNodes } = useManagedNodesSuspense({ includeStatus: true });
   const feedersForClaim = useMemo(
-    () => (managedNodes ?? []).filter((m) => m.protocol === protocolConfig.protocol),
-    [managedNodes, protocolConfig.protocol]
+    () => filterManagedNodesForClaim(managedNodes ?? [], claimProtocol),
+    [managedNodes, claimProtocol]
   );
   const managedNodesForMap = useMemo(() => filterManagedNodesForMapDisplay(feedersForClaim), [feedersForClaim]);
   const isLoadingManagedNodes = !managedNodes;
