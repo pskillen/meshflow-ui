@@ -32,6 +32,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { infrastructureRowsToCsv, downloadCsv, downloadTextFile, type CsvColumnDef } from '@/lib/infrastructure-csv';
 import { buildSetFavoriteNodeCommands, countSetFavoriteNodeCommands } from '@/lib/infrastructure-meshtastic-cli';
 import type { InfrastructureExportRow } from '@/lib/infrastructure-export-rows';
+import { nodeDetailPath } from '@/lib/node-detail-routes';
 
 export const INFRA_EXPORT_ROLE_OPTIONS = ['ROUTER', 'ROUTER_CLIENT', 'REPEATER', 'ROUTER_LATE', 'CLIENT_BASE'] as const;
 
@@ -121,7 +122,10 @@ const columns: ColumnDef<InfrastructureExportRow>[] = [
     header: 'Name',
     filterFn: 'includesString',
     cell: ({ row }) => (
-      <Link to={`/nodes/${row.original.internal_id}`} className="text-primary hover:underline">
+      <Link
+        to={nodeDetailPath({ node_id_str: row.original.node_id_str }) ?? '#'}
+        className="text-primary hover:underline"
+      >
         <div className="font-medium">{row.original.long_name || row.original.short_name || '—'}</div>
         {row.original.short_name && row.original.long_name && (
           <div className="text-xs text-muted-foreground">{row.original.short_name}</div>

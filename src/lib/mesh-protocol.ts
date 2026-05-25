@@ -1,4 +1,5 @@
 import type { MeshProtocol } from '@/lib/models';
+import { nodeDetailPath } from '@/lib/node-detail-routes';
 
 export type ProtocolSlug = 'meshtastic' | 'meshcore';
 
@@ -44,7 +45,7 @@ export const MESHTASTIC_CONFIG: ProtocolPageConfig = {
     nodes: '/nodes',
     managedNodes: '/nodes/managed-nodes',
     messages: '/messages',
-    nodeDetail: (internalId) => `/nodes/${internalId}`,
+    nodeDetail: (id) => nodeDetailPath({ internal_id: id, protocol: 1 }) ?? `/nodes/${id}`,
   },
   features: {
     constellationsOnMap: true,
@@ -70,7 +71,7 @@ export const MESHCORE_CONFIG: ProtocolPageConfig = {
     nodes: '/meshcore/nodes',
     managedNodes: '/meshcore/managed-nodes',
     messages: '/meshcore/messages',
-    nodeDetail: (internalId) => `/nodes/${internalId}`,
+    nodeDetail: (id) => nodeDetailPath({ internal_id: id, protocol: 2 }) ?? `/nodes/${id}`,
   },
   features: {
     constellationsOnMap: false,

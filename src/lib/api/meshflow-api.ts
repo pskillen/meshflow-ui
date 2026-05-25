@@ -1,4 +1,5 @@
 import { BaseApi } from './base';
+import type { ObservedNodeLookupAmbiguous, ResolveObservedNodeResult } from '@/lib/observed-node-lookup';
 import {
   ObservedNode,
   ManagedNode,
@@ -164,12 +165,31 @@ export class MeshflowApi extends BaseApi {
   }
 
   /**
-   * Get one observed node by stable UUID `internal_id` (`GET /nodes/observed-nodes/{internal_id}/`).
-   * Legacy Meshtastic numeric bookmarks: resolve via list/search or api `by-meshtastic-id` redirect.
+   * Resolve observed node by path segment: UUID, `mt:`/`!`, `mc:`, or bare hex.
+   * Returns ambiguous result (HTTP 300) when bare hex matches multiple protocols.
    */
-  async getObservedNode(internalId: string): Promise<ObservedNode> {
-    const node = await this.get<ObservedNode>(`/nodes/observed-nodes/${internalId}/`);
-    return parseObservedNodeFromAPI(node);
+  async resolveObservedNodeLookup(lookupId: string): Promise<ResolveObservedNodeResult> {
+    const segment = encodeURIComponent(lookupId);
+    const response = await this.axios.get<ObservedNode | ObservedNodeLookupAmbiguous>(
+      `/nodes/observed-nodes/${segment}/`,
+      { validateStatus: (status) => status === 200 || status === 300 }
+    );
+    if (response.status === 300) {
+      const body = response.data as ObservedNodeLookupAmbiguous;
+      return { status: 'ambiguous', ambiguous: body };
+    }
+    return { status: 'ok', node: parseObservedNodeFromAPI(response.data as ObservedNode) };
+  }
+
+  /**
+   * Get one observed node (`GET /nodes/observed-nodes/{id}/`). Throws if lookup is ambiguous (300).
+   */
+  async getObservedNode(lookupId: string): Promise<ObservedNode> {
+    const result = await this.resolveObservedNodeLookup(lookupId);
+    if (result.status === 'ambiguous') {
+      throw new Error('Multiple nodes match this id');
+    }
+    return result.node;
   }
 
   /** @deprecated Use {@link getObservedNode} */

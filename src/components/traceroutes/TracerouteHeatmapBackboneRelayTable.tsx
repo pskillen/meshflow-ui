@@ -51,7 +51,13 @@ function RoleNodeTable({ nodes }: { nodes: HeatmapNode[] }) {
           <TableRow key={n.meshtastic_node_id}>
             <TableCell>
               <Link
-                to={nodeDetailPath({ meshtastic_node_id: n.meshtastic_node_id, node_id_str: n.node_id_str })}
+                to={
+                  nodeDetailPath({
+                    meshtastic_node_id: n.meshtastic_node_id,
+                    node_id_str: n.node_id_str,
+                    protocol: 1,
+                  }) ?? '#'
+                }
                 className="font-medium text-primary hover:underline"
               >
                 {getHeatmapNodeLabel(n)}

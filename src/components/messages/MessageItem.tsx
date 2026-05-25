@@ -9,6 +9,7 @@ import { StaleReportedTime } from '@/components/nodes/StaleReportedTime';
 import { Link } from 'react-router-dom';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ExternalLink } from 'lucide-react';
+import { nodeDetailPath } from '@/lib/node-detail-routes';
 
 function isMeshCoreHeard(obs: PacketObservation | MeshCoreHeardObservation): obs is MeshCoreHeardObservation {
   return typeof (obs as MeshCoreHeardObservation).observer === 'string';
@@ -109,12 +110,6 @@ interface MessageItemProps {
   continuationMessages?: Array<{ message: TextMessage; replies: TextMessage[]; emojiReactions: TextMessage[] }>;
 }
 
-/** Parse node_id_str (!hex) to numeric meshtastic_node_id for routing */
-function parseNodeId(nodeIdStr: string): number | null {
-  const match = nodeIdStr?.replace(/^!/, '').match(/^[0-9a-fA-F]+$/);
-  return match ? parseInt(match[0], 16) : null;
-}
-
 // Memoize the entire component to prevent unnecessary re-renders
 export const MessageItem = memo(function MessageItem({
   message,
@@ -123,7 +118,15 @@ export const MessageItem = memo(function MessageItem({
   continuationMessages = [],
 }: MessageItemProps) {
   const proto = messageProtocol(message);
-  const nodeId = useMemo(() => (message.sender ? parseNodeId(message.sender.node_id_str) : null), [message.sender]);
+  const senderDetailPath = useMemo(() => {
+    if (!message.sender?.node_id_str) {
+      return null;
+    }
+    return nodeDetailPath({
+      node_id_str: message.sender.node_id_str,
+      protocol: proto === 'meshcore' ? 2 : 1,
+    });
+  }, [message.sender, proto]);
   const fullTime = useMemo(() => {
     return message.sent_at ? format(new Date(message.sent_at), 'MMM d, yyyy h:mm a') : 'Unknown time';
   }, [message.sent_at]);
@@ -153,16 +156,16 @@ export const MessageItem = memo(function MessageItem({
         </Avatar>
         <div className="min-w-0 flex-1 flex items-center gap-2">
           {/* Desktop: sender name as link. Mobile: sender name + subtle icon link */}
-          {nodeId != null ? (
+          {senderDetailPath != null ? (
             <>
               <Link
-                to={`/nodes/${nodeId}`}
+                to={senderDetailPath}
                 className="font-medium text-foreground hover:underline truncate md:max-w-[200px]"
               >
                 {senderName}
               </Link>
               <Link
-                to={`/nodes/${nodeId}`}
+                to={senderDetailPath}
                 className="shrink-0 p-0.5 text-muted-foreground hover:text-foreground md:sr-only"
                 aria-label={`View node ${senderName} details`}
               >

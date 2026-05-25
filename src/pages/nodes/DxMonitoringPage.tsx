@@ -15,6 +15,13 @@ import type {
   DxReasonCode,
 } from '@/lib/models';
 import { TRIGGER_TYPE_DX_WATCH, TRIGGER_TYPE_NEW_NODE_BASELINE } from '@/lib/traceroute-trigger-type';
+import { nodeDetailPath } from '@/lib/node-detail-routes';
+
+function dxObservedNodePath(node: { node_id_str: string; meshtastic_node_id: number }): string {
+  return (
+    nodeDetailPath({ node_id_str: node.node_id_str, protocol: 1, meshtastic_node_id: node.meshtastic_node_id }) ?? '#'
+  );
+}
 import {
   useDxActiveEventCount,
   useDxEventDetail,
@@ -431,7 +438,7 @@ export default function DxMonitoringPage() {
                       <TableCell>
                         <div className="flex flex-col gap-1 max-w-[16rem]">
                           <NodeLinkLabel
-                            to={`/nodes/${row.destination.internal_id}`}
+                            to={dxObservedNodePath(row.destination)}
                             {...formatDestinationLabel(row.destination)}
                           />
                           {row.destination.dx_metadata.exclude_from_detection && (
@@ -444,7 +451,7 @@ export default function DxMonitoringPage() {
                       <TableCell className="text-sm max-w-[12rem]">
                         {row.last_observer ? (
                           <NodeLinkLabel
-                            to={`/nodes/${row.last_observer.internal_id}`}
+                            to={dxObservedNodePath(row.last_observer)}
                             {...formatObserverLabel(row.last_observer)}
                           />
                         ) : (
@@ -535,7 +542,7 @@ export default function DxMonitoringPage() {
                 <div className="text-muted-foreground">Destination</div>
                 <div className="flex flex-wrap items-center gap-2 mt-1">
                   <NodeLinkLabel
-                    to={`/nodes/${detailQuery.data.destination.internal_id}`}
+                    to={dxObservedNodePath(detailQuery.data.destination)}
                     {...formatDestinationLabel(detailQuery.data.destination)}
                   />
                   {detailQuery.data.destination.dx_metadata.exclude_from_detection && (
@@ -574,7 +581,7 @@ export default function DxMonitoringPage() {
                             <TableCell className="text-xs whitespace-nowrap">{formatWhen(o.observed_at)}</TableCell>
                             <TableCell className="text-xs max-w-[12rem]">
                               <NodeLinkLabel
-                                to={`/nodes/${o.observer.internal_id}`}
+                                to={dxObservedNodePath(o.observer)}
                                 primary={obsLabel.primary}
                                 idSecondary={obsLabel.idSecondary}
                               />
@@ -683,7 +690,7 @@ export default function DxMonitoringPage() {
                                     <TableCell className="text-xs max-w-[10rem]">
                                       {row.source_node ? (
                                         <NodeLinkLabel
-                                          to={`/nodes/${row.source_node.internal_id}`}
+                                          to={dxObservedNodePath(row.source_node)}
                                           {...formatObserverLabel(row.source_node)}
                                         />
                                       ) : (
@@ -692,7 +699,7 @@ export default function DxMonitoringPage() {
                                     </TableCell>
                                     <TableCell className="text-xs max-w-[10rem]">
                                       <NodeLinkLabel
-                                        to={`/nodes/${row.destination.internal_id}`}
+                                        to={dxObservedNodePath(row.destination)}
                                         {...formatHopLabel(row.destination)}
                                       />
                                     </TableCell>

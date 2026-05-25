@@ -219,10 +219,13 @@ export function NeighbourPieChart({
                         {item.candidates.map((c) => (
                           <Link
                             key={c.meshtastic_node_id}
-                            to={nodeDetailPath({
-                              meshtastic_node_id: c.meshtastic_node_id,
-                              node_id_str: c.node_id_str,
-                            })}
+                            to={
+                              nodeDetailPath({
+                                meshtastic_node_id: c.meshtastic_node_id,
+                                node_id_str: c.node_id_str,
+                                protocol: 1,
+                              }) ?? '#'
+                            }
                             className="text-xs text-teal-600 dark:text-teal-400 hover:underline px-1.5 py-0.5 rounded bg-muted"
                           >
                             {c.short_name || c.node_id_str}

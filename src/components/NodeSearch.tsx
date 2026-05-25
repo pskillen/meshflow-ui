@@ -4,6 +4,7 @@ import { useNodes } from '@/hooks/api/useNodes';
 import { SearchIcon, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { nodeDetailPath } from '@/lib/node-detail-routes';
 
 interface NodeSearchProps {
   onNodeSelect?: (
@@ -114,7 +115,15 @@ export function NodeSearch({ onNodeSelect, displayValue, onClearSelection, lastH
               {filteredSearchResults.map((node) => (
                 <li key={node.internal_id}>
                   <Link
-                    to={onNodeSelect ? '#' : `/nodes/${node.internal_id}`}
+                    to={
+                      onNodeSelect
+                        ? '#'
+                        : (nodeDetailPath({
+                            node_id_str: node.node_id_str,
+                            protocol: node.node_id_str?.toLowerCase().startsWith('mc:') ? 2 : 1,
+                            meshtastic_node_id: node.meshtastic_node_id,
+                          }) ?? '#')
+                    }
                     className="block px-4 py-2 hover:bg-accent"
                     onClick={() => {
                       setIsOpen(false);

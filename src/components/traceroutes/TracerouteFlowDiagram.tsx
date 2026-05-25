@@ -17,7 +17,7 @@ function FlowEndpointBadge({
 }) {
   return (
     <Link
-      to={nodeDetailPath({ meshtastic_node_id: nodeId })}
+      to={nodeDetailPath({ meshtastic_node_id: nodeId, protocol: 1 }) ?? '#'}
       onClick={(e) => e.stopPropagation()}
       className="inline-flex max-w-full rounded-md focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
     >
@@ -51,7 +51,10 @@ function NodeBadge({ node }: { node: TracerouteRouteNode }) {
 
   return (
     <Link
-      to={nodeDetailPath({ meshtastic_node_id: node.meshtastic_node_id, node_id_str: node.node_id_str })}
+      to={
+        nodeDetailPath({ meshtastic_node_id: node.meshtastic_node_id, node_id_str: node.node_id_str, protocol: 1 }) ??
+        '#'
+      }
       onClick={(e) => e.stopPropagation()}
       className="inline-flex max-w-full rounded-md focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
     >

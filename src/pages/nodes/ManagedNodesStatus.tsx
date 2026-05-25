@@ -450,11 +450,13 @@ function ProtocolManagedNodesPageContent({
                         </TableCell>
                         <TableCell>
                           <Link
-                            to={nodeDetailPath({
-                              meshtastic_node_id: node.meshtastic_node_id,
-                              node_id_str: node.node_id_str,
-                              protocol: node.protocol,
-                            })}
+                            to={
+                              nodeDetailPath({
+                                meshtastic_node_id: node.meshtastic_node_id,
+                                node_id_str: node.node_id_str,
+                                protocol: node.protocol,
+                              }) ?? '#'
+                            }
                             className="text-primary hover:underline"
                           >
                             {node.short_name ?? '—'}
@@ -462,11 +464,13 @@ function ProtocolManagedNodesPageContent({
                         </TableCell>
                         <TableCell>
                           <Link
-                            to={nodeDetailPath({
-                              meshtastic_node_id: node.meshtastic_node_id,
-                              node_id_str: node.node_id_str,
-                              protocol: node.protocol,
-                            })}
+                            to={
+                              nodeDetailPath({
+                                meshtastic_node_id: node.meshtastic_node_id,
+                                node_id_str: node.node_id_str,
+                                protocol: node.protocol,
+                              }) ?? '#'
+                            }
                             className="text-primary hover:underline"
                           >
                             {node.long_name ?? node.node_id_str}

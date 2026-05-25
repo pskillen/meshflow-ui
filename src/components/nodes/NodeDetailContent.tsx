@@ -33,6 +33,7 @@ import {
   observedNodeMapRoleLegend,
   supportsMeshtasticTraceroutes,
 } from '@/lib/observed-node-capabilities';
+import { observedNodeDetailPath } from '@/lib/node-detail-routes';
 
 interface NodeDetailContentProps {
   internalId: string;
@@ -614,7 +615,7 @@ export function NodeDetailContent({ internalId, compact = false, activeTab, onTa
               .map((recentNode) => (
                 <Link
                   key={recentNode.meshtastic_node_id}
-                  to={`/nodes/${recentNode.internal_id}`}
+                  to={observedNodeDetailPath(recentNode) ?? '#'}
                   replace={true}
                   className="rounded-full bg-slate-100 px-3 py-1 text-sm text-teal-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-teal-400 dark:hover:bg-slate-700"
                 >

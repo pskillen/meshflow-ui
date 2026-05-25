@@ -11,6 +11,7 @@ import { NodeMiniChart } from '@/components/nodes/NodeMiniChart';
 import { Check, ChevronRight } from 'lucide-react';
 import { useState, memo } from 'react';
 import { RfPropagationMapModal } from '@/components/nodes/RfPropagationMapModal';
+import { observedNodeDetailPath } from '@/lib/node-detail-routes';
 
 interface InfrastructureNodeCardProps {
   node: ObservedNode;
@@ -182,7 +183,7 @@ function InfrastructureNodeCardInner({
           </>
         )}
         <Link
-          to={`/nodes/${node.internal_id}`}
+          to={observedNodeDetailPath(node) ?? '#'}
           className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
         >
           Open node details

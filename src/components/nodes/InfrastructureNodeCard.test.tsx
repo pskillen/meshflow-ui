@@ -68,9 +68,9 @@ describe('InfrastructureNodeCard', () => {
 
   it('also renders the Open node details link to /nodes/<internal_id>', () => {
     const internalId = '00000000-0000-4000-8000-000000000007';
-    renderCard(makeNode({ meshtastic_node_id: 7, internal_id: internalId }));
+    renderCard(makeNode({ meshtastic_node_id: 7, internal_id: internalId, node_id_str: '!00000007' }));
     const detailsLink = screen.getByRole('link', { name: /open node details/i });
-    expect(detailsLink.getAttribute('href')).toBe(`/nodes/${internalId}`);
+    expect(detailsLink.getAttribute('href')).toBe('/nodes/!00000007');
   });
 
   it('shows Propagation map only when has_ready_rf_render is true', () => {
