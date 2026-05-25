@@ -68,6 +68,13 @@ describe('MyNodeCard', () => {
     expect(screen.getByText('Claimed')).toBeInTheDocument();
   });
 
+  it('shows MeshCore protocol badge for meshcore nodes', () => {
+    renderCard({
+      node: makeNode({ protocol: 2, node_id_str: 'mc:aabbccddeeff', meshtastic_node_id: 0 }),
+    });
+    expect(screen.getByText('MeshCore')).toBeInTheDocument();
+  });
+
   it('shows No GPS position when coords missing', () => {
     renderCard({ node: makeNode({ latest_position: null }) });
     const badge = screen.getByText('No GPS position');
