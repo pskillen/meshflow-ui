@@ -111,6 +111,11 @@ function renderBotVersionCell(node: ManagedNode) {
   );
 }
 
+function renderAnnouncePeriodCell(node: ManagedNode) {
+  const hours = node.mc_flood_advert_interval_hours ?? 6;
+  return `${hours}h`;
+}
+
 function ProtocolManagedNodesPageContent({
   config,
   managedNodes,
@@ -435,6 +440,7 @@ function ProtocolManagedNodesPageContent({
                     <TableHead>Radio last heard</TableHead>
                     <TableHead>Owner</TableHead>
                     <TableHead>Bot version</TableHead>
+                    {config.slug === 'meshcore' ? <TableHead>Announce period</TableHead> : null}
                     {config.features.autoTracerouteFilters ? <TableHead>Auto-TR</TableHead> : null}
                   </TableRow>
                 </TableHeader>
@@ -482,6 +488,7 @@ function ProtocolManagedNodesPageContent({
                         <TableCell>{renderTimestampCell(node.radio_last_heard)}</TableCell>
                         <TableCell>{node.owner.username}</TableCell>
                         <TableCell>{renderBotVersionCell(node)}</TableCell>
+                        {config.slug === 'meshcore' ? <TableCell>{renderAnnouncePeriodCell(node)}</TableCell> : null}
                         {config.features.autoTracerouteFilters ? (
                           <TableCell>{autoTracerouteBadge(node)}</TableCell>
                         ) : null}

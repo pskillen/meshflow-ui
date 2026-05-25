@@ -199,6 +199,8 @@ export interface ManagedNode {
   /** Last meshflow-bot version reported on connect (null if never reported). */
   bot_version?: string | null;
   bot_version_reported_at?: Date | string | null;
+  /** MeshCore: hours between flood-routed adverts sent by the bot (API default 6). */
+  mc_flood_advert_interval_hours?: number;
   position: {
     latitude: number | null;
     longitude: number | null;
