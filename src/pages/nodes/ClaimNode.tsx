@@ -1,7 +1,9 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { useNodeSuspense, useManagedNodesSuspense } from '@/hooks/api/useNodes';
 import { useMeshflowApi } from '@/hooks/api/useApi';
+import { useNodeClaimWebSocket } from '@/hooks/useNodeClaimWebSocket';
 import { ConstellationsMap } from '@/components/nodes/ConstellationsMap';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,61 +12,126 @@ import { Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { NodeClaim } from '@/lib/models';
 import { StaleReportedTime } from '@/components/nodes/StaleReportedTime';
 import { filterManagedNodesForMapDisplay } from '@/lib/managed-node-status';
+import { MESHCORE_CONFIG, MESHTASTIC_CONFIG } from '@/lib/mesh-protocol';
+import { observedNodeDetailPath } from '@/lib/node-detail-routes';
+
+const FALLBACK_POLL_MS = 30_000;
+
+function isMeshCoreNode(node: { protocol?: number; node_id_str?: string }): boolean {
+  return node.protocol === 2 || (node.node_id_str?.toLowerCase().startsWith('mc:') ?? false);
+}
 
 export function ClaimNode() {
   const { id } = useParams<{ id: string }>();
-  const internalId = id ?? '';
+  const routeId = id ?? '';
   const navigate = useNavigate();
   const api = useMeshflowApi();
+  const queryClient = useQueryClient();
 
   const [claimKey, setClaimKey] = useState<string | null>(null);
   const [claimStatus, setClaimStatus] = useState<NodeClaim | undefined>(undefined);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null);
+  const pollingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const node = useNodeSuspense(internalId);
+  const node = useNodeSuspense(routeId);
+  const meshCore = isMeshCoreNode(node);
+  const protocolConfig = meshCore ? MESHCORE_CONFIG : MESHTASTIC_CONFIG;
+  const lookupId = node.internal_id ?? routeId;
+  const detailPath = observedNodeDetailPath(node) ?? `/nodes/${routeId}`;
+
   const { managedNodes } = useManagedNodesSuspense({ includeStatus: true });
-  const managedNodesForMap = useMemo(
-    () => (managedNodes ? filterManagedNodesForMapDisplay(managedNodes) : []),
-    [managedNodes]
+  const feedersForClaim = useMemo(
+    () => (managedNodes ?? []).filter((m) => m.protocol === protocolConfig.protocol),
+    [managedNodes, protocolConfig.protocol]
   );
+  const managedNodesForMap = useMemo(() => filterManagedNodesForMapDisplay(feedersForClaim), [feedersForClaim]);
   const isLoadingManagedNodes = !managedNodes;
-  const managedNodesError = false; // Suspense disables error state, so just set to false
 
-  // On mount, check for existing claim status and start polling if in progress
+  const handleClaimAccepted = useCallback(
+    (acceptedAt: string) => {
+      setClaimStatus((prev) => (prev ? { ...prev, accepted_at: acceptedAt } : prev));
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+      }
+      queryClient.invalidateQueries({ queryKey: ['nodes', lookupId, 'claim'] });
+      queryClient.invalidateQueries({ queryKey: ['nodes', lookupId] });
+      queryClient.invalidateQueries({ queryKey: ['observed-nodes', 'mine'] });
+      setTimeout(() => navigate(detailPath), 3000);
+    },
+    [detailPath, lookupId, navigate, queryClient]
+  );
+
+  const claimPending = claimStatus !== undefined && !claimStatus.accepted_at;
+
+  const { wsConnected } = useNodeClaimWebSocket({
+    nodeInternalId: lookupId,
+    nodeIdStr: node.node_id_str,
+    enabled: claimPending,
+    onAccepted: (event) => handleClaimAccepted(event.accepted_at),
+  });
+
+  const checkClaimStatus = useCallback(async () => {
+    try {
+      const status = await api.getClaimStatus(lookupId);
+      setClaimStatus(status);
+      if (status?.accepted_at) {
+        handleClaimAccepted(status.accepted_at);
+      }
+    } catch (err) {
+      console.error('Error checking claim status:', err);
+    }
+  }, [api, handleClaimAccepted, lookupId]);
+
+  const startStatusPolling = useCallback(() => {
+    checkClaimStatus();
+    if (pollingIntervalRef.current) {
+      clearInterval(pollingIntervalRef.current);
+    }
+    pollingIntervalRef.current = setInterval(checkClaimStatus, FALLBACK_POLL_MS);
+  }, [checkClaimStatus]);
+
   useEffect(() => {
     let cancelled = false;
     async function checkInitialClaim() {
       try {
-        const status = await api.getClaimStatus(internalId);
+        const status = await api.getClaimStatus(lookupId);
         if (cancelled) return;
         if (status) {
           setClaimStatus(status);
           setClaimKey(status.claim_key);
-        } else {
-          // If not claimed, start polling for updates
-          startStatusPolling();
+          if (!status.accepted_at) {
+            startStatusPolling();
+          } else {
+            handleClaimAccepted(status.accepted_at);
+          }
         }
-        // If claimed, redirect is handled by existing logic
       } catch {
-        // Ignore error, user can still initiate claim
+        // user can still initiate claim
       }
     }
     checkInitialClaim();
     return () => {
       cancelled = true;
     };
-  }, [internalId]);
+  }, [api, handleClaimAccepted, lookupId, startStatusPolling]);
 
-  // Function to initiate the claim
+  useEffect(() => {
+    return () => {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+      }
+    };
+  }, []);
+
   const initiateNodeClaim = async () => {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await api.claimNode(internalId);
+      const response = await api.claimNode(lookupId);
       setClaimKey(response.claim_key);
-      // Start polling for status updates
+      setClaimStatus(response);
       startStatusPolling();
     } catch (err) {
       setError('Failed to initiate claim. Please try again.');
@@ -74,46 +141,6 @@ export function ClaimNode() {
     }
   };
 
-  // Function to check claim status
-  const checkClaimStatus = async () => {
-    try {
-      const status = await api.getClaimStatus(internalId);
-      setClaimStatus(status);
-
-      if (status && status.accepted_at) {
-        if (pollingInterval) {
-          clearInterval(pollingInterval);
-          setPollingInterval(null);
-        }
-        setTimeout(() => {
-          navigate(`/nodes/${internalId}`);
-        }, 3000);
-      }
-    } catch (err) {
-      console.error('Error checking claim status:', err);
-    }
-  };
-
-  // Start polling for status updates
-  const startStatusPolling = () => {
-    // Check immediately
-    checkClaimStatus();
-
-    // Then check every 5 seconds
-    const interval = setInterval(checkClaimStatus, 5000);
-    setPollingInterval(interval);
-  };
-
-  // Clean up polling interval on unmount
-  useEffect(() => {
-    return () => {
-      if (pollingInterval) {
-        clearInterval(pollingInterval);
-      }
-    };
-  }, [pollingInterval]);
-
-  // If the node is already claimed, redirect to node details
   if (node.owner) {
     return (
       <div className="container mx-auto px-4 py-8">
@@ -124,10 +151,22 @@ export function ClaimNode() {
             This node is already claimed by {node.owner.username}. You will be redirected to the node details page.
           </AlertDescription>
         </Alert>
-        <Button onClick={() => navigate(`/nodes/${internalId}`)}>Go to Node Details</Button>
+        <Button onClick={() => navigate(detailPath)}>Go to Node Details</Button>
       </div>
     );
   }
+
+  const instructionSteps = meshCore
+    ? [
+        'On your MeshCore device, open a contact (DM) to one of the MeshCore feeders listed below — not a channel/broadcast message.',
+        'Send a message that contains only the claim key shown above.',
+        'This page will update automatically when the feeder receives your message.',
+      ]
+    : [
+        'Send a direct message from your Meshtastic node to one of the managed nodes shown on the map below.',
+        'The message should contain only the claim key shown above.',
+        'This page will update automatically when a managed node receives your message.',
+      ];
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -138,12 +177,14 @@ export function ClaimNode() {
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
-      <Link to={`/nodes/${internalId}`} replace={true} className="text-blue-500 hover:text-blue-700 mb-4 inline-block">
+      <Link to={detailPath} replace={true} className="text-blue-500 hover:text-blue-700 mb-4 inline-block">
         ← Back to Node Details
       </Link>
 
       <div className="mb-6">
-        <h1 className="text-3xl font-bold">Claim Node: {node.short_name}</h1>
+        <h1 className="text-3xl font-bold">
+          Claim {protocolConfig.labels.section} Node: {node.short_name}
+        </h1>
         <p className="text-slate-600 dark:text-slate-400">{node.long_name}</p>
       </div>
 
@@ -197,9 +238,9 @@ export function ClaimNode() {
                   <AlertTitle>Instructions</AlertTitle>
                   <AlertDescription>
                     <ol className="list-decimal list-inside space-y-2 mt-2">
-                      <li>Send a direct message from your node to one of the managed nodes shown on the map below.</li>
-                      <li>The message should contain only the claim key shown above.</li>
-                      <li>Once the message is received, your node will be associated with your account.</li>
+                      {instructionSteps.map((step) => (
+                        <li key={step}>{step}</li>
+                      ))}
                     </ol>
                   </AlertDescription>
                 </Alert>
@@ -212,10 +253,15 @@ export function ClaimNode() {
               <CardDescription>
                 {claimStatus.accepted_at
                   ? 'Your node has been successfully claimed. You will be redirected to the node details page.'
-                  : 'Waiting for your message to be received by a managed node.'}
+                  : `Waiting for your ${meshCore ? 'contact message' : 'direct message'} to reach a ${protocolConfig.labels.section} feeder.`}
               </CardDescription>
             </CardHeader>
             <CardContent>
+              {claimPending && (
+                <p className="text-xs text-muted-foreground mb-3">
+                  {wsConnected ? 'Live updates connected' : 'Checking periodically (live updates unavailable)'}
+                </p>
+              )}
               <Alert
                 className={
                   claimStatus.accepted_at
@@ -232,43 +278,55 @@ export function ClaimNode() {
                 <AlertDescription>
                   {claimStatus.accepted_at
                     ? 'Your node has been successfully claimed. You will be redirected to the node details page.'
-                    : `Waiting for your message to be received by a managed node.`}
+                    : `Send the claim key from your ${protocolConfig.labels.section} node to a feeder below.`}
                 </AlertDescription>
               </Alert>
             </CardContent>
           </Card>
           <Card className="mb-6">
             <CardHeader>
-              <CardTitle>Managed Nodes</CardTitle>
-              <CardDescription>Send your claim message to one of these nodes</CardDescription>
+              <CardTitle>{protocolConfig.labels.managedNodesTitle}</CardTitle>
+              <CardDescription>
+                Send your claim message to one of these {protocolConfig.labels.section} feeders
+                {meshCore ? (
+                  <>
+                    {' '}
+                    (
+                    <Link to={protocolConfig.routes.managedNodes} className="text-teal-600 hover:underline">
+                      view all
+                    </Link>
+                    )
+                  </>
+                ) : null}
+              </CardDescription>
             </CardHeader>
             <CardContent>
               {isLoadingManagedNodes ? (
                 <div className="flex items-center justify-center h-40">
                   <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
                 </div>
-              ) : managedNodesError ? (
-                <Alert variant="destructive">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertTitle>Error</AlertTitle>
-                  <AlertDescription>
-                    Failed to load managed nodes. Please refresh the page and try again.
-                  </AlertDescription>
-                </Alert>
-              ) : managedNodes && managedNodes.length > 0 ? (
-                <>
-                  <div className="mb-4">
-                    <div className="h-[400px] w-full">
-                      <ConstellationsMap nodes={managedNodesForMap} />
-                    </div>
+              ) : feedersForClaim.length > 0 ? (
+                <div className="mb-4">
+                  <div className="h-[400px] w-full">
+                    <ConstellationsMap nodes={managedNodesForMap} />
                   </div>
-                </>
+                </div>
               ) : (
                 <Alert>
                   <AlertCircle className="h-4 w-4" />
-                  <AlertTitle>No Managed Nodes</AlertTitle>
+                  <AlertTitle>No {protocolConfig.labels.section} Feeders</AlertTitle>
                   <AlertDescription>
-                    There are no managed nodes available to receive your claim message.
+                    There are no {protocolConfig.labels.section} managed nodes available to receive your claim message.
+                    {meshCore ? (
+                      <>
+                        {' '}
+                        See{' '}
+                        <Link to={protocolConfig.routes.managedNodes} className="text-teal-600 hover:underline">
+                          MeshCore managed nodes
+                        </Link>
+                        .
+                      </>
+                    ) : null}
                   </AlertDescription>
                 </Alert>
               )}

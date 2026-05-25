@@ -15,6 +15,7 @@ import { observedNodeDetailPath } from '@/lib/node-detail-routes';
 import type { UseQueryResult } from '@tanstack/react-query';
 
 import { MeshWatchControls } from '@/components/nodes/MeshWatchControls';
+import { ProtocolBadge } from '@/components/nodes/ProtocolBadge';
 import { BatteryGauge } from '@/components/nodes/BatteryGauge';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -90,7 +91,10 @@ export function MyNodeCard({
       <CardHeader className="pb-2 space-y-0">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0 flex-1">
-            <h2 className="text-base font-semibold leading-tight truncate">{displayName}</h2>
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="text-base font-semibold leading-tight truncate">{displayName}</h2>
+              <ProtocolBadge node={node} />
+            </div>
             {node.long_name ? <p className="text-sm text-muted-foreground truncate mt-0.5">{node.long_name}</p> : null}
             <p className="text-xs font-mono text-muted-foreground mt-1 truncate">{node.node_id_str}</p>
           </div>
