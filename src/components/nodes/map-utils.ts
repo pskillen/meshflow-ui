@@ -156,11 +156,14 @@ export function buildNodePopupHtml(node: NodePopupData): string {
     node.constellationName != null && node.constellationName !== ''
       ? `Constellation: ${escapeHtml(node.constellationName)}`
       : null;
+  const detailsLink = detailsUrl
+    ? `<a href="${escapeHtml(detailsUrl)}">Open details</a>`
+    : '<span style="color: #666;">Details unavailable</span>';
   return `
   <strong>${escapeHtml(displayName)}</strong><br>
   Last seen: ${escapeHtml(lastSeen)}<br>
   ${constellationLine ? `<span style="color: #666;">${constellationLine}</span><br>` : ''}
-  <a href="${detailsUrl}">Open details</a>
+  ${detailsLink}
   `;
 }
 

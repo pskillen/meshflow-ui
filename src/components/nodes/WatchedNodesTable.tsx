@@ -18,6 +18,7 @@ import { useMeshtasticApi } from '@/hooks/api/useApi';
 import { useMultiNodeMetrics } from '@/hooks/api/useMultiNodeMetrics';
 import { NodeMiniChart } from '@/components/nodes/NodeMiniChart';
 import { BatteryIcon, RouteIcon, Settings2 } from 'lucide-react';
+import { observedNodeDetailPath } from '@/lib/node-detail-routes';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import {
@@ -286,7 +287,7 @@ function WatchCard({
         <div>
           <FieldLabel>Node</FieldLabel>
           <Link
-            to={`/nodes/${node.internal_id}`}
+            to={observedNodeDetailPath(node) ?? '#'}
             className="font-medium text-teal-600 dark:text-teal-400 hover:underline"
           >
             {node.short_name || node.node_id_str}

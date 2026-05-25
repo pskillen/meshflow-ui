@@ -9,16 +9,16 @@ function pt(lng: number, lat: number): Feature<Point> {
 }
 
 describe('buildNodePopupHtml', () => {
-  it('links to internal_id not meshtastic_node_id zero', () => {
+  it('links to mc: node_id_str not meshtastic_node_id zero', () => {
     const html = buildNodePopupHtml({
       internal_id: 'a1b2c3d4-e5f6-4789-a012-8456789abcde',
       meshtastic_node_id: 0,
-      node_id_str: 'mc:abc',
+      node_id_str: 'mc:deadbeefcafe',
       long_name: 'Test',
       short_name: 't',
       protocol: 2,
     });
-    expect(html).toContain('href="/nodes/a1b2c3d4-e5f6-4789-a012-8456789abcde"');
+    expect(html).toContain('href="/nodes/mc%3Adeadbeefcafe"');
     expect(html).not.toContain('href="/nodes/0"');
   });
 });

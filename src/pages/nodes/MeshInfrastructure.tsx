@@ -23,6 +23,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ObservedNode, type NodeWatch } from '@/lib/models';
+import { observedNodeDetailPath } from '@/lib/node-detail-routes';
 import { filterManagedNodesForMapDisplay } from '@/lib/managed-node-status';
 import { MeshWatchControls } from '@/components/nodes/MeshWatchControls';
 import { Battery, MapPinOff } from 'lucide-react';
@@ -326,7 +327,7 @@ function MeshInfrastructureContent() {
                         <div className="flex flex-col gap-0.5">
                           <div className="flex items-center gap-2">
                             <Link
-                              to={`/nodes/${node.internal_id}`}
+                              to={observedNodeDetailPath(node) ?? '#'}
                               className="font-medium text-primary hover:underline"
                             >
                               {node.long_name} ({node.short_name || node.node_id_str})
@@ -387,7 +388,10 @@ function MeshInfrastructureContent() {
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-col items-start gap-1 sm:flex-row sm:items-center sm:gap-3">
-                          <Link to={`/nodes/${node.internal_id}`} className="text-primary text-sm hover:underline">
+                          <Link
+                            to={observedNodeDetailPath(node) ?? '#'}
+                            className="text-primary text-sm hover:underline"
+                          >
                             View details
                           </Link>
                           {managed != null && (
@@ -520,7 +524,7 @@ function MeshInfrastructureContent() {
                           <div className="flex flex-col gap-0.5">
                             <div className="flex items-center gap-2">
                               <Link
-                                to={`/nodes/${node.internal_id}`}
+                                to={observedNodeDetailPath(node) ?? '#'}
                                 className="font-medium text-primary hover:underline"
                               >
                                 {node.long_name} ({node.short_name || node.node_id_str})
@@ -609,7 +613,10 @@ function MeshInfrastructureContent() {
                         </TableCell>
                         <TableCell>
                           <div className="flex flex-col items-start gap-1 sm:flex-row sm:items-center sm:gap-3">
-                            <Link to={`/nodes/${node.internal_id}`} className="text-primary text-sm hover:underline">
+                            <Link
+                              to={observedNodeDetailPath(node) ?? '#'}
+                              className="text-primary text-sm hover:underline"
+                            >
                               View details
                             </Link>
                             {managed != null && (

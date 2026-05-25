@@ -17,6 +17,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { ObservedNode } from '@/lib/models';
 import { meshtasticIdToHex } from '@/lib/utils';
+import { observedNodeDetailPath } from '@/lib/node-detail-routes';
 
 const columns: ColumnDef<ObservedNode>[] = [
   {
@@ -25,7 +26,7 @@ const columns: ColumnDef<ObservedNode>[] = [
     cell: ({ row }) => {
       const node = row.original;
       return (
-        <Link to={`/nodes/${node.internal_id}`}>
+        <Link to={observedNodeDetailPath(node) ?? '#'}>
           <div>
             <div className="font-medium">{node.short_name}</div>
             <div className="text-sm text-muted-foreground">{node.long_name}</div>

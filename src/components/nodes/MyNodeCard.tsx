@@ -11,6 +11,7 @@ import {
   Unplug,
 } from 'lucide-react';
 import { StaleReportedTime } from '@/components/nodes/StaleReportedTime';
+import { observedNodeDetailPath } from '@/lib/node-detail-routes';
 import type { UseQueryResult } from '@tanstack/react-query';
 
 import { MeshWatchControls } from '@/components/nodes/MeshWatchControls';
@@ -225,7 +226,7 @@ export function MyNodeCard({
           />
         </div>
         <Button asChild className="w-full">
-          <Link to={`/nodes/${node.internal_id}`} className="inline-flex items-center justify-center gap-1.5">
+          <Link to={observedNodeDetailPath(node) ?? '#'} className="inline-flex items-center justify-center gap-1.5">
             <Settings className="h-4 w-4 shrink-0" aria-hidden />
             Node details
             <ChevronRight className="h-4 w-4 shrink-0 opacity-70" aria-hidden />

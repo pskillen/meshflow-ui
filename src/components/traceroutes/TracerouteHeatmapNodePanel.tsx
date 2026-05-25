@@ -78,10 +78,13 @@ export function TracerouteHeatmapNodePanel({
           Last seen: <span className="text-slate-300">{formatRecency(node.last_seen)}</span>
         </div>
         <Link
-          to={nodeDetailPath({
-            meshtastic_node_id: node.meshtastic_node_id,
-            node_id_str: node.node_id_str,
-          })}
+          to={
+            nodeDetailPath({
+              meshtastic_node_id: node.meshtastic_node_id,
+              node_id_str: node.node_id_str,
+              protocol: 1,
+            }) ?? '#'
+          }
           className="mt-1 inline-block text-xs text-emerald-400 hover:text-emerald-300 hover:underline"
         >
           Open details

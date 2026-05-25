@@ -4,6 +4,7 @@ import { StaleReportedTime } from '@/components/nodes/StaleReportedTime';
 import { EnvironmentMetricsMiniChart } from './EnvironmentMetricsMiniChart';
 import { ChevronRight } from 'lucide-react';
 import { memo } from 'react';
+import { observedNodeDetailPath } from '@/lib/node-detail-routes';
 
 interface WeatherNodeCardProps {
   node: ObservedNode;
@@ -49,7 +50,7 @@ function WeatherNodeCardInner({ node, metrics, dateRange }: WeatherNodeCardProps
       </div>
       <div className="mt-auto flex justify-end pt-3">
         <Link
-          to={`/nodes/${node.internal_id}`}
+          to={observedNodeDetailPath(node) ?? '#'}
           className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
         >
           Open node details

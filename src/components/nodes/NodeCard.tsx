@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { Battery } from 'lucide-react';
 import { StaleReportedTime } from '@/components/nodes/StaleReportedTime';
 import { ObservedNode } from '@/lib/models';
+import { observedNodeDetailPath } from '@/lib/node-detail-routes';
 import { getRoleLabel } from '@/lib/meshtastic';
 import { cn } from '@/lib/utils';
 
@@ -42,11 +43,16 @@ function BatteryIndicator({ level }: { level: number }) {
 export function NodeCard({ node }: NodeCardProps) {
   const batteryLevel = node.latest_device_metrics?.battery_level ?? null;
   const roleLabel = getRoleLabel(node.meshtastic_role);
+  const detailPath = observedNodeDetailPath(node);
+
+  if (!detailPath) {
+    return null;
+  }
 
   return (
     <Link
       key={node.meshtastic_node_id}
-      to={`/nodes/${node.internal_id}`}
+      to={detailPath}
       className="block p-5 bg-white dark:bg-slate-800 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-200 border border-slate-200 dark:border-slate-700"
     >
       <div className="flex justify-between items-start gap-3 mb-3">
