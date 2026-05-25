@@ -5,20 +5,16 @@ import { useConstellationsSuspense } from '@/hooks/api/useConstellations';
 import type { MessageChannel } from '@/lib/models';
 import type { ProtocolPageConfig } from '@/lib/mesh-protocol';
 import { filterChannelsForProtocol, formatMessageChannelLabel } from '@/lib/message-channels';
-import { constellationStorageKey, filterConstellationsForProtocol } from '@/lib/constellation-protocol';
+import {
+  constellationStorageKey,
+  filterConstellationsForProtocol,
+  resolveMessageConstellationId,
+} from '@/lib/constellation-protocol';
 import { cn } from '@/lib/utils';
 
 type ProtocolMessageHistoryPageProps = {
   config: ProtocolPageConfig;
 };
-
-function readStoredConstellationId(protocol: ProtocolPageConfig['slug']): number | null {
-  if (typeof window === 'undefined') return null;
-  const raw = window.localStorage.getItem(constellationStorageKey(protocol));
-  if (!raw) return null;
-  const n = Number(raw);
-  return Number.isFinite(n) ? n : null;
-}
 
 export function ProtocolMessageHistoryPage({ config }: ProtocolMessageHistoryPageProps) {
   const { constellations: allConstellations } = useConstellationsSuspense();
@@ -27,35 +23,28 @@ export function ProtocolMessageHistoryPage({ config }: ProtocolMessageHistoryPag
     [allConstellations, config.slug]
   );
 
-  const [selectedConstellation, setSelectedConstellation] = useState<number | null>(() => {
-    const stored = readStoredConstellationId(config.slug);
-    return stored;
-  });
+  const [selectedConstellation, setSelectedConstellation] = useState<number | null>(null);
   const [selectedChannel, setSelectedChannel] = useState<number | null>(null);
 
+  const activeConstellationId = useMemo(
+    () => resolveMessageConstellationId(constellations, selectedConstellation, config.slug),
+    [constellations, selectedConstellation, config.slug]
+  );
+
   useEffect(() => {
-    if (constellations.length === 0) {
-      setSelectedConstellation(null);
-      setSelectedChannel(null);
-      return;
+    if (activeConstellationId !== selectedConstellation) {
+      setSelectedConstellation(activeConstellationId);
     }
-    const stillValid = selectedConstellation != null && constellations.some((c) => c.id === selectedConstellation);
-    if (!stillValid) {
-      const stored = readStoredConstellationId(config.slug);
-      const fromStorage = stored != null && constellations.some((c) => c.id === stored) ? stored : constellations[0].id;
-      setSelectedConstellation(fromStorage);
-      setSelectedChannel(null);
-    }
-  }, [constellations, config.slug, selectedConstellation]);
+  }, [activeConstellationId, selectedConstellation]);
 
   const channels: MessageChannel[] = useMemo(() => {
-    if (!selectedConstellation) {
+    if (activeConstellationId == null) {
       return [];
     }
-    const constellation = constellations.find((c) => c.id === selectedConstellation);
+    const constellation = constellations.find((c) => c.id === activeConstellationId);
     const raw = constellation?.channels ?? [];
     return filterChannelsForProtocol(raw, config.slug);
-  }, [selectedConstellation, constellations, config.slug]);
+  }, [activeConstellationId, constellations, config.slug]);
 
   useEffect(() => {
     if (channels.length === 0) {
@@ -65,7 +54,7 @@ export function ProtocolMessageHistoryPage({ config }: ProtocolMessageHistoryPag
     if (selectedChannel == null || !channels.some((ch) => ch.id === selectedChannel)) {
       setSelectedChannel(channels[0].id);
     }
-  }, [channels, selectedChannel]);
+  }, [channels, selectedChannel, activeConstellationId]);
 
   const selectConstellation = (id: number) => {
     setSelectedConstellation(id);
@@ -103,7 +92,7 @@ export function ProtocolMessageHistoryPage({ config }: ProtocolMessageHistoryPag
                         onClick={() => selectConstellation(c.id)}
                         className={cn(
                           'rounded-md border px-3 py-1.5 text-sm transition-colors',
-                          selectedConstellation === c.id
+                          activeConstellationId === c.id
                             ? 'border-primary bg-primary text-primary-foreground'
                             : 'border-border bg-background hover:bg-muted'
                         )}
@@ -132,8 +121,8 @@ export function ProtocolMessageHistoryPage({ config }: ProtocolMessageHistoryPag
                   </select>
                 </div>
               </div>
-              {selectedChannel && selectedConstellation ? (
-                <MessageList channel={selectedChannel} constellationId={selectedConstellation} protocol={config.slug} />
+              {selectedChannel != null && activeConstellationId != null ? (
+                <MessageList channel={selectedChannel} constellationId={activeConstellationId} protocol={config.slug} />
               ) : (
                 <div className="flex justify-center p-8 text-muted-foreground">
                   No channels available for this constellation.

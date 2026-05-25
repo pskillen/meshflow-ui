@@ -544,6 +544,8 @@ export interface Constellation {
   name: string;
   description: string;
   created_by: number;
+  /** Constellation-level protocol (1 = Meshtastic, 2 = MeshCore). */
+  protocol?: MeshProtocol | 'meshtastic' | 'meshcore' | string;
   channels: MessageChannel[];
   map_color: string;
   bot_default_ignore_meshtastic_portnums?: string | null;

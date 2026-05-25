@@ -2,5 +2,5 @@ import { ProtocolMessageHistoryPage } from '@/pages/protocol/ProtocolMessageHist
 import { MESHTASTIC_CONFIG } from '@/lib/mesh-protocol';
 
 export function MessageHistory() {
-  return <ProtocolMessageHistoryPage config={MESHTASTIC_CONFIG} />;
+  return <ProtocolMessageHistoryPage key={MESHTASTIC_CONFIG.slug} config={MESHTASTIC_CONFIG} />;
 }

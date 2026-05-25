@@ -1,8 +1,10 @@
-import type { MessageChannel } from '@/lib/models';
+import type { MeshProtocol, MessageChannel } from '@/lib/models';
 import type { ProtocolSlug } from '@/lib/mesh-protocol';
 
-function channelProtocolSlug(ch: MessageChannel): ProtocolSlug | null {
-  const p = ch.protocol;
+/** Normalize API protocol field (number or string) to a route slug; null when absent. */
+export function protocolSlugFromApiValue(
+  p: MeshProtocol | 'meshtastic' | 'meshcore' | string | null | undefined
+): ProtocolSlug | null {
   if (p === undefined || p === null) {
     return null;
   }
@@ -17,6 +19,10 @@ function channelProtocolSlug(ch: MessageChannel): ProtocolSlug | null {
     return 'meshtastic';
   }
   return null;
+}
+
+function channelProtocolSlug(ch: MessageChannel): ProtocolSlug | null {
+  return protocolSlugFromApiValue(ch.protocol);
 }
 
 export function filterChannelsForProtocol(channels: MessageChannel[], protocol: ProtocolSlug): MessageChannel[] {
