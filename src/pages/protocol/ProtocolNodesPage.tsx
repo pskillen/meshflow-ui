@@ -16,6 +16,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import type { ObservedNode } from '@/lib/models';
 import { Link } from 'react-router-dom';
 import { filterManagedNodesForMapDisplay } from '@/lib/managed-node-status';
+import { buildMeshCoreMapNodes } from '@/lib/meshcore-map-nodes';
 import { StaleReportedTime } from '@/components/nodes/StaleReportedTime';
 import type { ProtocolPageConfig } from '@/lib/mesh-protocol';
 import { NODE_TIME_RANGE_OPTIONS, getLastHeardAfterForRange, type NodeTimeRangeOption } from '@/lib/node-time-range';
@@ -143,7 +144,17 @@ function ProtocolNodesPageContent({
   };
 
   const displayedNodes = sortNodes(filterNodes(mainListNodes || []));
-  const mapNodes = searchQuery ? filterNodes(mainListNodes || []) : mainListNodes || [];
+  const observedForMap = searchQuery ? filterNodes(mainListNodes || []) : mainListNodes || [];
+  const mapNodes = useMemo(() => {
+    if (config.slug !== 'meshcore') {
+      return observedForMap;
+    }
+    return buildMeshCoreMapNodes(observedForMap, managedNodesForMap);
+  }, [config.slug, observedForMap, managedNodesForMap]);
+  const mapNodesWithPosition = useMemo(
+    () => mapNodes.filter((n) => n.latest_position?.latitude != null && n.latest_position?.longitude != null),
+    [mapNodes]
+  );
 
   const { withLocation, identityOnly } = useMemo(() => {
     if (config.slug === 'meshtastic') {
@@ -239,6 +250,12 @@ function ProtocolNodesPageContent({
           <CardTitle>{config.slug === 'meshtastic' ? 'Mesh Nodes and Monitoring' : 'Map'}</CardTitle>
         </CardHeader>
         <CardContent>
+          {config.slug === 'meshcore' && mapNodesWithPosition.length === 0 ? (
+            <p className="text-sm text-muted-foreground mb-4">
+              No MeshCore nodes with a known position in this time range. Managed feeders need a default location in the
+              API; observed nodes appear after ADVERT packets with coordinates.
+            </p>
+          ) : null}
           <div className="h-[600px] w-full">
             {config.features.constellationsOnMap ? (
               <NodesAndConstellationsMap
@@ -248,12 +265,7 @@ function ProtocolNodesPageContent({
                 showUnmanagedNodes={true}
               />
             ) : (
-              <NodesMap
-                nodes={mapNodes.filter(
-                  (n) => n.latest_position?.latitude != null && n.latest_position?.longitude != null
-                )}
-                roleLegend={config.features.roleLegend}
-              />
+              <NodesMap nodes={mapNodesWithPosition} roleLegend={config.features.roleLegend} />
             )}
           </div>
         </CardContent>

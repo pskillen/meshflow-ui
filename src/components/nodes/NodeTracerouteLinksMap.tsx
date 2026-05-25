@@ -3,6 +3,7 @@ import { Popup } from 'react-map-gl/mapbox';
 import { ArcLayer, ScatterplotLayer, TextLayer } from '@deck.gl/layers';
 import type { PickingInfo } from '@deck.gl/core';
 import { Link } from 'react-router-dom';
+import { nodeDetailPath } from '@/lib/node-detail-routes';
 import { X } from 'lucide-react';
 import type { NodeTracerouteLinkEdge, NodeTracerouteLinkNode } from '@/hooks/api/useNodeTracerouteLinks';
 
@@ -195,7 +196,10 @@ export function NodeTracerouteLinksMap({ edges, nodes, focusNodeId, showLabels =
                 </div>
               )}
               <Link
-                to={`/nodes/${selectedNode.meshtastic_node_id}`}
+                to={nodeDetailPath({
+                  meshtastic_node_id: selectedNode.meshtastic_node_id,
+                  node_id_str: selectedNode.node_id_str,
+                })}
                 className="mt-1 inline-block text-xs text-emerald-400 hover:text-emerald-300 hover:underline"
               >
                 Open details

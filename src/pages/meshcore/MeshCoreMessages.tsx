@@ -2,5 +2,5 @@ import { ProtocolMessageHistoryPage } from '@/pages/protocol/ProtocolMessageHist
 import { MESHCORE_CONFIG } from '@/lib/mesh-protocol';
 
 export function MeshCoreMessages() {
-  return <ProtocolMessageHistoryPage config={MESHCORE_CONFIG} />;
+  return <ProtocolMessageHistoryPage key={MESHCORE_CONFIG.slug} config={MESHCORE_CONFIG} />;
 }

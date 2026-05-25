@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { StaleReportedTime } from '@/components/nodes/StaleReportedTime';
 import { Loader2, AlertCircle, Info, Copy, Radio, HelpCircle, ChevronDown, KeyRound } from 'lucide-react';
 import { useConfig } from '@/providers/ConfigProvider';
+import { nodeDetailPath, observedNodeDetailPath } from '@/lib/node-detail-routes';
 import { BotSetupInstructions } from '@/components/nodes/BotSetupInstructions';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -131,10 +132,7 @@ function NodeSettingsContent() {
                         </div>
                       </div>
                       <div className="mt-2 flex gap-2">
-                        <Link
-                          to={`/nodes/${node.meshtastic_node_id}`}
-                          className="text-blue-500 hover:text-blue-700 text-sm"
-                        >
+                        <Link to={observedNodeDetailPath(node)} className="text-blue-500 hover:text-blue-700 text-sm">
                           View Node
                         </Link>
                         {!managedNodeIds.has(node.meshtastic_node_id) && (
@@ -750,7 +748,14 @@ function ManagedNodeSettings({
   return (
     <div className="space-y-4 pt-2">
       <div className="flex flex-wrap gap-2">
-        <Link to={`/nodes/${node.meshtastic_node_id}`}>
+        <Link
+          to={nodeDetailPath({
+            internal_id: node.internal_id,
+            meshtastic_node_id: node.meshtastic_node_id,
+            node_id_str: node.node_id_str,
+            protocol: node.protocol,
+          })}
+        >
           <Button variant="outline" size="sm">
             View Node Details
           </Button>

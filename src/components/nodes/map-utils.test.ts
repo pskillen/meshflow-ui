@@ -2,11 +2,26 @@ import { describe, it, expect } from 'vitest';
 import * as turf from '@turf/turf';
 import type { Feature, Point, Polygon } from 'geojson';
 
-import { boundaryPolygonFromPoints } from './map-utils';
+import { boundaryPolygonFromPoints, buildNodePopupHtml } from './map-utils';
 
 function pt(lng: number, lat: number): Feature<Point> {
   return turf.point([lng, lat]);
 }
+
+describe('buildNodePopupHtml', () => {
+  it('links to internal_id not meshtastic_node_id zero', () => {
+    const html = buildNodePopupHtml({
+      internal_id: 'a1b2c3d4-e5f6-4789-a012-8456789abcde',
+      meshtastic_node_id: 0,
+      node_id_str: 'mc:abc',
+      long_name: 'Test',
+      short_name: 't',
+      protocol: 2,
+    });
+    expect(html).toContain('href="/nodes/a1b2c3d4-e5f6-4789-a012-8456789abcde"');
+    expect(html).not.toContain('href="/nodes/0"');
+  });
+});
 
 describe('boundaryPolygonFromPoints', () => {
   it('returns null for an empty point set', () => {

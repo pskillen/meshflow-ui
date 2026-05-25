@@ -1,6 +1,7 @@
 import L from 'leaflet';
 import * as turf from '@turf/turf';
 import type { Feature, MultiPolygon, Point, Polygon } from 'geojson';
+import { nodeDetailPath, type NodeDetailLinkInput } from '@/lib/node-detail-routes';
 
 /** Role IDs from Meshtastic (matches ROLE_LABELS in lib/meshtastic). */
 export const ROLE_COLORS: Record<number, string> = {
@@ -129,15 +130,15 @@ function percentileSorted(sorted: number[], p: number): number {
 }
 
 /** Minimal node fields for popup content */
-export interface NodePopupData {
+export interface NodePopupData extends NodeDetailLinkInput {
   meshtastic_node_id: number;
-  node_id_str?: string;
   long_name: string | null;
   short_name: string | null;
   /** Date or ISO string – API may return either; we normalize to locale format */
   last_heard?: Date | string | null;
   /** Constellation name when this is a managed node */
   constellationName?: string | null;
+  protocol?: number | null;
 }
 
 /**
@@ -150,7 +151,7 @@ export function buildNodePopupHtml(node: NodePopupData): string {
       ? `${node.long_name} (${node.short_name})`
       : node.long_name || node.short_name || node.node_id_str || `Node ${node.meshtastic_node_id}`;
   const lastSeen = node.last_heard != null ? new Date(node.last_heard).toLocaleString() : 'Never';
-  const detailsUrl = `/nodes/${node.meshtastic_node_id}`;
+  const detailsUrl = nodeDetailPath(node);
   const constellationLine =
     node.constellationName != null && node.constellationName !== ''
       ? `Constellation: ${escapeHtml(node.constellationName)}`

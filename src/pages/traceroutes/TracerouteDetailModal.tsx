@@ -1,5 +1,6 @@
 import { format } from 'date-fns';
 import { Link } from 'react-router-dom';
+import { nodeDetailPath, observedNodeDetailPath } from '@/lib/node-detail-routes';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { useTraceroute } from '@/hooks/api/useTraceroutes';
@@ -86,7 +87,11 @@ export function TracerouteDetailModal({ tracerouteId, open, onOpenChange }: Trac
             {traceroute ? (
               <>
                 <Link
-                  to={`/nodes/${traceroute.source_node.meshtastic_node_id}`}
+                  to={nodeDetailPath({
+                    meshtastic_node_id: traceroute.source_node.meshtastic_node_id,
+                    node_id_str: traceroute.source_node.node_id_str,
+                    protocol: traceroute.source_node.protocol,
+                  })}
                   onClick={(e) => e.stopPropagation()}
                   className="font-medium text-primary underline-offset-4 hover:underline"
                 >
@@ -94,7 +99,7 @@ export function TracerouteDetailModal({ tracerouteId, open, onOpenChange }: Trac
                 </Link>
                 <span aria-hidden>→</span>
                 <Link
-                  to={`/nodes/${traceroute.target_node.meshtastic_node_id}`}
+                  to={observedNodeDetailPath(traceroute.target_node)}
                   onClick={(e) => e.stopPropagation()}
                   className="font-medium text-primary underline-offset-4 hover:underline"
                 >
@@ -119,7 +124,11 @@ export function TracerouteDetailModal({ tracerouteId, open, onOpenChange }: Trac
               <Badge variant="outline" className="gap-1">
                 <span className="text-muted-foreground">Source:</span>
                 <Link
-                  to={`/nodes/${traceroute.source_node.meshtastic_node_id}`}
+                  to={nodeDetailPath({
+                    meshtastic_node_id: traceroute.source_node.meshtastic_node_id,
+                    node_id_str: traceroute.source_node.node_id_str,
+                    protocol: traceroute.source_node.protocol,
+                  })}
                   onClick={(e) => e.stopPropagation()}
                   className="text-primary underline-offset-4 hover:underline"
                 >
@@ -129,7 +138,7 @@ export function TracerouteDetailModal({ tracerouteId, open, onOpenChange }: Trac
               <Badge variant="outline" className="gap-1">
                 <span className="text-muted-foreground">Target:</span>
                 <Link
-                  to={`/nodes/${traceroute.target_node.meshtastic_node_id}`}
+                  to={observedNodeDetailPath(traceroute.target_node)}
                   onClick={(e) => e.stopPropagation()}
                   className="text-primary underline-offset-4 hover:underline"
                 >
