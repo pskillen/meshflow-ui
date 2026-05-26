@@ -89,9 +89,14 @@ export function TriggerTracerouteModal({
 
   const managedNodesForMap = useMemo(() => filterManagedNodesForMapDisplay(managedNodes), [managedNodes]);
 
+  const meshtasticManagedNodes = useMemo(
+    () => managedNodes.filter((n) => n.meshtastic_node_id != null && n.meshtastic_node_id > 0),
+    [managedNodes]
+  );
+
   const managedNodeIdSet = useMemo(
-    () => new Set(managedNodesForMap.map((m) => m.meshtastic_node_id)),
-    [managedNodesForMap]
+    () => new Set(meshtasticManagedNodes.map((m) => m.meshtastic_node_id as number)),
+    [meshtasticManagedNodes]
   );
 
   const [pickTargetLastHeardAfter, setPickTargetLastHeardAfter] = useState(() => pickTargetLastHeardCutoff());
@@ -191,8 +196,8 @@ export function TriggerTracerouteModal({
                 <SelectValue placeholder="Select source node..." />
               </SelectTrigger>
               <SelectContent>
-                {managedNodes.map((node) => (
-                  <SelectItem key={node.meshtastic_node_id} value={node.meshtastic_node_id.toString()}>
+                {meshtasticManagedNodes.map((node) => (
+                  <SelectItem key={node.meshtastic_node_id} value={String(node.meshtastic_node_id)}>
                     {node.short_name ?? node.node_id_str} ({node.node_id_str})
                   </SelectItem>
                 ))}

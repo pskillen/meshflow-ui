@@ -23,6 +23,8 @@ import {
   groupClaimedNodes,
   observedNodeForManagedRow,
 } from '@/lib/my-nodes-grouping';
+import { apiKeyLinksManagedNode, isObservedNodeManaged, managedNodeStableKey } from '@/lib/managed-node-enrollment';
+import { meshProtocolFromObservedNode } from '@/lib/mesh-protocol';
 import {
   Dialog,
   DialogContent,
@@ -50,7 +52,7 @@ function MyNodesContent() {
   const [showInstructionsNode, setShowInstructionsNode] = useState<ObservedNode | null>(null);
   const [instructionsModalOpen, setInstructionsModalOpen] = useState(false);
   const [unclaimTarget, setUnclaimTarget] = useState<ObservedNode | null>(null);
-  const [unmanageTarget, setUnmanageTarget] = useState<{ nodeId: number; label: string } | null>(null);
+  const [unmanageTarget, setUnmanageTarget] = useState<{ internalId: string; label: string } | null>(null);
   const cancelClaimMutation = useCancelNodeClaim();
   const deleteManagedMutation = useDeleteManagedNode();
   const { data: apiKeys } = useQuery({
@@ -67,19 +69,9 @@ function MyNodesContent() {
     return m;
   }, [watchesQuery.data]);
 
-  const managedNodeIds = useMemo(() => new Set(myManagedNodes.map((n) => n.meshtastic_node_id)), [myManagedNodes]);
-
-  const claimedByNodeId = useMemo(() => {
-    const m = new Map<number, ObservedNode>();
-    for (const c of myClaimedNodes) {
-      m.set(c.meshtastic_node_id, c);
-    }
-    return m;
-  }, [myClaimedNodes]);
-
   const claimedOnlyNodes = useMemo(
-    () => myClaimedNodes.filter((n) => !managedNodeIds.has(n.meshtastic_node_id)),
-    [myClaimedNodes, managedNodeIds]
+    () => myClaimedNodes.filter((n) => !isObservedNodeManaged(n, myManagedNodes)),
+    [myClaimedNodes, myManagedNodes]
   );
 
   const connectivityBuckets = useMemo(() => groupClaimedNodes(claimedOnlyNodes), [claimedOnlyNodes]);
@@ -102,8 +94,10 @@ function MyNodesContent() {
 
   const renderInstructionsModal = () => {
     if (!showInstructionsNode) return null;
-    const nodeApiKeys = apiKeys?.filter((key) => key.nodes.includes(showInstructionsNode.meshtastic_node_id)) || [];
+    const managedRow = myManagedNodes.find((m) => isObservedNodeManaged(showInstructionsNode, [m]));
+    const nodeApiKeys = managedRow && apiKeys ? apiKeys.filter((key) => apiKeyLinksManagedNode(key, managedRow)) : [];
     const firstApiKey = nodeApiKeys[0]?.key;
+    const instructionProtocol = meshProtocolFromObservedNode(showInstructionsNode) === 2 ? 'meshcore' : 'meshtastic';
     return (
       <Dialog
         open={instructionsModalOpen}
@@ -127,6 +121,7 @@ function MyNodesContent() {
             </Alert>
             {firstApiKey && config ? (
               <BotSetupInstructions
+                protocol={instructionProtocol}
                 apiKey={firstApiKey}
                 apiBaseUrl={config.apis.meshBot.baseUrl}
                 nodeShortName={showInstructionsNode.short_name || showInstructionsNode.node_id_str}
@@ -256,7 +251,7 @@ function MyNodesContent() {
               disabled={deleteManagedMutation.isPending}
               onClick={() => {
                 if (!unmanageTarget) return;
-                deleteManagedMutation.mutate(unmanageTarget.nodeId, {
+                deleteManagedMutation.mutate(unmanageTarget.internalId, {
                   onSuccess: () => setUnmanageTarget(null),
                 });
               }}
@@ -281,12 +276,13 @@ function MyNodesContent() {
               <CardContent>
                 <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
                   {myManagedNodes.map((managed) => {
-                    const node = observedNodeForManagedRow(managed, claimedByNodeId.get(managed.meshtastic_node_id));
+                    const claimedMatch = myClaimedNodes.find((c) => isObservedNodeManaged(c, [managed]));
+                    const node = observedNodeForManagedRow(managed, claimedMatch);
                     const watch = watchesByNodeIdStr.get(node.node_id_str);
                     const liveness = getManagedLiveness(managed);
                     return (
                       <MyNodeCard
-                        key={`managed-${managed.meshtastic_node_id}`}
+                        key={`managed-${managedNodeStableKey(managed)}`}
                         node={node}
                         isManaged
                         isClaimed={node.owner?.id !== undefined}
@@ -299,12 +295,13 @@ function MyNodesContent() {
                           setShowInstructionsNode(node);
                           setInstructionsModalOpen(true);
                         }}
-                        onRequestUnmanage={() =>
+                        onRequestUnmanage={() => {
+                          if (!managed.internal_id) return;
                           setUnmanageTarget({
-                            nodeId: managed.meshtastic_node_id,
+                            internalId: managed.internal_id,
                             label: node.short_name || node.node_id_str,
-                          })
-                        }
+                          });
+                        }}
                       />
                     );
                   })}

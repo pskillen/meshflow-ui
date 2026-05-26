@@ -3,12 +3,15 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Copy, Download, ExternalLink } from 'lucide-react';
 
+export type BotSetupProtocol = 'meshtastic' | 'meshcore';
+
 export interface BotDefaults {
   ignorePortnums?: string | null;
   hopLimit?: number | null;
 }
 
 interface BotSetupInstructionsProps {
+  protocol?: BotSetupProtocol;
   apiKey: string;
   apiBaseUrl: string;
   nodeShortName?: string;
@@ -19,7 +22,7 @@ function deriveWsUrl(httpUrl: string): string {
   return httpUrl.replace(/^http:\/\//, 'ws://').replace(/^https:\/\//, 'wss://');
 }
 
-function buildBotEnvVars(botDefaults?: BotDefaults): string[] {
+function buildMeshtasticBotEnvVars(botDefaults?: BotDefaults): string[] {
   const lines: string[] = [];
   if (botDefaults?.ignorePortnums?.trim()) {
     lines.push(`      - IGNORE_PORTNUMS=${botDefaults.ignorePortnums.trim()}`);
@@ -32,7 +35,7 @@ function buildBotEnvVars(botDefaults?: BotDefaults): string[] {
   return lines;
 }
 
-function buildBotEnvVarsForEnvFile(botDefaults?: BotDefaults): string[] {
+function buildMeshtasticBotEnvVarsForEnvFile(botDefaults?: BotDefaults): string[] {
   const lines: string[] = [];
   if (botDefaults?.ignorePortnums?.trim()) {
     lines.push(`IGNORE_PORTNUMS=${botDefaults.ignorePortnums.trim()}`);
@@ -45,9 +48,13 @@ function buildBotEnvVarsForEnvFile(botDefaults?: BotDefaults): string[] {
   return lines;
 }
 
-function generateDockerComposeEmbedded(apiBaseUrl: string, apiKey: string, botDefaults?: BotDefaults): string {
+function generateMeshtasticDockerComposeEmbedded(
+  apiBaseUrl: string,
+  apiKey: string,
+  botDefaults?: BotDefaults
+): string {
   const wsUrl = deriveWsUrl(apiBaseUrl);
-  const botEnvLines = buildBotEnvVars(botDefaults);
+  const botEnvLines = buildMeshtasticBotEnvVars(botDefaults);
   const botEnvBlock = botEnvLines.length > 0 ? '\n' + botEnvLines.join('\n') : '';
   return `---
 services:
@@ -60,7 +67,7 @@ services:
       - ADMIN_NODES='!xxxxxxxx'          # Your admin node ID(s) - find in Meshtastic app or node details
       - STORAGE_API_ROOT=${apiBaseUrl}
       - STORAGE_API_TOKEN=${apiKey}
-      - STORAGE_API_VERSION=2
+      - STORAGE_API_VERSION=3
       - MESHFLOW_WS_URL=${wsUrl}${botEnvBlock}
     volumes:
       - ./data:/app/data
@@ -77,13 +84,48 @@ services:
 `;
 }
 
-function generateDockerComposeSeparate(): string {
+function generateMeshCoreDockerComposeEmbedded(apiBaseUrl: string, apiKey: string): string {
+  const wsUrl = deriveWsUrl(apiBaseUrl);
+  return `---
+services:
+  meshflow-meshcore-bot:
+    image: ghcr.io/pskillen/meshflow-bot:latest
+    container_name: meshflow-meshcore-bot
+    restart: unless-stopped
+    devices:
+      - /dev/ttyUSB0:/dev/ttyUSB0   # Adjust for your serial device; or use BLE env vars instead
+    environment:
+      - RADIO_PROTOCOL=meshcore
+      - MESHCORE_SERIAL_DEVICE=/dev/ttyUSB0
+      # - MESHCORE_BLE_ADDRESS=AA:BB:CC:DD:EE:FF
+      - MESHCORE_UPLOAD_ENABLED=true
+      - STORAGE_API_ROOT=${apiBaseUrl}
+      - STORAGE_API_TOKEN=${apiKey}
+      - STORAGE_API_VERSION=3
+      - MESHFLOW_WS_URL=${wsUrl}
+    volumes:
+      - ./data:/app/data
+    depends_on:
+      - watchtower
+
+  watchtower:
+    image: containrrr/watchtower
+    container_name: watchtower
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: --interval 3600 meshflow-meshcore-bot
+`;
+}
+
+function generateDockerComposeSeparate(protocol: BotSetupProtocol): string {
+  const serviceName = protocol === 'meshcore' ? 'meshflow-meshcore-bot' : 'meshflow-bot';
   return `---
 # Place .env in this directory with STORAGE_API_ROOT, STORAGE_API_TOKEN, etc.
 services:
-  meshflow-bot:
+  ${serviceName}:
     image: ghcr.io/pskillen/meshflow-bot:latest
-    container_name: meshflow-bot
+    container_name: ${serviceName}
     restart: unless-stopped
     env_file: .env
     volumes:
@@ -97,15 +139,15 @@ services:
     restart: unless-stopped
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-    command: --interval 3600 meshflow-bot
+    command: --interval 3600 ${serviceName}
 `;
 }
 
-function generateEnvFile(apiBaseUrl: string, apiKey: string, botDefaults?: BotDefaults): string {
+function generateMeshtasticEnvFile(apiBaseUrl: string, apiKey: string, botDefaults?: BotDefaults): string {
   const wsUrl = deriveWsUrl(apiBaseUrl);
-  const botEnvLines = buildBotEnvVarsForEnvFile(botDefaults);
+  const botEnvLines = buildMeshtasticBotEnvVarsForEnvFile(botDefaults);
   const botEnvBlock = botEnvLines.length > 0 ? '\n\n' + botEnvLines.join('\n') : '';
-  return `# Meshflow Bot configuration
+  return `# Meshflow Bot configuration (Meshtastic)
 # Copy this file to .env in the same directory as docker-compose.yaml
 
 MESHTASTIC_IP=meshtastic.local
@@ -113,8 +155,25 @@ ADMIN_NODES='!xxxxxxxx'
 
 STORAGE_API_ROOT=${apiBaseUrl}
 STORAGE_API_TOKEN=${apiKey}
-STORAGE_API_VERSION=2
+STORAGE_API_VERSION=3
 MESHFLOW_WS_URL=${wsUrl}${botEnvBlock}
+`;
+}
+
+function generateMeshCoreEnvFile(apiBaseUrl: string, apiKey: string): string {
+  const wsUrl = deriveWsUrl(apiBaseUrl);
+  return `# Meshflow Bot configuration (MeshCore)
+# Copy this file to .env in the same directory as docker-compose.yaml
+
+RADIO_PROTOCOL=meshcore
+MESHCORE_SERIAL_DEVICE=/dev/ttyUSB0
+# MESHCORE_BLE_ADDRESS=AA:BB:CC:DD:EE:FF
+MESHCORE_UPLOAD_ENABLED=true
+
+STORAGE_API_ROOT=${apiBaseUrl}
+STORAGE_API_TOKEN=${apiKey}
+STORAGE_API_VERSION=3
+MESHFLOW_WS_URL=${wsUrl}
 `;
 }
 
@@ -128,13 +187,28 @@ function downloadFile(filename: string, content: string) {
   URL.revokeObjectURL(url);
 }
 
-export function BotSetupInstructions({ apiKey, apiBaseUrl, botDefaults }: BotSetupInstructionsProps) {
+export function BotSetupInstructions({
+  protocol = 'meshtastic',
+  apiKey,
+  apiBaseUrl,
+  botDefaults,
+}: BotSetupInstructionsProps) {
   const [format, setFormat] = useState<'embedded' | 'separate'>('embedded');
   const [copied, setCopied] = useState<'compose' | 'env' | null>(null);
 
-  const dockerComposeEmbedded = generateDockerComposeEmbedded(apiBaseUrl, apiKey, botDefaults);
-  const dockerComposeSeparate = generateDockerComposeSeparate();
-  const envContent = generateEnvFile(apiBaseUrl, apiKey, botDefaults);
+  const isMeshCore = protocol === 'meshcore';
+
+  const dockerComposeEmbedded = isMeshCore
+    ? generateMeshCoreDockerComposeEmbedded(apiBaseUrl, apiKey)
+    : generateMeshtasticDockerComposeEmbedded(apiBaseUrl, apiKey, botDefaults);
+  const dockerComposeSeparate = generateDockerComposeSeparate(protocol);
+  const envContent = isMeshCore
+    ? generateMeshCoreEnvFile(apiBaseUrl, apiKey)
+    : generateMeshtasticEnvFile(apiBaseUrl, apiKey, botDefaults);
+
+  const docsUrl = isMeshCore
+    ? 'https://github.com/pskillen/meshflow-bot/blob/main/docs/MESHCORE.md'
+    : 'https://github.com/pskillen/meshflow-bot';
 
   const handleCopy = (text: string, type: 'compose' | 'env') => {
     navigator.clipboard.writeText(text);
@@ -157,13 +231,32 @@ export function BotSetupInstructions({ apiKey, apiBaseUrl, botDefaults }: BotSet
             <code className="rounded bg-muted px-1">docker-compose.yaml</code>
           </li>
         )}
-        <li>
-          Edit <code className="rounded bg-muted px-1">MESHTASTIC_IP</code> and{' '}
-          <code className="rounded bg-muted px-1">ADMIN_NODES</code> for your setup
-        </li>
+        {isMeshCore ? (
+          <>
+            <li>
+              Set <code className="rounded bg-muted px-1">MESHCORE_SERIAL_DEVICE</code> or{' '}
+              <code className="rounded bg-muted px-1">MESHCORE_BLE_ADDRESS</code> for your hardware
+            </li>
+            <li>
+              Ensure <code className="rounded bg-muted px-1">ManagedNode.mc_pubkey</code> in the API matches your device
+              (64 hex)
+            </li>
+          </>
+        ) : (
+          <li>
+            Edit <code className="rounded bg-muted px-1">MESHTASTIC_IP</code> and{' '}
+            <code className="rounded bg-muted px-1">ADMIN_NODES</code> for your setup
+          </li>
+        )}
         <li>
           Run <code className="rounded bg-muted px-1">docker compose up -d</code>
         </li>
+        {isMeshCore ? (
+          <li>
+            Confirm logs show <code className="rounded bg-muted px-1">mc-channel-sync</code> and feeder ingest URLs
+            under <code className="rounded bg-muted px-1">/api/meshcore/feeders/</code>
+          </li>
+        ) : null}
       </ol>
 
       <Tabs value={format} onValueChange={(v) => setFormat(v as 'embedded' | 'separate')}>
@@ -243,15 +336,15 @@ export function BotSetupInstructions({ apiKey, apiBaseUrl, botDefaults }: BotSet
         </TabsContent>
       </Tabs>
 
-      <div className="pt-2">
+      <div className="pt-2 flex flex-wrap gap-4">
         <a
-          href="https://github.com/pskillen/meshflow-bot"
+          href={docsUrl}
           target="_blank"
           rel="noopener noreferrer"
           className="inline-flex items-center text-sm text-primary hover:underline"
         >
           <ExternalLink className="h-4 w-4 mr-1" />
-          Meshflow Bot on GitHub
+          {isMeshCore ? 'MeshCore bot docs' : 'Meshflow Bot on GitHub'}
         </a>
       </div>
     </div>

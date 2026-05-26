@@ -111,13 +111,13 @@ export function TracerouteFlowDiagram({ traceroute }: { traceroute: AutoTraceRou
         <div className="flex flex-wrap items-center gap-2">
           <FlowEndpointBadge
             label={sourceLabel}
-            nodeId={sourceNodeId}
+            nodeId={sourceNodeId!}
             directionColor="bg-blue-500/20 text-blue-700 dark:text-blue-300"
           />
           <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground" />
           <FlowEndpointBadge
             label={targetLabel}
-            nodeId={targetNodeId}
+            nodeId={targetNodeId!}
             directionColor="bg-green-500/20 text-green-700 dark:text-green-300"
           />
         </div>
@@ -131,10 +131,10 @@ export function TracerouteFlowDiagram({ traceroute }: { traceroute: AutoTraceRou
         <h4 className="mb-2 text-sm font-medium text-muted-foreground">Outbound</h4>
         <FlowRow
           startLabel={sourceLabel}
-          startNodeId={sourceNodeId}
+          startNodeId={sourceNodeId!}
           nodes={routeNodes}
           endLabel={targetLabel}
-          endNodeId={targetNodeId}
+          endNodeId={targetNodeId!}
           directionColor="bg-blue-500/20 text-blue-700 dark:text-blue-300"
         />
       </div>
@@ -143,10 +143,10 @@ export function TracerouteFlowDiagram({ traceroute }: { traceroute: AutoTraceRou
           <h4 className="mb-2 text-sm font-medium text-muted-foreground">Return</h4>
           <FlowRow
             startLabel={targetLabel}
-            startNodeId={targetNodeId}
+            startNodeId={targetNodeId!}
             nodes={routeBackNodes}
             endLabel={sourceLabel}
-            endNodeId={sourceNodeId}
+            endNodeId={sourceNodeId!}
             directionColor="bg-green-500/20 text-green-700 dark:text-green-300"
           />
         </div>

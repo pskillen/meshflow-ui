@@ -22,8 +22,8 @@ const UNCERTAINTY_THRESHOLD_M = 200;
 
 export type MapNode = ObservedNode | ManagedNode;
 
-function getNodeId(node: MapNode): number {
-  return node.meshtastic_node_id;
+function getNodeId(node: MapNode): string {
+  return node.node_id_str || ('internal_id' in node && node.internal_id) || String(node.meshtastic_node_id ?? '');
 }
 
 function getNodePosition(node: MapNode): { lat: number; lng: number } | null {
@@ -57,7 +57,8 @@ export interface NodesAndConstellationsMapProps {
   onMapMove?: (center: L.LatLng, zoom: number) => void;
   onNodeSelect?: (node: MapNode | null) => boolean;
   /** When provided, highlights this node (e.g. selection from external source like search) */
-  selectedNodeId?: number | null;
+  /** Meshtastic numeric id or map identity string (`node_id_str` / `internal_id`). */
+  selectedNodeId?: string | number | null;
   /** Optional custom label for observed node markers (e.g. weather metrics) */
   getMarkerLabel?: (node: ObservedNode) => string;
   /** Optional opacity 0-1 for observed node markers (e.g. age-based fading) */
@@ -110,7 +111,7 @@ export function NodesAndConstellationsMap({
   const tileLayerRef = useRef<L.TileLayer | null>(null);
   const polygonsRef = useRef<L.Polygon[]>([]);
   const markersRef = useRef<L.Marker[]>([]);
-  const [internalSelectedNodeId, setInternalSelectedNodeId] = useState<number | null>(null);
+  const [internalSelectedNodeId, setInternalSelectedNodeId] = useState<string | null>(null);
   const selectedNodeId = selectedNodeIdProp ?? internalSelectedNodeId;
   const lastViewRef = useRef<{ center: L.LatLng; zoom: number } | null>(null);
   const onMapMoveRef = useRef(onMapMove);
@@ -269,7 +270,7 @@ export function NodesAndConstellationsMap({
     markersRef.current.forEach((m) => m.remove());
     markersRef.current = [];
 
-    const managedNodeIds = new Set(managedNodes.map((n) => n.meshtastic_node_id));
+    const managedNodeIds = new Set(managedNodes.map((n) => getNodeId(n)));
     const filteredManaged =
       filterConstellationIds != null && filterConstellationIds.length > 0
         ? managedNodes.filter((n) => n.constellation && filterConstellationIds.includes(n.constellation.id))
@@ -368,7 +369,7 @@ export function NodesAndConstellationsMap({
             ...filteredManaged.filter((n) => getNodePosition(n) != null),
           ]
         : filteredManaged.filter((n) => getNodePosition(n) != null);
-      const seen = new Set<number>();
+      const seen = new Set<string>();
       nodesWithUncertainty.forEach((node) => {
         const id = getNodeId(node);
         if (seen.has(id)) return;
@@ -404,13 +405,13 @@ export function NodesAndConstellationsMap({
     // When !showConstellation: draw all observed nodes (including managed) with role colors
     const observedLayer = showConstellation
       ? showUnmanagedNodes
-        ? observedNodes.filter((o) => !managedNodeIds.has(o.meshtastic_node_id))
+        ? observedNodes.filter((o) => !managedNodeIds.has(getNodeId(o)))
         : []
       : observedNodes;
 
-    const managedNodeConstellationMap = new Map<number, string>();
+    const managedNodeConstellationMap = new Map<string, string>();
     filteredManaged.forEach((n) => {
-      if (n.constellation?.name) managedNodeConstellationMap.set(n.meshtastic_node_id, n.constellation.name);
+      if (n.constellation?.name) managedNodeConstellationMap.set(getNodeId(n), n.constellation.name);
     });
 
     const hasSelection = selectedNodeId != null;
@@ -418,7 +419,8 @@ export function NodesAndConstellationsMap({
       const pos = getNodePosition(node);
       if (!pos) return;
       const position: L.LatLngExpression = [pos.lat, pos.lng];
-      const isSelected = selectedNodeId === node.meshtastic_node_id;
+      const isSelected =
+        selectedNodeId != null && (selectedNodeId === getNodeId(node) || selectedNodeId === node.meshtastic_node_id);
       const label = getMarkerLabel
         ? getMarkerLabel(node as ObservedNode)
         : node.short_name || node.node_id_str?.toString().slice(-4) || '?';
@@ -445,12 +447,12 @@ export function NodesAndConstellationsMap({
             dimmed,
             opacity,
             grayscale,
-            getNodeAlertRing?.(node.meshtastic_node_id) ?? undefined
+            (node.meshtastic_node_id != null ? getNodeAlertRing?.(node.meshtastic_node_id) : undefined) ?? undefined
           );
       const marker = L.marker(position, { icon });
       marker.on('click', () => handleMarkerClick(node));
       if (enableBubbles) {
-        const constellationName = managedNodeConstellationMap.get(node.meshtastic_node_id) ?? null;
+        const constellationName = managedNodeConstellationMap.get(getNodeId(node)) ?? null;
         marker.bindPopup(buildNodePopupHtml({ ...node, constellationName }));
       }
       marker.addTo(map);
@@ -464,7 +466,9 @@ export function NodesAndConstellationsMap({
         c.nodes.forEach((node) => {
           if (node.position?.latitude == null || node.position?.longitude == null) return;
           const position: L.LatLngExpression = [node.position.latitude, node.position.longitude];
-          const isSelected = selectedNodeId === node.meshtastic_node_id;
+          const isSelected =
+            selectedNodeId != null &&
+            (selectedNodeId === getNodeId(node) || selectedNodeId === node.meshtastic_node_id);
           const marker = L.marker(position, {
             icon: createNodeIcon(
               node.short_name || node.node_id_str?.slice(4, 8) || '?',
@@ -473,7 +477,7 @@ export function NodesAndConstellationsMap({
               hasSelection && !isSelected,
               undefined,
               undefined,
-              getNodeAlertRing?.(node.meshtastic_node_id) ?? undefined
+              (node.meshtastic_node_id != null ? getNodeAlertRing?.(node.meshtastic_node_id) : undefined) ?? undefined
             ),
           });
           marker.on('click', () => handleMarkerClick(node));

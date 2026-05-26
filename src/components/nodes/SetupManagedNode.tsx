@@ -27,6 +27,8 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { useMapTileUrl } from '@/hooks/useMapTileUrl';
 import { useConstellationsSuspense } from '@/hooks/api/useConstellations';
+import { meshProtocolFromObservedNode, normalizeMeshProtocol } from '@/lib/mesh-protocol';
+import { isMeshCoreEnrollment, normalizeMcPubkeyInput } from '@/lib/managed-node-enrollment';
 
 interface SetupManagedNodeProps {
   node: ObservedNode;
@@ -37,12 +39,14 @@ interface SetupManagedNodeProps {
 function formatManagedNodeCreateError(err: unknown): string {
   if (axios.isAxiosError(err) && err.response?.data && typeof err.response.data === 'object') {
     const data = err.response.data as Record<string, unknown>;
-    const nid = data.meshtastic_node_id;
-    if (Array.isArray(nid) && nid.length > 0) {
-      return String(nid[0]);
-    }
-    if (typeof nid === 'string') {
-      return nid;
+    for (const field of ['mc_pubkey', 'meshtastic_node_id'] as const) {
+      const val = data[field];
+      if (Array.isArray(val) && val.length > 0) {
+        return String(val[0]);
+      }
+      if (typeof val === 'string') {
+        return val;
+      }
     }
     if (data.detail != null) {
       return String(data.detail);
@@ -51,7 +55,7 @@ function formatManagedNodeCreateError(err: unknown): string {
   return 'Failed to create managed node. Please try again.';
 }
 
-type SetupStep = 'constellation' | 'location' | 'channels' | 'api-key' | 'instructions';
+type SetupStep = 'constellation' | 'pubkey' | 'location' | 'channels' | 'api-key' | 'instructions';
 
 export function SetupManagedNode({ node, isOpen, onClose }: SetupManagedNodeProps) {
   const navigate = useNavigate();
@@ -70,6 +74,10 @@ export function SetupManagedNode({ node, isOpen, onClose }: SetupManagedNodeProp
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [createdApiKey, setCreatedApiKey] = useState<NodeApiKey | null>(null);
+  const [mcPubkey, setMcPubkey] = useState('');
+
+  const enrollmentProtocol = meshProtocolFromObservedNode(node);
+  const isMeshCore = isMeshCoreEnrollment(enrollmentProtocol);
 
   // Location state
   const [nodeLocation, setNodeLocation] = useState<{ lat: number; lng: number } | null>(null);
@@ -124,6 +132,7 @@ export function SetupManagedNode({ node, isOpen, onClose }: SetupManagedNodeProp
       setIsLoading(false);
       setError(null);
       setCreatedApiKey(null);
+      setMcPubkey(observedNode.mc_pubkey?.toLowerCase() ?? '');
 
       // Reset location and channel mappings
       setNodeLocation(null);
@@ -148,13 +157,21 @@ export function SetupManagedNode({ node, isOpen, onClose }: SetupManagedNodeProp
         markerRef.current = null;
       }
     }
-  }, [isOpen, node]);
+  }, [isOpen, node, observedNode.mc_pubkey]);
 
   const handleNextStep = () => {
     if (currentStep === 'constellation') {
+      setCurrentStep(isMeshCore ? 'pubkey' : 'location');
+    } else if (currentStep === 'pubkey') {
+      const result = normalizeMcPubkeyInput(mcPubkey);
+      if (!result.ok) {
+        setError(result.message);
+        return;
+      }
+      setError(null);
       setCurrentStep('location');
     } else if (currentStep === 'location') {
-      setCurrentStep('channels');
+      setCurrentStep(isMeshCore ? 'api-key' : 'channels');
     } else if (currentStep === 'channels') {
       setCurrentStep('api-key');
     } else if (currentStep === 'api-key') {
@@ -164,11 +181,13 @@ export function SetupManagedNode({ node, isOpen, onClose }: SetupManagedNodeProp
 
   const handlePreviousStep = () => {
     if (currentStep === 'location') {
+      setCurrentStep(isMeshCore ? 'pubkey' : 'constellation');
+    } else if (currentStep === 'pubkey') {
       setCurrentStep('constellation');
     } else if (currentStep === 'channels') {
       setCurrentStep('location');
     } else if (currentStep === 'api-key') {
-      setCurrentStep('channels');
+      setCurrentStep(isMeshCore ? 'location' : 'channels');
     } else if (currentStep === 'instructions') {
       setCurrentStep('api-key');
     }
@@ -271,9 +290,10 @@ export function SetupManagedNode({ node, isOpen, onClose }: SetupManagedNodeProp
 
   // Handle channel mapping changes
   const handleChannelChange = (channelIndex: number, channelId: number | null) => {
+    const key = `meshtastic_channel_${channelIndex}` as keyof typeof channelMappings;
     setChannelMappings((prev) => ({
       ...prev,
-      [`channel_${channelIndex}`]: channelId,
+      [key]: channelId,
     }));
   };
 
@@ -295,33 +315,54 @@ export function SetupManagedNode({ node, isOpen, onClose }: SetupManagedNodeProp
     }
 
     try {
-      // Create the managed node with location and channel mappings
-      const managedNode = await api.createManagedNode(
-        node.meshtastic_node_id,
-        selectedConstellation,
-        nodeName,
-        user.id,
-        {
+      let managedNode;
+      if (isMeshCore) {
+        const pubkeyResult = normalizeMcPubkeyInput(mcPubkey);
+        if (!pubkeyResult.ok) {
+          setError(pubkeyResult.message);
+          setIsLoading(false);
+          return;
+        }
+        managedNode = await api.createMeshCoreManagedNode(
+          pubkeyResult.value,
+          selectedConstellation,
+          nodeName,
+          user.id,
+          {
+            defaultLocationLatitude: nodeLocation?.lat,
+            defaultLocationLongitude: nodeLocation?.lng,
+          }
+        );
+      } else {
+        if (node.meshtastic_node_id == null || node.meshtastic_node_id <= 0) {
+          setError('This observed node has no Meshtastic node id and cannot be enrolled as a managed feeder.');
+          setIsLoading(false);
+          return;
+        }
+        managedNode = await api.createManagedNode(node.meshtastic_node_id, selectedConstellation, nodeName, user.id, {
           defaultLocationLatitude: nodeLocation?.lat,
           defaultLocationLongitude: nodeLocation?.lng,
           channels: channelMappings,
-        }
-      );
-
-      // Handle API key
-      if (apiKeyOption === 'existing' && selectedApiKey) {
-        // Add node to existing API key
-        await api.addNodeToApiKey(selectedApiKey, managedNode.meshtastic_node_id);
-      } else if (apiKeyOption === 'new' && newApiKeyName) {
-        // Create new API key
-        const apiKey = await api.createApiKey(newApiKeyName, selectedConstellation);
-        setCreatedApiKey(apiKey);
-
-        // Add node to new API key
-        await api.addNodeToApiKey(apiKey.id, managedNode.meshtastic_node_id);
+        });
       }
 
-      // Move to instructions step
+      const internalId = managedNode.internal_id;
+      if (!internalId) {
+        setError('Managed node was created but no internal id was returned.');
+        setIsLoading(false);
+        return;
+      }
+
+      const linkTarget = { managedNodeInternalId: internalId };
+
+      if (apiKeyOption === 'existing' && selectedApiKey) {
+        await api.addNodeToApiKey(selectedApiKey, linkTarget);
+      } else if (apiKeyOption === 'new' && newApiKeyName) {
+        const apiKey = await api.createApiKey(newApiKeyName, selectedConstellation);
+        setCreatedApiKey(apiKey);
+        await api.addNodeToApiKey(apiKey.id, linkTarget);
+      }
+
       setCurrentStep('instructions');
     } catch (err) {
       console.error('Error creating managed node:', err);
@@ -336,12 +377,15 @@ export function SetupManagedNode({ node, isOpen, onClose }: SetupManagedNodeProp
     selectedConstellation != null ? constellations.find((c) => c.id === selectedConstellation) : null;
   const selectedConstellationChannels = selectedConstellationObj?.channels || [];
 
+  const eligibleConstellations = constellations.filter((c) => normalizeMeshProtocol(c.protocol) === enrollmentProtocol);
+
   const renderConstellationStep = () => (
     <>
       <DialogHeader>
-        <DialogTitle>Set Up Managed Node</DialogTitle>
+        <DialogTitle>Set Up {isMeshCore ? 'MeshCore Feeder' : 'Managed Node'}</DialogTitle>
         <DialogDescription>
-          Select a constellation for your managed node. A constellation is a group of nodes that work together.
+          Select a {isMeshCore ? 'MeshCore' : 'Meshtastic'} constellation for your feeder. A constellation is a regional
+          group of nodes that work together.
         </DialogDescription>
       </DialogHeader>
 
@@ -363,13 +407,18 @@ export function SetupManagedNode({ node, isOpen, onClose }: SetupManagedNodeProp
               <SelectValue placeholder="Select a constellation" />
             </SelectTrigger>
             <SelectContent>
-              {constellations.map((constellation) => (
+              {eligibleConstellations.map((constellation) => (
                 <SelectItem key={constellation.id} value={constellation.id.toString()}>
                   {constellation.name}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
+          {eligibleConstellations.length === 0 ? (
+            <p className="text-sm text-amber-600 dark:text-amber-500">
+              No {isMeshCore ? 'MeshCore' : 'Meshtastic'} constellations are available. Ask an admin to create one.
+            </p>
+          ) : null}
         </div>
       </div>
 
@@ -377,7 +426,56 @@ export function SetupManagedNode({ node, isOpen, onClose }: SetupManagedNodeProp
         <Button variant="outline" onClick={onClose}>
           Cancel
         </Button>
-        <Button onClick={handleNextStep} disabled={!selectedConstellation || !nodeName}>
+        <Button
+          onClick={handleNextStep}
+          disabled={!selectedConstellation || !nodeName || eligibleConstellations.length === 0}
+        >
+          Next
+        </Button>
+      </DialogFooter>
+    </>
+  );
+
+  const renderPubkeyStep = () => (
+    <>
+      <DialogHeader>
+        <DialogTitle>Feeder public key</DialogTitle>
+        <DialogDescription>
+          Enter the full 64-character hexadecimal public key of your MeshCore radio. After connecting the bot once, find
+          it in bot logs as <code className="rounded bg-muted px-1">SELF_INFO</code> or the device pubkey field.
+        </DialogDescription>
+      </DialogHeader>
+
+      <div className="space-y-4 py-4">
+        <div className="space-y-2">
+          <Label htmlFor="mc-pubkey">mc_pubkey (64 hex)</Label>
+          <Input
+            id="mc-pubkey"
+            value={mcPubkey}
+            onChange={(e) => setMcPubkey(e.target.value)}
+            placeholder="a1b2c3d4… (64 characters)"
+            className="font-mono text-sm"
+            autoComplete="off"
+            spellCheck={false}
+          />
+          {observedNode.mc_pubkey ? (
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Pre-filled from this observed node. Confirm it matches the physical feeder you will connect.
+            </p>
+          ) : (
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              If you do not know the pubkey yet, connect the bot with upload disabled, copy the pubkey from logs, then
+              return here.
+            </p>
+          )}
+        </div>
+      </div>
+
+      <DialogFooter>
+        <Button variant="outline" onClick={handlePreviousStep}>
+          Back
+        </Button>
+        <Button onClick={handleNextStep} disabled={!mcPubkey.trim()}>
           Next
         </Button>
       </DialogFooter>
@@ -451,7 +549,11 @@ export function SetupManagedNode({ node, isOpen, onClose }: SetupManagedNodeProp
                     Channel {channelIndex}:
                   </Label>
                   <Select
-                    value={channelMappings[`channel_${channelIndex}` as keyof typeof channelMappings]?.toString() || ''}
+                    value={
+                      channelMappings[
+                        `meshtastic_channel_${channelIndex}` as keyof typeof channelMappings
+                      ]?.toString() || ''
+                    }
                     onValueChange={(value) => handleChannelChange(channelIndex, value ? Number(value) : null)}
                   >
                     <SelectTrigger id={`channel-${channelIndex}`} className="flex-1">
@@ -595,11 +697,12 @@ export function SetupManagedNode({ node, isOpen, onClose }: SetupManagedNodeProp
 
         {effectiveApiKey && config ? (
           <BotSetupInstructions
+            protocol={isMeshCore ? 'meshcore' : 'meshtastic'}
             apiKey={effectiveApiKey}
             apiBaseUrl={config.apis.meshBot.baseUrl}
             nodeShortName={nodeName}
             botDefaults={
-              selectedConstellation != null
+              !isMeshCore && selectedConstellation != null
                 ? (() => {
                     const c = constellations.find((x) => x.id === selectedConstellation);
                     return c
@@ -657,6 +760,8 @@ export function SetupManagedNode({ node, isOpen, onClose }: SetupManagedNodeProp
           </div>
         ) : currentStep === 'constellation' ? (
           renderConstellationStep()
+        ) : currentStep === 'pubkey' ? (
+          renderPubkeyStep()
         ) : currentStep === 'location' ? (
           renderLocationStep()
         ) : currentStep === 'channels' ? (

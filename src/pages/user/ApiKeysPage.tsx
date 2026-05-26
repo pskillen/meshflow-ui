@@ -11,6 +11,7 @@ import { useConstellationsSuspense } from '@/hooks/api/useConstellations';
 import { useMyManagedNodesSuspense } from '@/hooks/api/useNodes';
 import type { NodeApiKey } from '@/lib/models';
 import type { OwnedManagedNode } from '@/lib/models';
+import { apiKeyLinkedInternalIds, managedNodeStableKey } from '@/lib/managed-node-enrollment';
 
 function ApiKeysContent() {
   const api = useMeshtasticApi();
@@ -24,7 +25,7 @@ function ApiKeysContent() {
   const [apiKeyError, setApiKeyError] = useState<string | null>(null);
   const [assignKeyId, setAssignKeyId] = useState<string | null>(null);
   const [assignModalOpen, setAssignModalOpen] = useState(false);
-  const [selectedAssignNodes, setSelectedAssignNodes] = useState<number[]>([]);
+  const [selectedAssignInternalIds, setSelectedAssignInternalIds] = useState<string[]>([]);
   const [isAssigning, setIsAssigning] = useState(false);
   const [deleteKeyId, setDeleteKeyId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -60,16 +61,16 @@ function ApiKeysContent() {
     }
   };
 
-  const openAssignModal = (keyId: string, currentNodes: number[]) => {
+  const openAssignModal = (keyId: string, currentInternalIds: string[]) => {
     setAssignKeyId(keyId);
-    setSelectedAssignNodes(currentNodes);
+    setSelectedAssignInternalIds(currentInternalIds);
     setAssignModalOpen(true);
   };
 
   const closeAssignModal = () => {
     setAssignModalOpen(false);
     setAssignKeyId(null);
-    setSelectedAssignNodes([]);
+    setSelectedAssignInternalIds([]);
   };
 
   const handleAssignNodes = async () => {
@@ -78,14 +79,15 @@ function ApiKeysContent() {
     if (!apiKey) return;
     setIsAssigning(true);
     try {
-      for (const nodeId of selectedAssignNodes) {
-        if (!apiKey.nodes.includes(nodeId)) {
-          await api.addNodeToApiKey(assignKeyId, nodeId);
+      const currentlyLinked = apiKeyLinkedInternalIds(apiKey, myManagedNodes);
+      for (const internalId of selectedAssignInternalIds) {
+        if (!currentlyLinked.includes(internalId)) {
+          await api.addNodeToApiKey(assignKeyId, { managedNodeInternalId: internalId });
         }
       }
-      for (const nodeId of apiKey.nodes) {
-        if (!selectedAssignNodes.includes(nodeId)) {
-          await api.removeNodeFromApiKey(assignKeyId, nodeId);
+      for (const internalId of currentlyLinked) {
+        if (!selectedAssignInternalIds.includes(internalId)) {
+          await api.removeNodeFromApiKey(assignKeyId, { managedNodeInternalId: internalId });
         }
       }
       await queryClient.invalidateQueries({ queryKey: ['api-keys'] });
@@ -281,25 +283,29 @@ function ApiKeysContent() {
             </p>
             <div className="max-h-48 overflow-y-auto border rounded p-2 mb-4">
               {nodesForAssignModal.length > 0 ? (
-                nodesForAssignModal.map((node) => (
-                  <div key={node.meshtastic_node_id} className="flex items-center gap-2 mb-1">
-                    <input
-                      type="checkbox"
-                      id={`assign-node-${node.meshtastic_node_id}`}
-                      checked={selectedAssignNodes.includes(node.meshtastic_node_id)}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          setSelectedAssignNodes((prev) => [...prev, node.meshtastic_node_id]);
-                        } else {
-                          setSelectedAssignNodes((prev) => prev.filter((id) => id !== node.meshtastic_node_id));
-                        }
-                      }}
-                    />
-                    <label htmlFor={`assign-node-${node.meshtastic_node_id}`} className="text-sm cursor-pointer">
-                      {node.short_name || node.node_id_str}
-                    </label>
-                  </div>
-                ))
+                nodesForAssignModal.map((node) => {
+                  const stableKey = managedNodeStableKey(node);
+                  if (!node.internal_id) return null;
+                  return (
+                    <div key={stableKey} className="flex items-center gap-2 mb-1">
+                      <input
+                        type="checkbox"
+                        id={`assign-node-${stableKey}`}
+                        checked={selectedAssignInternalIds.includes(node.internal_id)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedAssignInternalIds((prev) => [...prev, node.internal_id!]);
+                          } else {
+                            setSelectedAssignInternalIds((prev) => prev.filter((id) => id !== node.internal_id));
+                          }
+                        }}
+                      />
+                      <label htmlFor={`assign-node-${stableKey}`} className="text-sm cursor-pointer">
+                        {node.short_name || node.node_id_str}
+                      </label>
+                    </div>
+                  );
+                })
               ) : (
                 <span className="text-sm text-muted-foreground">
                   No managed nodes in this constellation. Add nodes from{' '}
@@ -343,7 +349,7 @@ function ApiKeyCard({
   myManagedNodes: OwnedManagedNode[];
   onToggle: (keyId: string, isActive: boolean) => Promise<void>;
   onDelete: (keyId: string) => Promise<void>;
-  onAssignNodes: (keyId: string, currentNodes: number[]) => void;
+  onAssignNodes: (keyId: string, currentInternalIds: string[]) => void;
   onCopy: (text: string) => void;
   isToggling: boolean;
   isDeleting: boolean;
@@ -353,13 +359,11 @@ function ApiKeyCard({
       ? apiKey.constellation
       : ((apiKey.constellation as { id: number })?.id ?? 0);
   const constellationName = getConstellationName(constellationId);
-  const assignedNodeNames = apiKey.nodes
-    .map(
-      (nid) =>
-        myManagedNodes.find((n) => n.meshtastic_node_id === nid)?.short_name ||
-        myManagedNodes.find((n) => n.meshtastic_node_id === nid)?.node_id_str ||
-        `!${nid.toString(16)}`
-    )
+  const assignedNodeNames = apiKeyLinkedInternalIds(apiKey, myManagedNodes)
+    .map((internalId) => {
+      const n = myManagedNodes.find((m) => m.internal_id === internalId);
+      return n?.short_name || n?.node_id_str || internalId;
+    })
     .filter(Boolean);
 
   return (
@@ -397,7 +401,11 @@ function ApiKeyCard({
           >
             {apiKey.is_active ? 'Deactivate' : 'Activate'}
           </Button>
-          <Button size="sm" variant="outline" onClick={() => onAssignNodes(apiKey.id, apiKey.nodes)}>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => onAssignNodes(apiKey.id, apiKeyLinkedInternalIds(apiKey, myManagedNodes))}
+          >
             Assign/Remove Nodes
           </Button>
           <Button

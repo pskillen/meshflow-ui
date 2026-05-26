@@ -89,7 +89,7 @@ export function AutoTargetPreviewMap({
     const hours = mergedGeo.selector_params!.last_heard_within_hours;
     const cutoff = new Date(Date.now() - hours * 60 * 60 * 1000);
     return {
-      feederNodeId: feeder.meshtastic_node_id,
+      feederNodeId: feeder.meshtastic_node_id!,
       managedNodeIds,
       lastHeardCutoff: cutoff,
       geo: mergedGeo,
@@ -243,11 +243,11 @@ export function AutoTargetPreviewMap({
         {
           lat: feederLat,
           lng: feederLng,
-          meshtastic_node_id: feeder.meshtastic_node_id,
+          meshtastic_node_id: feeder.meshtastic_node_id ?? 0,
           node_id_str: feeder.node_id_str,
           short_name: feeder.short_name,
           long_name: feeder.long_name,
-          managed_node_id: String(feeder.meshtastic_node_id),
+          managed_node_id: String(feeder.meshtastic_node_id ?? feeder.node_id_str),
         },
       ],
       { id: 'auto-target-feeder-icons', size: 36, pickable: true }

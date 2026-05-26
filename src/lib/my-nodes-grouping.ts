@@ -233,8 +233,10 @@ function hasValidObservedPosition(p: Position | null | undefined): boolean {
 export function managedNodeToObservedNode(m: ManagedNode): ObservedNode {
   const latest_position = positionFromManaged(m);
   return {
-    internal_id: '',
-    meshtastic_node_id: m.meshtastic_node_id,
+    internal_id: m.internal_id ?? '',
+    meshtastic_node_id: m.meshtastic_node_id ?? 0,
+    protocol: m.protocol,
+    mc_pubkey: m.mc_pubkey ?? null,
     node_id_str: m.node_id_str,
     mac_addr: null,
     long_name: m.long_name,
@@ -257,21 +259,30 @@ export function mergeManagedPositionIntoObserved(node: ObservedNode, m: ManagedN
   return { ...node, latest_position: pos };
 }
 
+function mapKeyForObserved(node: Pick<ObservedNode, 'node_id_str' | 'meshtastic_node_id'>): string {
+  return node.node_id_str || String(node.meshtastic_node_id);
+}
+
+function mapKeyForManaged(m: ManagedNode): string {
+  return m.node_id_str || m.internal_id || String(m.meshtastic_node_id ?? '');
+}
+
 /**
- * Union of claimed + managed for `NodesMap` / battery chart: one entry per `meshtastic_node_id`.
+ * Union of claimed + managed for `NodesMap` / battery chart: one entry per node identity.
  * When both exist, claimed data wins; managed fills in default position if needed.
  */
 export function buildNodesForMap(claimed: ObservedNode[], managed: ManagedNode[]): ObservedNode[] {
-  const map = new Map<number, ObservedNode>();
+  const map = new Map<string, ObservedNode>();
   for (const c of claimed) {
-    map.set(c.meshtastic_node_id, c);
+    map.set(mapKeyForObserved(c), c);
   }
   for (const m of managed) {
-    const existing = map.get(m.meshtastic_node_id);
+    const key = mapKeyForManaged(m);
+    const existing = map.get(key);
     if (existing) {
-      map.set(m.meshtastic_node_id, mergeManagedPositionIntoObserved(existing, m));
+      map.set(key, mergeManagedPositionIntoObserved(existing, m));
     } else {
-      map.set(m.meshtastic_node_id, managedNodeToObservedNode(m));
+      map.set(key, managedNodeToObservedNode(m));
     }
   }
   return [...map.values()];

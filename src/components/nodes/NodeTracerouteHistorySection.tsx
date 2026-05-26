@@ -67,7 +67,7 @@ export function NodeTracerouteHistorySection({ nodeId, observedNode }: NodeTrace
   const handleRepeat = (tr: AutoTraceRoute) => {
     triggerMutation.mutate(
       {
-        managedNodeId: tr.source_node.meshtastic_node_id,
+        managedNodeId: tr.source_node.meshtastic_node_id!,
         targetNodeId: tr.target_node.meshtastic_node_id,
         targetStrategy:
           tr.target_strategy === 'intra_zone' ||

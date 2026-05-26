@@ -62,7 +62,15 @@ function InfrastructureExportContent() {
     includeStatus: true,
   });
 
-  const managedByMeshId = useMemo(() => new Map(managedNodes.map((m) => [m.meshtastic_node_id, m])), [managedNodes]);
+  const managedByMeshId = useMemo(
+    () =>
+      new Map(
+        managedNodes
+          .filter((m): m is typeof m & { meshtastic_node_id: number } => m.meshtastic_node_id != null)
+          .map((m) => [m.meshtastic_node_id, m])
+      ),
+    [managedNodes]
+  );
 
   const exportRows = useMemo(() => buildInfrastructureExportRows(nodes, managedByMeshId), [nodes, managedByMeshId]);
 

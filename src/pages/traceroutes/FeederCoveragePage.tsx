@@ -143,7 +143,8 @@ export function FeederCoveragePage() {
   useEffect(() => {
     if (selectedFeederId != null) return;
     if (feederOptions.length === 0) return;
-    setSelectedFeederId(feederOptions[0].meshtastic_node_id);
+    const firstId = feederOptions[0].meshtastic_node_id;
+    if (firstId != null) setSelectedFeederId(firstId);
   }, [feederOptions, selectedFeederId]);
 
   // Mirror selection into the URL so it's deep-linkable.

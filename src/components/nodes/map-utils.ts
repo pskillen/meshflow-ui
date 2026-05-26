@@ -131,7 +131,7 @@ function percentileSorted(sorted: number[], p: number): number {
 
 /** Minimal node fields for popup content */
 export interface NodePopupData extends NodeDetailLinkInput {
-  meshtastic_node_id: number;
+  meshtastic_node_id?: number | null;
   long_name: string | null;
   short_name: string | null;
   /** Date or ISO string – API may return either; we normalize to locale format */
