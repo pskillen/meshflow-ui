@@ -33,6 +33,8 @@ import {
   type NodeApiKey,
 } from '@/lib/models';
 import { SetupManagedNode } from '@/components/nodes/SetupManagedNode';
+import { apiKeyLinksManagedNode, isObservedNodeManaged, managedNodeStableKey } from '@/lib/managed-node-enrollment';
+import { meshProtocolFromManagedNode } from '@/lib/mesh-protocol';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMeshtasticApi } from '@/hooks/api/useApi';
 import { cn } from '@/lib/utils';
@@ -49,6 +51,7 @@ function NodeSettingsContent() {
   const [setupInstructionsKey, setSetupInstructionsKey] = useState<{
     apiKey: string;
     nodeShortName: string;
+    protocol: 'meshtastic' | 'meshcore';
     botDefaults?: { ignorePortnums?: string | null; hopLimit?: number | null };
   } | null>(null);
   const [cancelClaimInternalId, setCancelClaimInternalId] = useState<string | null>(null);
@@ -84,8 +87,7 @@ function NodeSettingsContent() {
     navigator.clipboard.writeText(text);
   };
 
-  // Create a Set of managed node IDs for quick lookup
-  const managedNodeIds = new Set(myManagedNodes.map((n) => n.meshtastic_node_id));
+  const isNodeManaged = (observed: ObservedNode) => isObservedNodeManaged(observed, myManagedNodes);
 
   // Fetch API keys
   const { data: apiKeys, isLoading: isLoadingApiKeys } = useQuery({
@@ -138,7 +140,7 @@ function NodeSettingsContent() {
                         >
                           View Node
                         </Link>
-                        {!managedNodeIds.has(node.meshtastic_node_id) && (
+                        {!isNodeManaged(node) && (
                           <Button
                             onClick={() => handleRunAsManagedNode(node)}
                             size="sm"
@@ -269,11 +271,12 @@ function NodeSettingsContent() {
               {myManagedNodes.length > 0 ? (
                 <Accordion type="multiple" className="space-y-2">
                   {myManagedNodes.map((node) => {
-                    const nodeApiKeys = apiKeys?.filter((key) => key.nodes.includes(node.meshtastic_node_id)) || [];
+                    const nodeApiKeys = apiKeys?.filter((key) => apiKeyLinksManagedNode(key, node)) || [];
+                    const stableKey = managedNodeStableKey(node);
                     return (
                       <AccordionItem
-                        key={node.meshtastic_node_id}
-                        value={`node-${node.meshtastic_node_id}`}
+                        key={stableKey}
+                        value={`node-${stableKey}`}
                         className="border-2 border-slate-300 dark:border-slate-500 rounded-lg bg-slate-50/80 dark:bg-slate-950/40 shadow-sm"
                       >
                         <AccordionTrigger className="px-4 py-3 hover:no-underline">
@@ -333,6 +336,7 @@ function NodeSettingsContent() {
                   <DialogTitle>Bot Setup Instructions</DialogTitle>
                 </DialogHeader>
                 <BotSetupInstructions
+                  protocol={setupInstructionsKey.protocol}
                   apiKey={setupInstructionsKey.apiKey}
                   apiBaseUrl={config.apis.meshBot.baseUrl}
                   nodeShortName={setupInstructionsKey.nodeShortName}
@@ -399,7 +403,8 @@ function NodeSettingsContent() {
               disabled={deleteManagedMutation.isPending}
               onClick={() => {
                 if (!unmanageManagedTarget) return;
-                deleteManagedMutation.mutate(unmanageManagedTarget.meshtastic_node_id, {
+                if (!unmanageManagedTarget.internal_id) return;
+                deleteManagedMutation.mutate(unmanageManagedTarget.internal_id, {
                   onSuccess: () => setUnmanageManagedTarget(null),
                 });
               }}
@@ -705,6 +710,7 @@ function ManagedNodeSettings({
     params: {
       apiKey: string;
       nodeShortName: string;
+      protocol: 'meshtastic' | 'meshcore';
       botDefaults?: { ignorePortnums?: string | null; hopLimit?: number | null };
     } | null
   ) => void;
@@ -726,8 +732,11 @@ function ManagedNodeSettings({
   const isChannelMapDirty = !channelMappingsEqual(mappings, savedMappings);
 
   const saveChannels = useMutation({
-    mutationFn: () =>
-      api.patchManagedNode(node.meshtastic_node_id, {
+    mutationFn: () => {
+      if (!node.internal_id) {
+        throw new Error('Managed node is missing internal_id');
+      }
+      return api.patchManagedNode(node.internal_id, {
         meshtastic_channel_0: mappings.meshtastic_channel_0,
         meshtastic_channel_1: mappings.meshtastic_channel_1,
         meshtastic_channel_2: mappings.meshtastic_channel_2,
@@ -736,7 +745,8 @@ function ManagedNodeSettings({
         meshtastic_channel_5: mappings.meshtastic_channel_5,
         meshtastic_channel_6: mappings.meshtastic_channel_6,
         meshtastic_channel_7: mappings.meshtastic_channel_7,
-      }),
+      });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['managed-nodes', 'mine'] });
       setChannelMapOpen(false);
@@ -937,6 +947,7 @@ function ManagedNodeSettings({
                           onShowSetupInstructions({
                             apiKey: apiKey.key,
                             nodeShortName: node.short_name || node.node_id_str,
+                            protocol: meshProtocolFromManagedNode(node) === 2 ? 'meshcore' : 'meshtastic',
                             botDefaults: node.constellation
                               ? {
                                   ignorePortnums:

@@ -271,13 +271,15 @@ describe('getPositionHint', () => {
 });
 
 describe('buildNodesForMap and merge', () => {
-  it('dedupes by meshtastic_node_id and merges managed position when observed has none', () => {
+  it('dedupes by node identity and merges managed position when observed has none', () => {
     const claimed = makeObserved({
       meshtastic_node_id: 42,
+      node_id_str: '!0000002a',
       latest_position: null,
     });
     const managed = makeManaged({
       meshtastic_node_id: 42,
+      node_id_str: '!0000002a',
       position: { latitude: 10, longitude: 20 },
     });
     const merged = buildNodesForMap([claimed], [managed]);
@@ -289,6 +291,7 @@ describe('buildNodesForMap and merge', () => {
   it('keeps claimed position when already valid', () => {
     const claimed = makeObserved({
       meshtastic_node_id: 42,
+      node_id_str: '!0000002a',
       latest_position: {
         latitude: 1,
         longitude: 2,
@@ -300,6 +303,7 @@ describe('buildNodesForMap and merge', () => {
     });
     const managed = makeManaged({
       meshtastic_node_id: 42,
+      node_id_str: '!0000002a',
       position: { latitude: 10, longitude: 20 },
     });
     const merged = buildNodesForMap([claimed], [managed]);
