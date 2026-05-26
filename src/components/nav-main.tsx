@@ -61,8 +61,6 @@ function isPathActive(pathname: string, url: string, exact: boolean) {
 
 function navSubItemActive(pathname: string, childUrl: string): boolean {
   switch (childUrl) {
-    case '/map':
-      return pathname === '/map';
     case '/meshtastic/dashboard':
       return pathname === '/meshtastic/dashboard';
     case '/meshcore/dashboard':
@@ -73,6 +71,12 @@ function navSubItemActive(pathname: string, childUrl: string): boolean {
       return pathname === '/meshcore/managed-nodes';
     case '/nodes':
       return pathname === '/nodes';
+    case '/nodes/my-nodes':
+      return pathname === '/nodes/my-nodes' || pathname.startsWith('/nodes/my-nodes/');
+    case '/nodes/infrastructure':
+      return pathname === '/nodes/infrastructure' || pathname.startsWith('/nodes/infrastructure/');
+    case '/meshcore/infrastructure':
+      return pathname === '/meshcore/infrastructure';
     case '/traceroutes/history':
       return pathname === '/traceroutes/history' || pathname.startsWith('/traceroutes/history/');
     case '/traceroutes/map/heat':
@@ -90,9 +94,7 @@ function navSubItemActive(pathname: string, childUrl: string): boolean {
 
 function buildNavSections(showDxMonitoring: boolean): NavSection[] {
   const meshtasticNodesChildren: NavChild[] = [
-    { title: 'Map', url: '/map', icon: MapIcon },
     { title: 'List', url: '/nodes', icon: ListIcon },
-    { title: 'My nodes', url: '/nodes/my-nodes', icon: RadioIcon },
     { title: 'Managed nodes', url: '/nodes/managed-nodes', icon: ActivityIcon },
     { title: 'Watches', url: '/nodes/monitor', icon: ActivityIcon },
     ...(showDxMonitoring ? [{ title: 'DX monitoring', url: '/nodes/dx-monitoring', icon: ScanSearchIcon }] : []),
@@ -104,6 +106,7 @@ function buildNavSections(showDxMonitoring: boolean): NavSection[] {
       items: [
         { title: 'Dashboard', url: '/', icon: BarChartIcon },
         { title: 'Weather', url: '/weather', icon: CloudRainIcon },
+        { title: 'My nodes', url: '/nodes/my-nodes', icon: RadioIcon },
       ],
     },
     {
@@ -147,6 +150,7 @@ function buildNavSections(showDxMonitoring: boolean): NavSection[] {
           children: [
             { title: 'List', url: '/meshcore/nodes', icon: ListIcon },
             { title: 'Managed nodes', url: '/meshcore/managed-nodes', icon: ActivityIcon },
+            { title: 'Mesh infra', url: '/meshcore/infrastructure', icon: ServerIcon },
           ],
         },
       ],

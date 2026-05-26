@@ -10,15 +10,15 @@ import {
 
 describe('mesh-protocol config', () => {
   it('meshtastic routes use legacy paths', () => {
-    expect(MESHTASTIC_CONFIG.routes.map).toBe('/map');
     expect(MESHTASTIC_CONFIG.routes.nodes).toBe('/nodes');
     expect(MESHTASTIC_CONFIG.routes.managedNodes).toBe('/nodes/managed-nodes');
+    expect(MESHTASTIC_CONFIG.routes.infrastructure).toBe('/nodes/infrastructure');
   });
 
   it('meshcore routes use meshcore prefix', () => {
-    expect(MESHCORE_CONFIG.routes.map).toBeUndefined();
     expect(MESHCORE_CONFIG.routes.messages).toBe('/meshcore/messages');
     expect(MESHCORE_CONFIG.routes.managedNodes).toBe('/meshcore/managed-nodes');
+    expect(MESHCORE_CONFIG.routes.infrastructure).toBe('/meshcore/infrastructure');
   });
 
   it('meshtastic messages route', () => {

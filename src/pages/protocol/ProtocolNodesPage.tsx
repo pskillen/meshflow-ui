@@ -1,7 +1,6 @@
 import { useProtocolObservedNodesSuspense } from '@/hooks/api/useProtocolNodes';
 import { useManagedNodesSuspense } from '@/hooks/api/useNodes';
 import { useMeshCoreManagedNodesSuspense } from '@/hooks/api/useMeshCore';
-import { subHours } from 'date-fns';
 import { useMemo, useState } from 'react';
 import { NodeCard } from '@/components/nodes/NodeCard';
 import { NodesAndConstellationsMap } from '@/components/nodes/NodesAndConstellationsMap';
@@ -17,26 +16,11 @@ import type { ObservedNode } from '@/lib/models';
 import { Link } from 'react-router-dom';
 import { filterManagedNodesForMapDisplay } from '@/lib/managed-node-status';
 import { buildMeshCoreMapNodes } from '@/lib/meshcore-map-nodes';
-import { StaleReportedTime } from '@/components/nodes/StaleReportedTime';
 import type { ProtocolPageConfig } from '@/lib/mesh-protocol';
 import { NODE_TIME_RANGE_OPTIONS, getLastHeardAfterForRange, type NodeTimeRangeOption } from '@/lib/node-time-range';
 import { formatDistanceToNow } from 'date-fns';
 
 type SortOption = 'last_heard' | 'name';
-
-function RecentNodeChip({ node, config }: { node: ObservedNode; config: ProtocolPageConfig }) {
-  return (
-    <Link
-      to={config.routes.nodeDetail(node.internal_id)}
-      className="flex-shrink-0 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary/10 hover:bg-primary/20 transition-colors border border-primary/20"
-    >
-      <span className="font-medium text-sm truncate max-w-[120px]">{node.short_name || node.node_id_str}</span>
-      <span className="text-xs text-muted-foreground">
-        <StaleReportedTime at={node.last_heard ?? null} fallback="Never" className="text-inherit" />
-      </span>
-    </Link>
-  );
-}
 
 function IdentityOnlyTable({ nodes, config }: { nodes: ObservedNode[]; config: ProtocolPageConfig }) {
   return (
@@ -94,19 +78,11 @@ function ProtocolNodesPageContent({
   config,
   managedNodesForMap,
 }: ProtocolNodesPageProps & { managedNodesForMap: ReturnType<typeof filterManagedNodesForMapDisplay> }) {
-  const now = useMemo(() => new Date(), []);
-  const twoHoursAgo = useMemo(() => subHours(now, 2), [now]);
-
   const [timeRange, setTimeRange] = useState<NodeTimeRangeOption>('7d');
   const [sortBy, setSortBy] = useState<SortOption>('last_heard');
   const [searchQuery, setSearchQuery] = useState('');
 
   const lastHeardAfter = useMemo(() => getLastHeardAfterForRange(timeRange), [timeRange]);
-
-  const { nodes: recentNodes } = useProtocolObservedNodesSuspense(config, {
-    lastHeardAfter: config.features.showRecentBar ? twoHoursAgo : undefined,
-    pageSize: 20,
-  });
 
   const {
     nodes: mainListNodes,
@@ -218,21 +194,6 @@ function ProtocolNodesPageContent({
           </div>
         </div>
       </div>
-
-      {config.features.showRecentBar && recentNodes.length > 0 && (
-        <Card className="mb-6">
-          <CardHeader className="py-3">
-            <CardTitle className="text-base">Seen in last 2 hours</CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin">
-              {recentNodes.map((node) => (
-                <RecentNodeChip key={node.internal_id} node={node} config={config} />
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       <div className="relative mb-6">
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
