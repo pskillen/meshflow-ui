@@ -32,7 +32,20 @@ const DEFAULT_HANDLERS: Array<{ pattern: string | RegExp; handler: RouteHandler 
   ['**/config.json', createJsonHandler(loadFixture('config.json'))],
   ['**/api/auth/user/**', createJsonHandler(loadFixture('auth-user.json'))],
   ['**/api/nodes/observed-nodes/**', createJsonHandler(loadFixture('observed-nodes.json'))],
-  ['**/api/nodes/observed-nodes/recent_counts/**', createJsonHandler(loadFixture('observed-nodes-recent-counts.json'))],
+  [
+    '**/api/nodes/observed-nodes/recent_counts**',
+    (route) => {
+      const url = route.request().url();
+      const fixture = url.includes('protocol=meshcore')
+        ? 'observed-nodes-recent-counts-meshcore.json'
+        : 'observed-nodes-recent-counts.json';
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(loadFixture(fixture)),
+      });
+    },
+  ],
   ['**/api/nodes/managed-nodes/**', createJsonHandler(loadFixture('managed-nodes.json'))],
   ['**/api/constellations/**', createJsonHandler(loadFixture('constellations.json'))],
   ['**/api/stats/global/**', createJsonHandler(loadFixture('stats-global.json'))],
@@ -40,7 +53,11 @@ const DEFAULT_HANDLERS: Array<{ pattern: string | RegExp; handler: RouteHandler 
     '**/api/stats/snapshots/**',
     (route: Route) => {
       const url = route.request().url();
-      const fixture = url.includes('packet_volume') ? 'stats-snapshots-packet-volume.json' : 'stats-snapshots.json';
+      let fixture = 'stats-snapshots.json';
+      if (url.includes('mc_packet_volume')) fixture = 'stats-snapshots-mc-packet-volume.json';
+      else if (url.includes('packet_volume')) fixture = 'stats-snapshots-packet-volume.json';
+      else if (url.includes('mc_online_nodes') || url.includes('mc_new_nodes'))
+        fixture = 'stats-snapshots-mc-nodes.json';
       return route.fulfill({
         status: 200,
         contentType: 'application/json',

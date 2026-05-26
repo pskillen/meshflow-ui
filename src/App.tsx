@@ -32,6 +32,8 @@ import MonitorNodes from '@/pages/nodes/monitor';
 import DxMonitoringPage from '@/pages/nodes/DxMonitoringPage';
 import { MeshCoreNodesList } from '@/pages/meshcore/MeshCoreNodesList';
 import { MeshCoreMessages } from '@/pages/meshcore/MeshCoreMessages';
+import { MeshCoreDashboard } from '@/pages/meshcore/MeshCoreDashboard';
+import { MeshtasticDashboard } from '@/pages/meshtastic/MeshtasticDashboard';
 
 const ManagedNodesStatus = lazy(() => import('@/pages/nodes/ManagedNodesStatus'));
 const MeshCoreManagedNodesStatus = lazy(() =>
@@ -59,6 +61,8 @@ function App() {
                   <Route path="/nodes/:id" element={<NodeDetails />} />
                   <Route path="/map" element={<NodeMap />} />
                   <Route path="/messages" element={<MessageHistory />} />
+                  <Route path="/meshtastic/dashboard" element={<MeshtasticDashboard />} />
+                  <Route path="/meshcore/dashboard" element={<MeshCoreDashboard />} />
                   <Route path="/meshcore/nodes" element={<MeshCoreNodesList />} />
                   <Route path="/meshcore/messages" element={<MeshCoreMessages />} />
                   <Route path="/meshcore/map" element={<Navigate to="/meshcore/nodes" replace />} />

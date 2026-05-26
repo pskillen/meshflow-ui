@@ -1,7 +1,6 @@
-import { NodeActivityTable } from '@/components/NodeActivityTable';
 import { NodesAndConstellationsMap } from '@/components/nodes/NodesAndConstellationsMap';
-import { useNodesSuspense, useManagedNodesSuspense, useRecentNodeCountsSuspense } from '@/hooks/api/useNodes';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { useManagedNodesSuspense, useRecentNodeCountsSuspense } from '@/hooks/api/useNodes';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Suspense, useMemo } from 'react';
 import { filterManagedNodesForMapDisplay } from '@/lib/managed-node-status';
 import { MeshStatsSection } from '@/components/MeshStatsSection';
@@ -17,9 +16,21 @@ const COUNT_COLUMNS = [
   { key: 'all', label: 'All time' },
 ] as const;
 
+function RecentCountsRow({ label, protocol }: { label: string; protocol: 'meshtastic' | 'meshcore' }) {
+  const counts = useRecentNodeCountsSuspense(protocol);
+  return (
+    <TableRow>
+      <TableCell className="font-medium">{label}</TableCell>
+      {COUNT_COLUMNS.map((col) => (
+        <TableCell key={col.key} className="text-center font-mono tabular-nums">
+          {counts[col.key] ?? '—'}
+        </TableCell>
+      ))}
+    </TableRow>
+  );
+}
+
 function DashboardContent() {
-  const counts = useRecentNodeCountsSuspense();
-  const { nodes } = useNodesSuspense();
   const { managedNodes } = useManagedNodesSuspense({ includeStatus: true });
   const managedNodesForMap = useMemo(() => filterManagedNodesForMapDisplay(managedNodes), [managedNodes]);
 
@@ -34,6 +45,7 @@ function DashboardContent() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead>Protocol</TableHead>
                   {COUNT_COLUMNS.map((col) => (
                     <TableHead key={col.key} className="text-center">
                       {col.label}
@@ -42,13 +54,8 @@ function DashboardContent() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                <TableRow>
-                  {COUNT_COLUMNS.map((col) => (
-                    <TableCell key={col.key} className="text-center font-mono tabular-nums">
-                      {counts[col.key] ?? '—'}
-                    </TableCell>
-                  ))}
-                </TableRow>
+                <RecentCountsRow label="Meshtastic" protocol="meshtastic" />
+                <RecentCountsRow label="MeshCore" protocol="meshcore" />
               </TableBody>
             </Table>
           </CardContent>
@@ -58,15 +65,10 @@ function DashboardContent() {
         <Card>
           <CardHeader>
             <CardTitle>Meshflow Map</CardTitle>
-            <CardDescription>
-              <p>
-                Constellations represent local regions on the mesh. Below is a map of nodes which report into Meshflow.
-              </p>
-              <p>
-                Click on a node to view more information about it. View the <Link to="nodes">Nodes page</Link> for a
-                list of all nodes.
-              </p>
-            </CardDescription>
+            <p className="text-sm text-muted-foreground">
+              Constellations represent local regions on the mesh. Below is a map of nodes which report into Meshflow.
+              Click on a node to view more information. View the <Link to="nodes">Nodes page</Link> for a list.
+            </p>
           </CardHeader>
           <CardContent>
             <div className="h-[600px] w-full">
@@ -80,10 +82,7 @@ function DashboardContent() {
         </Card>
       </div>
       <div className="px-4 lg:px-6">
-        <MeshStatsSection />
-      </div>
-      <div className="px-4 lg:px-6" data-testid="dashboard-node-activity">
-        <NodeActivityTable nodes={nodes || []} />
+        <MeshStatsSection protocolScope="both" />
       </div>
     </div>
   );

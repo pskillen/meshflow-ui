@@ -547,7 +547,7 @@ export interface NeighbourStats {
 export interface StatsSnapshot {
   id: number;
   recorded_at: string;
-  stat_type: 'online_nodes' | 'new_nodes' | 'packet_volume';
+  stat_type: 'online_nodes' | 'new_nodes' | 'packet_volume' | 'mc_online_nodes' | 'mc_new_nodes' | 'mc_packet_volume';
   constellation_id: number | null;
   value: {
     count: number;

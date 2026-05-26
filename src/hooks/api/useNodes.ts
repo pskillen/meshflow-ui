@@ -262,12 +262,12 @@ export type RecentNodeCounts = Record<string, number>;
  * Suspense-enabled hook to fetch recent node counts by time window.
  * Returns: { "2": n, "24": n, "168": n, "720": n, "2160": n, "all": n }
  */
-export function useRecentNodeCountsSuspense() {
+export function useRecentNodeCountsSuspense(protocol?: 'meshtastic' | 'meshcore') {
   const api = useMeshflowApi();
   const query = useSuspenseQuery<RecentNodeCounts, Error>({
     refetchInterval: 1000 * 60, // 1 minute
-    queryKey: ['nodes', 'recent-counts'],
-    queryFn: () => api.getRecentNodeCounts(),
+    queryKey: ['nodes', 'recent-counts', protocol ?? 'all'],
+    queryFn: () => api.getRecentNodeCounts(protocol),
   });
   return query.data;
 }

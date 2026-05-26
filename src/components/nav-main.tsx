@@ -63,6 +63,14 @@ function navSubItemActive(pathname: string, childUrl: string): boolean {
   switch (childUrl) {
     case '/map':
       return pathname === '/map';
+    case '/meshtastic/dashboard':
+      return pathname === '/meshtastic/dashboard';
+    case '/meshcore/dashboard':
+      return pathname === '/meshcore/dashboard';
+    case '/meshcore/nodes':
+      return pathname === '/meshcore/nodes' || pathname.startsWith('/meshcore/nodes/');
+    case '/meshcore/managed-nodes':
+      return pathname === '/meshcore/managed-nodes';
     case '/nodes':
       return pathname === '/nodes';
     case '/traceroutes/history':
@@ -101,6 +109,7 @@ function buildNavSections(showDxMonitoring: boolean): NavSection[] {
     {
       label: 'Meshtastic',
       items: [
+        { title: 'Dashboard', url: '/meshtastic/dashboard', icon: BarChartIcon },
         { title: 'Messages', url: '/messages', icon: MessageSquareIcon },
         {
           title: 'Nodes',
@@ -129,9 +138,17 @@ function buildNavSections(showDxMonitoring: boolean): NavSection[] {
     {
       label: 'MeshCore',
       items: [
+        { title: 'Dashboard', url: '/meshcore/dashboard', icon: BarChartIcon },
         { title: 'Messages', url: '/meshcore/messages', icon: MessageSquareIcon },
-        { title: 'Nodes', url: '/meshcore/nodes', icon: ListIcon },
-        { title: 'Managed nodes', url: '/meshcore/managed-nodes', icon: ActivityIcon },
+        {
+          title: 'Nodes',
+          url: '/meshcore/nodes',
+          icon: NetworkIcon,
+          children: [
+            { title: 'List', url: '/meshcore/nodes', icon: ListIcon },
+            { title: 'Managed nodes', url: '/meshcore/managed-nodes', icon: ActivityIcon },
+          ],
+        },
       ],
     },
   ];

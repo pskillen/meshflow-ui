@@ -46,10 +46,17 @@ describe('NavMain', () => {
     expect(screen.getAllByText('MeshCore').length).toBeGreaterThanOrEqual(1);
   });
 
-  it('keeps Dashboard and Weather at top level', () => {
+  it('keeps home Dashboard and Weather at top level', () => {
     renderNavAt('/');
-    expect(screen.getByText('Dashboard')).toBeInTheDocument();
+    expect(screen.getAllByText('Dashboard').length).toBeGreaterThanOrEqual(3);
     expect(screen.getByText('Weather')).toBeInTheDocument();
+  });
+
+  it('lists protocol dashboards under Meshtastic and MeshCore', () => {
+    renderNavAt('/');
+    const dashLinks = screen.getAllByRole('link', { name: 'Dashboard' });
+    expect(dashLinks.some((el) => el.getAttribute('href') === '/meshtastic/dashboard')).toBe(true);
+    expect(dashLinks.some((el) => el.getAttribute('href') === '/meshcore/dashboard')).toBe(true);
   });
 
   it('marks Messages active on /messages', () => {
@@ -66,7 +73,7 @@ describe('NavMain', () => {
     expect(link?.closest('[data-active="true"]')).toBeTruthy();
   });
 
-  it('marks MeshCore managed nodes active on /meshcore/managed-nodes', () => {
+  it('marks MeshCore managed nodes child active on /meshcore/managed-nodes', () => {
     renderNavAt('/meshcore/managed-nodes');
     const links = screen.getAllByRole('link', { name: 'Managed nodes' });
     const meshcoreLink = links.find((el) => el.getAttribute('href') === '/meshcore/managed-nodes');
