@@ -71,6 +71,26 @@ describe('BotSetupInstructions', () => {
     expect(embeddedContent).toContain('TEXT_MESSAGE_MAX_HOPS=7');
   });
 
+  it('uses STORAGE_API_VERSION=3 for Meshtastic compose', () => {
+    const { container } = render(
+      <BotSetupInstructions apiKey="test-key" apiBaseUrl="https://api.example.com" protocol="meshtastic" />
+    );
+    const embeddedContent = getEmbeddedDockerComposeContent(container);
+    expect(embeddedContent).toContain('STORAGE_API_VERSION=3');
+    expect(embeddedContent).not.toContain('STORAGE_API_VERSION=2');
+  });
+
+  it('renders MeshCore compose with RADIO_PROTOCOL=meshcore', () => {
+    const { container } = render(
+      <BotSetupInstructions apiKey="test-key" apiBaseUrl="https://api.example.com" protocol="meshcore" />
+    );
+    const pres = container.querySelectorAll('pre');
+    const meshcoreCompose = Array.from(pres).find((pre) => (pre.textContent || '').includes('RADIO_PROTOCOL=meshcore'));
+    expect(meshcoreCompose).toBeTruthy();
+    expect(meshcoreCompose?.textContent).toContain('MESHCORE_UPLOAD_ENABLED=true');
+    expect(meshcoreCompose?.textContent).toContain('STORAGE_API_VERSION=3');
+  });
+
   it('omits hop limit env vars when hopLimit is out of range', () => {
     const { container } = render(
       <BotSetupInstructions
