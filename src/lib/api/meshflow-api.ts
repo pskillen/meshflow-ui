@@ -217,6 +217,7 @@ export class MeshflowApi extends BaseApi {
     page?: number;
     pageSize?: number;
     includeClientBase?: boolean;
+    protocol?: 'meshtastic' | 'meshcore';
   }): Promise<PaginatedResponse<ObservedNode>> {
     const searchParams = new URLSearchParams();
     if (params?.page) searchParams.append('page', params.page.toString());
@@ -226,6 +227,9 @@ export class MeshflowApi extends BaseApi {
     }
     if (params?.includeClientBase) {
       searchParams.append('include_client_base', 'true');
+    }
+    if (params?.protocol) {
+      searchParams.append('protocol', params.protocol);
     }
 
     const response = await this.get<PaginatedResponse<ObservedNode>>(

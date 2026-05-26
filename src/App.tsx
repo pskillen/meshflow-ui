@@ -14,7 +14,6 @@ import { WebSocketProvider } from '@/providers/WebSocketProvider';
 import { NodesList } from '@/pages/nodes/NodesList';
 import { MeshInfrastructure } from '@/pages/nodes/MeshInfrastructure';
 import { Weather } from '@/pages/Weather';
-import { NodeMap } from '@/pages/map/NodeMap';
 import { MessageHistory } from '@/pages/messages/MessageHistory';
 import { Dashboard } from '@/pages/Dashboard';
 import { NodeDetails } from '@/pages/nodes/NodeDetails';
@@ -59,7 +58,7 @@ function App() {
                   <Route path="/" element={<Dashboard />} />
                   <Route path="/nodes" element={<NodesList />} />
                   <Route path="/nodes/:id" element={<NodeDetails />} />
-                  <Route path="/map" element={<NodeMap />} />
+                  <Route path="/map" element={<Navigate to="/nodes" replace />} />
                   <Route path="/messages" element={<MessageHistory />} />
                   <Route path="/meshtastic/dashboard" element={<MeshtasticDashboard />} />
                   <Route path="/meshcore/dashboard" element={<MeshCoreDashboard />} />
@@ -97,7 +96,8 @@ function App() {
                     </ProtectedRoute>
                   }
                 >
-                  <Route path="/nodes/infrastructure" element={<MeshInfrastructure />} />
+                  <Route path="/nodes/infrastructure" element={<MeshInfrastructure protocol="meshtastic" />} />
+                  <Route path="/meshcore/infrastructure" element={<MeshInfrastructure protocol="meshcore" />} />
                   <Route
                     path="/nodes/infrastructure/export"
                     element={

@@ -12,6 +12,10 @@ import { useNodeWatches } from '@/hooks/api/useNodeWatches';
 import { useMultiNodeMetricsSuspense } from '@/hooks/api/useMultiNodeMetrics';
 import { InfrastructureNodeCard } from '@/components/nodes/InfrastructureNodeCard';
 import { NodesAndConstellationsMap } from '@/components/nodes/NodesAndConstellationsMap';
+import { NodesMap } from '@/components/nodes/NodesMap';
+import { buildMeshCoreMapNodes } from '@/lib/meshcore-map-nodes';
+import { meshProtocolFromManagedNode, type ProtocolSlug } from '@/lib/mesh-protocol';
+import type { ManagedNode } from '@/lib/models';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { MonitoredNodesBatteryChart } from '@/components/nodes/MonitoredNodesBatteryChart';
 import { MonitoredNodesChannelUtilChart } from '@/components/nodes/MonitoredNodesChannelUtilChart';
@@ -87,6 +91,18 @@ function getLastLocationReported(node: ObservedNode): Date | null {
   return new Date(pos.reported_time);
 }
 
+type InfraProtocol = ProtocolSlug;
+
+function infraNodeKey(node: ObservedNode): string {
+  return node.node_id_str || String(node.internal_id);
+}
+
+function feederCoverageHref(node: ObservedNode, managed: ManagedNode | undefined): string | null {
+  const feederId = managed?.meshtastic_node_id ?? node.meshtastic_node_id;
+  if (feederId == null || feederId === 0) return null;
+  return `/traceroutes/map/coverage?feeder=${feederId}`;
+}
+
 function hasRecentLocation(node: ObservedNode): boolean {
   const pos = node.latest_position as {
     latitude?: number;
@@ -103,7 +119,8 @@ function hasRecentLocation(node: ObservedNode): boolean {
   return reportedTime >= cutoff;
 }
 
-function MeshInfrastructureContent() {
+function MeshInfrastructureContent({ protocol }: { protocol: InfraProtocol }) {
+  const isMeshtastic = protocol === 'meshtastic';
   const [timeRange, setTimeRange] = useState<NodeListTimeRange>('14d');
   const [includeClientBase, setIncludeClientBase] = useState(false);
   const [chartTimeRangeLabel, setChartTimeRangeLabel] = useState('7d');
@@ -114,18 +131,20 @@ function MeshInfrastructureContent() {
 
   const lastHeardAfter = useMemo(() => getLastHeardAfter(timeRange), [timeRange]);
 
-  const [selectedChartNodeIds, setSelectedChartNodeIds] = useState<Set<number>>(() => new Set());
+  const [selectedChartNodeIds, setSelectedChartNodeIds] = useState<Set<string>>(() => new Set());
 
   const { nodes, totalNodes, fetchNextPage, hasNextPage } = useInfrastructureNodesSuspense({
     lastHeardAfter,
     pageSize: 12,
-    includeClientBase,
+    includeClientBase: isMeshtastic ? includeClientBase : false,
+    protocol,
   });
 
   /** Full list for map + alert tables; the paged `nodes` above only includes loaded card pages. */
   const { nodes: allInfraNodes } = useAllInfrastructureNodesSuspense({
     lastHeardAfter,
-    includeClientBase,
+    includeClientBase: isMeshtastic ? includeClientBase : false,
+    protocol,
   });
 
   const watchesQuery = useNodeWatches();
@@ -142,13 +161,35 @@ function MeshInfrastructureContent() {
     includeStatus: true,
     includeGeoClassification: true,
   });
-  const managedByMeshId = useMemo(() => new Map(managedNodes.map((m) => [m.meshtastic_node_id, m])), [managedNodes]);
-  const managedNodesForMap = useMemo(() => filterManagedNodesForMapDisplay(managedNodes), [managedNodes]);
+  const protocolManagedNodes = useMemo(
+    () => managedNodes.filter((m) => meshProtocolFromManagedNode(m) === (isMeshtastic ? 1 : 2)),
+    [managedNodes, isMeshtastic]
+  );
+  const managedByNodeIdStr = useMemo(
+    () => new Map(protocolManagedNodes.map((m) => [m.node_id_str, m])),
+    [protocolManagedNodes]
+  );
+  const managedNodesForMap = useMemo(
+    () => filterManagedNodesForMapDisplay(protocolManagedNodes),
+    [protocolManagedNodes]
+  );
 
-  const { metricsMap } = useMultiNodeMetricsSuspense(nodes, chartDateRange);
+  const { metricsMap } = useMultiNodeMetricsSuspense(isMeshtastic ? nodes : [], chartDateRange);
 
   const nodesWithLocation = useMemo(() => allInfraNodes.filter(hasRecentLocation), [allInfraNodes]);
   const nodesWithoutLocation = useMemo(() => allInfraNodes.filter((n) => !hasRecentLocation(n)), [allInfraNodes]);
+
+  const mapObservedNodes = useMemo(() => {
+    if (isMeshtastic) {
+      return nodesWithLocation;
+    }
+    return buildMeshCoreMapNodes(nodesWithLocation, managedNodesForMap);
+  }, [isMeshtastic, nodesWithLocation, managedNodesForMap]);
+
+  const mapObservedWithPosition = useMemo(
+    () => mapObservedNodes.filter((n) => n.latest_position?.latitude != null && n.latest_position?.longitude != null),
+    [mapObservedNodes]
+  );
 
   const lowBatteryNodesOrdered = useMemo(() => partitionMeshInfraLowBatteryTableNodes(allInfraNodes), [allInfraNodes]);
 
@@ -188,13 +229,14 @@ function MeshInfrastructureContent() {
   }, [lowBatteryNodesOrdered, lowBatteryTableFilters]);
 
   const nodeAlertRing = useMemo(() => {
+    if (!isMeshtastic) return new Map<number, 'diamond' | 'rounded-square'>();
     const m = new Map<number, 'diamond' | 'rounded-square'>();
     for (const n of allInfraNodes) {
       if (!hasMeshInfraMapBatteryOrPresenceAlert(n)) continue;
       m.set(n.meshtastic_node_id, n.meshtastic_node_id % 2 === 0 ? 'diamond' : 'rounded-square');
     }
     return m;
-  }, [allInfraNodes]);
+  }, [allInfraNodes, isMeshtastic]);
 
   const sortedNodes = useMemo(
     () =>
@@ -207,16 +249,16 @@ function MeshInfrastructureContent() {
   );
 
   const chartNodes = useMemo(
-    () => nodes.filter((n) => selectedChartNodeIds.has(n.meshtastic_node_id)),
+    () => nodes.filter((n) => selectedChartNodeIds.has(infraNodeKey(n))),
     [nodes, selectedChartNodeIds]
   );
 
-  const handleCompareToggle = useCallback((nodeId: number, newState: boolean) => {
+  const handleCompareToggle = useCallback((nodeKey: string, newState: boolean) => {
     const savedScrollY = typeof window !== 'undefined' ? window.scrollY : 0;
     setSelectedChartNodeIds((prev) => {
       const next = new Set(prev);
-      if (newState) next.add(nodeId);
-      else next.delete(nodeId);
+      if (newState) next.add(nodeKey);
+      else next.delete(nodeKey);
       return next;
     });
     requestAnimationFrame(() => {
@@ -234,11 +276,19 @@ function MeshInfrastructureContent() {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold">Mesh Infrastructure</h1>
-        <div className="mt-2 flex items-center gap-2">
-          <Switch id="include-client-base" checked={includeClientBase} onCheckedChange={setIncludeClientBase} />
-          <Label htmlFor="include-client-base">Include CLIENT_BASE</Label>
-        </div>
+        <h1 className="text-3xl font-bold">
+          {isMeshtastic ? 'Meshtastic Mesh Infrastructure' : 'MeshCore Mesh Infrastructure'}
+        </h1>
+        {isMeshtastic ? (
+          <div className="mt-2 flex items-center gap-2">
+            <Switch id="include-client-base" checked={includeClientBase} onCheckedChange={setIncludeClientBase} />
+            <Label htmlFor="include-client-base">Include CLIENT_BASE</Label>
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground mt-2">
+            Observed MeshCore nodes heard in the selected time range, with managed feeders on the map.
+          </p>
+        )}
       </div>
 
       <div className="flex flex-col sm:flex-row flex-wrap justify-between items-start sm:items-center gap-4 mb-8">
@@ -259,9 +309,11 @@ function MeshInfrastructureContent() {
             </SelectContent>
           </Select>
         </div>
-        <Button variant="outline" size="sm" asChild>
-          <Link to={`/nodes/infrastructure/export?last_heard=${timeRange}`}>Export table</Link>
-        </Button>
+        {isMeshtastic ? (
+          <Button variant="outline" size="sm" asChild>
+            <Link to={`/nodes/infrastructure/export?last_heard=${timeRange}`}>Export table</Link>
+          </Button>
+        ) : null}
       </div>
 
       <div className="mb-8">
@@ -271,16 +323,20 @@ function MeshInfrastructureContent() {
           </CardHeader>
           <CardContent>
             <div className="h-[600px] w-full">
-              <NodesAndConstellationsMap
-                observedNodes={nodesWithLocation}
-                managedNodes={managedNodesForMap}
-                showConstellation={true}
-                showUnmanagedNodes={true}
-                drawPositionUncertainty={true}
-                enableBubbles={true}
-                showRoleLegendSwatches={false}
-                getNodeAlertRing={(nodeId) => nodeAlertRing.get(nodeId) ?? null}
-              />
+              {isMeshtastic ? (
+                <NodesAndConstellationsMap
+                  observedNodes={nodesWithLocation}
+                  managedNodes={managedNodesForMap}
+                  showConstellation={true}
+                  showUnmanagedNodes={true}
+                  drawPositionUncertainty={true}
+                  enableBubbles={true}
+                  showRoleLegendSwatches={false}
+                  getNodeAlertRing={(nodeId) => nodeAlertRing.get(nodeId) ?? null}
+                />
+              ) : (
+                <NodesMap nodes={mapObservedWithPosition} roleLegend="meshcore" />
+              )}
             </div>
           </CardContent>
         </Card>
@@ -320,7 +376,8 @@ function MeshInfrastructureContent() {
                     !node.last_heard ||
                     (node.last_heard instanceof Date ? node.last_heard : new Date(node.last_heard)) < cutoff;
                   const watch = watchesByNodeIdStr.get(node.node_id_str);
-                  const managed = managedByMeshId.get(node.meshtastic_node_id);
+                  const managed = managedByNodeIdStr.get(node.node_id_str);
+                  const coverageHref = isMeshtastic ? feederCoverageHref(node, managed) : null;
                   return (
                     <TableRow key={node.internal_id}>
                       <TableCell>
@@ -383,7 +440,7 @@ function MeshInfrastructureContent() {
                           node={node}
                           watch={watch}
                           watchesQuery={watchesQuery}
-                          idPrefix={`infra-no-loc-${node.meshtastic_node_id}`}
+                          idPrefix={`infra-no-loc-${infraNodeKey(node)}`}
                         />
                       </TableCell>
                       <TableCell>
@@ -394,11 +451,11 @@ function MeshInfrastructureContent() {
                           >
                             View details
                           </Link>
-                          {managed != null && (
+                          {coverageHref != null && (
                             <Link
-                              to={`/traceroutes/map/coverage?feeder=${node.meshtastic_node_id}`}
+                              to={coverageHref}
                               className="text-muted-foreground text-sm underline-offset-4 hover:text-primary hover:underline"
-                              data-testid={`infra-no-loc-coverage-link-${node.meshtastic_node_id}`}
+                              data-testid={`infra-no-loc-coverage-link-${infraNodeKey(node)}`}
                             >
                               Coverage map
                             </Link>
@@ -414,7 +471,7 @@ function MeshInfrastructureContent() {
         </Card>
       )}
 
-      {lowBatteryNodesOrdered.length > 0 && (
+      {isMeshtastic && lowBatteryNodesOrdered.length > 0 && (
         <Card className="mb-8">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -510,7 +567,8 @@ function MeshInfrastructureContent() {
                     const reportedAt = getBatteryMetricsReportedAt(node);
                     const level = node.latest_device_metrics?.battery_level;
                     const watch = watchesByNodeIdStr.get(node.node_id_str);
-                    const managed = managedByMeshId.get(node.meshtastic_node_id);
+                    const managed = managedByNodeIdStr.get(node.node_id_str);
+                    const coverageHref = feederCoverageHref(node, managed);
                     const cutoff = subDays(new Date(), 7);
                     const isOffline =
                       !node.last_heard ||
@@ -608,7 +666,7 @@ function MeshInfrastructureContent() {
                             node={node}
                             watch={watch}
                             watchesQuery={watchesQuery}
-                            idPrefix={`infra-batt-${node.meshtastic_node_id}`}
+                            idPrefix={`infra-batt-${infraNodeKey(node)}`}
                           />
                         </TableCell>
                         <TableCell>
@@ -619,11 +677,11 @@ function MeshInfrastructureContent() {
                             >
                               View details
                             </Link>
-                            {managed != null && (
+                            {coverageHref != null && (
                               <Link
-                                to={`/traceroutes/map/coverage?feeder=${node.meshtastic_node_id}`}
+                                to={coverageHref}
                                 className="text-muted-foreground text-sm underline-offset-4 hover:text-primary hover:underline"
-                                data-testid={`infra-batt-coverage-link-${node.meshtastic_node_id}`}
+                                data-testid={`infra-batt-coverage-link-${infraNodeKey(node)}`}
                               >
                                 Coverage map
                               </Link>
@@ -646,26 +704,28 @@ function MeshInfrastructureContent() {
             All Infrastructure Nodes ({sortedNodes.length}
             {totalNodes > sortedNodes.length ? ` of ${totalNodes}` : ''})
           </h2>
-          <div className="flex items-center gap-2 sm:ml-auto">
-            <label htmlFor="chart-time-range" className="text-sm text-muted-foreground whitespace-nowrap">
-              Chart time range:
-            </label>
-            <TimeRangeSelect
-              options={CHART_TIME_RANGE_OPTIONS}
-              value={chartTimeRangeLabel}
-              onChange={handleChartTimeRangeChange}
-            />
-          </div>
+          {isMeshtastic ? (
+            <div className="flex items-center gap-2 sm:ml-auto">
+              <label htmlFor="chart-time-range" className="text-sm text-muted-foreground whitespace-nowrap">
+                Chart time range:
+              </label>
+              <TimeRangeSelect
+                options={CHART_TIME_RANGE_OPTIONS}
+                value={chartTimeRangeLabel}
+                onChange={handleChartTimeRangeChange}
+              />
+            </div>
+          ) : null}
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {sortedNodes.map((node) => (
             <InfrastructureNodeCard
               key={node.internal_id}
               node={node}
-              managedNode={managedByMeshId.get(node.meshtastic_node_id)}
-              metrics={metricsMap[node.meshtastic_node_id] ?? []}
-              dateRange={chartDateRange}
-              onCompareToggle={handleCompareToggle}
+              managedNode={managedByNodeIdStr.get(node.node_id_str)}
+              metrics={isMeshtastic ? (metricsMap[node.meshtastic_node_id] ?? []) : undefined}
+              dateRange={isMeshtastic ? chartDateRange : undefined}
+              onCompareToggle={isMeshtastic ? handleCompareToggle : undefined}
               watch={watchesByNodeIdStr.get(node.node_id_str)}
               watchesQuery={watchesQuery}
             />
@@ -680,7 +740,7 @@ function MeshInfrastructureContent() {
         )}
       </div>
 
-      {nodes.length > 0 && (
+      {isMeshtastic && nodes.length > 0 && (
         <Card className="mt-8">
           <CardHeader>
             <CardTitle>Battery & Channel Utilisation</CardTitle>
@@ -722,7 +782,7 @@ function MeshInfrastructureContent() {
   );
 }
 
-export function MeshInfrastructure() {
+export function MeshInfrastructure({ protocol }: { protocol: InfraProtocol }) {
   return (
     <Suspense
       fallback={
@@ -731,7 +791,7 @@ export function MeshInfrastructure() {
         </div>
       }
     >
-      <MeshInfrastructureContent />
+      <MeshInfrastructureContent protocol={protocol} />
     </Suspense>
   );
 }
