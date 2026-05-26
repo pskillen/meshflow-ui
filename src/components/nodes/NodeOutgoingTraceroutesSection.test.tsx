@@ -49,7 +49,7 @@ function renderSection(managed: ManagedNode) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={client}>
-      <NodeOutgoingTraceroutesSection nodeId={managed.meshtastic_node_id} managed={managed} />
+      <NodeOutgoingTraceroutesSection nodeId={managed.meshtastic_node_id!} managed={managed} />
     </QueryClientProvider>
   );
 }

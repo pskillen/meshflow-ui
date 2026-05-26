@@ -100,7 +100,7 @@ export function useDeleteManagedNode() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (meshtasticNodeId: number) => api.deleteManagedNode(meshtasticNodeId),
+    mutationFn: (managedNodeInternalId: string) => api.deleteManagedNode(managedNodeInternalId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['managed-nodes'] });
       queryClient.invalidateQueries({ queryKey: ['managed-nodes', 'mine'] });

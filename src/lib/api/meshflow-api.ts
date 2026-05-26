@@ -18,7 +18,8 @@ import {
   TextMessage,
   TextMessageResponse,
   NodeClaim,
-  CreateManagedNode,
+  CreateMeshtasticManagedNode,
+  CreateMeshCoreManagedNode,
   NodeApiKey,
   CreateNodeApiKey,
   AutoTraceRoute,
@@ -556,7 +557,7 @@ export class MeshflowApi extends BaseApi {
   }
 
   async patchManagedNode(
-    nodeId: number,
+    managedNodeInternalId: string,
     body: {
       meshtastic_channel_0?: number | null;
       meshtastic_channel_1?: number | null;
@@ -568,11 +569,11 @@ export class MeshflowApi extends BaseApi {
       meshtastic_channel_7?: number | null;
     }
   ): Promise<OwnedManagedNode> {
-    return this.patch<OwnedManagedNode>(`/nodes/managed-nodes/${nodeId}/`, body);
+    return this.patch<OwnedManagedNode>(`/nodes/managed-nodes/${managedNodeInternalId}/`, body);
   }
 
   /**
-   * Create a managed node
+   * Create a Meshtastic managed node.
    */
   async createManagedNode(
     nodeId: number,
@@ -594,7 +595,8 @@ export class MeshflowApi extends BaseApi {
       };
     }
   ): Promise<OwnedManagedNode> {
-    const data: CreateManagedNode = {
+    const data: CreateMeshtasticManagedNode = {
+      protocol: 1,
       meshtastic_node_id: nodeId,
       constellation_id: constellationId,
       name: name,
@@ -615,11 +617,37 @@ export class MeshflowApi extends BaseApi {
   }
 
   /**
+   * Create a MeshCore feeder managed node.
+   */
+  async createMeshCoreManagedNode(
+    mcPubkey: string,
+    constellationId: number,
+    name: string,
+    ownerId: number | null,
+    options?: {
+      defaultLocationLatitude?: number;
+      defaultLocationLongitude?: number;
+    }
+  ): Promise<OwnedManagedNode> {
+    const data: CreateMeshCoreManagedNode = {
+      protocol: 2,
+      mc_pubkey: mcPubkey,
+      constellation_id: constellationId,
+      name,
+      owner_id: ownerId,
+      default_location_latitude: options?.defaultLocationLatitude ?? null,
+      default_location_longitude: options?.defaultLocationLongitude ?? null,
+    };
+
+    return this.post<OwnedManagedNode>('/nodes/managed-nodes/', data);
+  }
+
+  /**
    * Soft-delete (un-manage) a managed node: removes API-key links and hides the row from listings.
    * Does not clear the observed-node claim.
    */
-  async deleteManagedNode(nodeId: number): Promise<void> {
-    await this.delete<void>(`/nodes/managed-nodes/${nodeId}/`);
+  async deleteManagedNode(managedNodeInternalId: string): Promise<void> {
+    await this.delete<void>(`/nodes/managed-nodes/${managedNodeInternalId}/`);
   }
 
   // ===== API Keys =====
@@ -647,15 +675,29 @@ export class MeshflowApi extends BaseApi {
   /**
    * Add a node to an API key
    */
-  async addNodeToApiKey(apiKeyId: string, nodeId: number): Promise<NodeApiKey> {
-    return this.post<NodeApiKey>(`/nodes/api-keys/${apiKeyId}/add_node/`, { meshtastic_node_id: nodeId });
+  async addNodeToApiKey(
+    apiKeyId: string,
+    target: { managedNodeInternalId: string } | { meshtasticNodeId: number }
+  ): Promise<NodeApiKey> {
+    const body =
+      'managedNodeInternalId' in target
+        ? { managed_node_internal_id: target.managedNodeInternalId }
+        : { meshtastic_node_id: target.meshtasticNodeId };
+    return this.post<NodeApiKey>(`/nodes/api-keys/${apiKeyId}/add_node/`, body);
   }
 
   /**
    * Remove a node from an API key
    */
-  async removeNodeFromApiKey(apiKeyId: string, nodeId: number): Promise<NodeApiKey> {
-    return this.post<NodeApiKey>(`/nodes/api-keys/${apiKeyId}/remove_node/`, { meshtastic_node_id: nodeId });
+  async removeNodeFromApiKey(
+    apiKeyId: string,
+    target: { managedNodeInternalId: string } | { meshtasticNodeId: number }
+  ): Promise<NodeApiKey> {
+    const body =
+      'managedNodeInternalId' in target
+        ? { managed_node_internal_id: target.managedNodeInternalId }
+        : { meshtastic_node_id: target.meshtasticNodeId };
+    return this.post<NodeApiKey>(`/nodes/api-keys/${apiKeyId}/remove_node/`, body);
   }
 
   /**

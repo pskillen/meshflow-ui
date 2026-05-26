@@ -234,7 +234,9 @@ export function managedNodeToObservedNode(m: ManagedNode): ObservedNode {
   const latest_position = positionFromManaged(m);
   return {
     internal_id: '',
-    meshtastic_node_id: m.meshtastic_node_id,
+    meshtastic_node_id: m.meshtastic_node_id ?? 0,
+    protocol: m.protocol,
+    mc_pubkey: m.mc_pubkey ?? null,
     node_id_str: m.node_id_str,
     mac_addr: null,
     long_name: m.long_name,
@@ -263,18 +265,24 @@ export function mergeManagedPositionIntoObserved(node: ObservedNode, m: ManagedN
  */
 export function buildNodesForMap(claimed: ObservedNode[], managed: ManagedNode[]): ObservedNode[] {
   const map = new Map<number, ObservedNode>();
+  const meshcoreOnly = new Map<string, ObservedNode>();
   for (const c of claimed) {
     map.set(c.meshtastic_node_id, c);
   }
   for (const m of managed) {
-    const existing = map.get(m.meshtastic_node_id);
+    const meshId = m.meshtastic_node_id;
+    if (meshId == null) {
+      meshcoreOnly.set(m.node_id_str, managedNodeToObservedNode(m));
+      continue;
+    }
+    const existing = map.get(meshId);
     if (existing) {
-      map.set(m.meshtastic_node_id, mergeManagedPositionIntoObserved(existing, m));
+      map.set(meshId, mergeManagedPositionIntoObserved(existing, m));
     } else {
-      map.set(m.meshtastic_node_id, managedNodeToObservedNode(m));
+      map.set(meshId, managedNodeToObservedNode(m));
     }
   }
-  return [...map.values()];
+  return [...map.values(), ...meshcoreOnly.values()];
 }
 
 /** Card row for a managed node: full observed payload when user also claimed it. */

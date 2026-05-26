@@ -173,7 +173,10 @@ export interface MeshCorePacketListItem {
 // ManagedNode from Meshflow API v2
 export interface ManagedNode {
   protocol?: MeshProtocol;
-  meshtastic_node_id: number;
+  /** Meshtastic numeric id; null for MeshCore feeders. */
+  meshtastic_node_id: number | null;
+  mc_pubkey?: string | null;
+  internal_id?: string;
   long_name: string | null;
   short_name: string | null;
   last_heard: Date | null;
@@ -241,7 +244,15 @@ export interface OwnedManagedNode extends ManagedNode {
   default_location_longitude?: number | null;
 }
 
-export interface CreateManagedNode {
+export interface LinkedManagedNodeRef {
+  internal_id: string;
+  node_id_str: string;
+  protocol: MeshProtocol;
+  meshtastic_node_id: number | null;
+}
+
+export interface CreateMeshtasticManagedNode {
+  protocol?: 1;
   meshtastic_node_id: number;
   constellation_id: number;
   name: string;
@@ -257,6 +268,19 @@ export interface CreateManagedNode {
   meshtastic_channel_6: number | null;
   meshtastic_channel_7: number | null;
 }
+
+export interface CreateMeshCoreManagedNode {
+  protocol: 2;
+  mc_pubkey: string;
+  constellation_id: number;
+  name: string;
+  owner_id: number | null;
+  default_location_latitude: number | null;
+  default_location_longitude: number | null;
+}
+
+/** @deprecated Use CreateMeshtasticManagedNode or CreateMeshCoreManagedNode */
+export type CreateManagedNode = CreateMeshtasticManagedNode;
 
 /** Enriched route node with position for map display (from API route_nodes/route_back_nodes) */
 export interface TracerouteRouteNode {
@@ -588,7 +612,9 @@ export interface NodeApiKey {
   owner: number;
   last_used: string | null;
   is_active: boolean;
+  /** Legacy Meshtastic numeric ids only (omits MeshCore feeders). */
   nodes: number[];
+  linked_managed_nodes?: LinkedManagedNodeRef[];
 }
 
 export interface CreateNodeApiKey {
