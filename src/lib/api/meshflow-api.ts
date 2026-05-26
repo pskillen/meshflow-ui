@@ -202,8 +202,10 @@ export class MeshflowApi extends BaseApi {
    * Get node counts by time window (nodes seen since each threshold).
    * Returns: { "2": n, "24": n, "168": n, "720": n, "2160": n, "all": n }
    */
-  async getRecentNodeCounts(): Promise<Record<string, number>> {
-    return this.get<Record<string, number>>('/nodes/observed-nodes/recent_counts/');
+  async getRecentNodeCounts(protocol?: 'meshtastic' | 'meshcore'): Promise<Record<string, number>> {
+    const searchParams = new URLSearchParams();
+    if (protocol) searchParams.append('protocol', protocol);
+    return this.get<Record<string, number>>('/nodes/observed-nodes/recent_counts/', searchParams);
   }
 
   /**
@@ -215,6 +217,7 @@ export class MeshflowApi extends BaseApi {
     page?: number;
     pageSize?: number;
     includeClientBase?: boolean;
+    protocol?: 'meshtastic' | 'meshcore';
   }): Promise<PaginatedResponse<ObservedNode>> {
     const searchParams = new URLSearchParams();
     if (params?.page) searchParams.append('page', params.page.toString());
@@ -224,6 +227,9 @@ export class MeshflowApi extends BaseApi {
     }
     if (params?.includeClientBase) {
       searchParams.append('include_client_base', 'true');
+    }
+    if (params?.protocol) {
+      searchParams.append('protocol', params.protocol);
     }
 
     const response = await this.get<PaginatedResponse<ObservedNode>>(

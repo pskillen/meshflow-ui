@@ -46,10 +46,32 @@ describe('NavMain', () => {
     expect(screen.getAllByText('MeshCore').length).toBeGreaterThanOrEqual(1);
   });
 
-  it('keeps Dashboard and Weather at top level', () => {
+  it('keeps home Dashboard, Weather, and My nodes at top level', () => {
     renderNavAt('/');
-    expect(screen.getByText('Dashboard')).toBeInTheDocument();
+    expect(screen.getAllByText('Dashboard').length).toBeGreaterThanOrEqual(3);
     expect(screen.getByText('Weather')).toBeInTheDocument();
+    const myNodesLink = screen.getByRole('link', { name: 'My nodes' });
+    expect(myNodesLink.getAttribute('href')).toBe('/nodes/my-nodes');
+  });
+
+  it('marks My nodes active on /nodes/my-nodes', () => {
+    renderNavAt('/nodes/my-nodes');
+    const link = screen.getByRole('link', { name: 'My nodes' });
+    expect(link.closest('[data-active="true"]')).toBeTruthy();
+  });
+
+  it('does not list My nodes under Meshtastic Nodes submenu', () => {
+    renderNavAt('/');
+    const listLink = screen.getAllByRole('link', { name: 'List' }).find((el) => el.getAttribute('href') === '/nodes');
+    const submenu = listLink?.closest('[data-sidebar="menu-sub"]');
+    expect(submenu?.querySelector('a[href="/nodes/my-nodes"]')).toBeNull();
+  });
+
+  it('lists protocol dashboards under Meshtastic and MeshCore', () => {
+    renderNavAt('/');
+    const dashLinks = screen.getAllByRole('link', { name: 'Dashboard' });
+    expect(dashLinks.some((el) => el.getAttribute('href') === '/meshtastic/dashboard')).toBe(true);
+    expect(dashLinks.some((el) => el.getAttribute('href') === '/meshcore/dashboard')).toBe(true);
   });
 
   it('marks Messages active on /messages', () => {
@@ -60,23 +82,31 @@ describe('NavMain', () => {
     expect(link?.closest('[data-active="true"]')).toBeTruthy();
   });
 
-  it('marks Meshtastic map child active on /map', () => {
-    renderNavAt('/map');
-    const link = screen.getAllByRole('link', { name: 'Map' }).find((el) => el.getAttribute('href') === '/map');
+  it('marks Meshtastic nodes list child active on /nodes', () => {
+    renderNavAt('/nodes');
+    const link = screen.getAllByRole('link', { name: 'List' }).find((el) => el.getAttribute('href') === '/nodes');
     expect(link?.closest('[data-active="true"]')).toBeTruthy();
   });
 
-  it('marks MeshCore managed nodes active on /meshcore/managed-nodes', () => {
+  it('does not show standalone Map nav link under Nodes', () => {
+    renderNavAt('/');
+    const mapLinks = screen.queryAllByRole('link', { name: 'Map' });
+    expect(mapLinks.some((el) => el.getAttribute('href') === '/map')).toBe(false);
+    expect(mapLinks.some((el) => el.getAttribute('href') === '/meshcore/map')).toBe(false);
+  });
+
+  it('marks MeshCore mesh infra child active on /meshcore/infrastructure', () => {
+    renderNavAt('/meshcore/infrastructure');
+    const links = screen.getAllByRole('link', { name: 'Mesh infra' });
+    const meshcoreLink = links.find((el) => el.getAttribute('href') === '/meshcore/infrastructure');
+    expect(meshcoreLink?.closest('[data-active="true"]')).toBeTruthy();
+  });
+
+  it('marks MeshCore managed nodes child active on /meshcore/managed-nodes', () => {
     renderNavAt('/meshcore/managed-nodes');
     const links = screen.getAllByRole('link', { name: 'Managed nodes' });
     const meshcoreLink = links.find((el) => el.getAttribute('href') === '/meshcore/managed-nodes');
     expect(meshcoreLink?.closest('[data-active="true"]')).toBeTruthy();
-  });
-
-  it('does not show MeshCore Map nav link', () => {
-    renderNavAt('/');
-    const mapLinks = screen.queryAllByRole('link', { name: 'Map' });
-    expect(mapLinks.some((el) => el.getAttribute('href') === '/meshcore/map')).toBe(false);
   });
 
   it('marks MeshCore Messages active on /meshcore/messages', () => {

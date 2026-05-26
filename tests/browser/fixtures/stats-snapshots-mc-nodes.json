@@ -1,0 +1,21 @@
+{
+  "count": 2,
+  "next": null,
+  "previous": null,
+  "results": [
+    {
+      "id": 201,
+      "recorded_at": "2025-03-14T12:00:00Z",
+      "stat_type": "mc_online_nodes",
+      "constellation_id": null,
+      "value": { "count": 3, "window_hours": 2 }
+    },
+    {
+      "id": 202,
+      "recorded_at": "2025-03-15T12:00:00Z",
+      "stat_type": "mc_online_nodes",
+      "constellation_id": null,
+      "value": { "count": 5, "window_hours": 2 }
+    }
+  ]
+}

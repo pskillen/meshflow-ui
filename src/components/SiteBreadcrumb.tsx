@@ -33,8 +33,9 @@ function getBreadcrumbSegments(pathname: string): { path: string; label: string 
     }
   } else if (parts[0] === 'weather') {
     segments.push({ path: '/weather', label: 'Weather' });
-  } else if (parts[0] === 'map') {
-    segments.push({ path: '/map', label: 'Map' });
+  } else if (parts[0] === 'meshcore' && parts[1] === 'infrastructure') {
+    segments.push({ path: '/meshcore/nodes', label: 'MeshCore Nodes' });
+    segments.push({ path: '/meshcore/infrastructure', label: 'Infrastructure' });
   } else if (parts[0] === 'messages') {
     segments.push({ path: '/messages', label: 'Messages' });
   } else if (parts[0] === 'user') {

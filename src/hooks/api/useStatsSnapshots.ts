@@ -64,7 +64,7 @@ export function useStatsSnapshotsForTypesSuspense(
 
   const queries = useSuspenseQueries({
     queries: statTypes.map((statType) => {
-      const st = statType as 'online_nodes' | 'new_nodes' | 'packet_volume';
+      const st = statType as NonNullable<StatsSnapshotsParams['statType']>;
       const fullParams: StatsSnapshotsParams = { ...params, statType: st };
       return {
         queryKey: ['stats-snapshots', getStatsSnapshotsKey(fullParams)],

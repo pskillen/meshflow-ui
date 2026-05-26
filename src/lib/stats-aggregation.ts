@@ -103,6 +103,43 @@ export function aggregateStatsByType(points: ByTypeDataPoint[], window: Aggregat
 }
 
 /** Display names for packet types in charts */
+import type { PaginatedResponse, StatsSnapshot } from '@/lib/models';
+
+export function globalSnapshotRows(snapshots: PaginatedResponse<StatsSnapshot> | undefined): StatsSnapshot[] {
+  if (!snapshots?.results) return [];
+  return snapshots.results.filter((s) => s.constellation_id === null);
+}
+
+export function snapshotsToCountSeries(rows: StatsSnapshot[]): { timestamp: number; value: number }[] {
+  return [...rows]
+    .sort((a, b) => new Date(a.recorded_at).getTime() - new Date(b.recorded_at).getTime())
+    .map((s) => ({
+      timestamp: new Date(s.recorded_at).getTime(),
+      value: s.value?.count ?? 0,
+    }));
+}
+
+/** Merge MT and MC count series on timestamp for overlaid bar charts. */
+export function mergeMeshtasticMeshcoreSeries(
+  mt: { timestamp: number; value: number }[],
+  mc: { timestamp: number; value: number }[]
+): { timestamp: number; meshtastic: number; meshcore: number }[] {
+  const byTs = new Map<number, { meshtastic: number; meshcore: number }>();
+  for (const p of mt) {
+    const row = byTs.get(p.timestamp) ?? { meshtastic: 0, meshcore: 0 };
+    row.meshtastic = p.value;
+    byTs.set(p.timestamp, row);
+  }
+  for (const p of mc) {
+    const row = byTs.get(p.timestamp) ?? { meshtastic: 0, meshcore: 0 };
+    row.meshcore = p.value;
+    byTs.set(p.timestamp, row);
+  }
+  return Array.from(byTs.entries())
+    .map(([timestamp, vals]) => ({ timestamp, ...vals }))
+    .sort((a, b) => a.timestamp - b.timestamp);
+}
+
 export const PACKET_TYPE_DISPLAY_NAMES: Record<string, string> = {
   text_message: 'Messages',
   position: 'Position',

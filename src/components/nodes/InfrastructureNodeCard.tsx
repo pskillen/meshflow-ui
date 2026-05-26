@@ -20,8 +20,8 @@ interface InfrastructureNodeCardProps {
   dateRange?: { startDate: Date; endDate: Date };
   /** When true, this node is included in the comparison charts */
   compareSelected?: boolean;
-  /** Called when the compare checkbox is toggled. Receives (nodeId, newState). */
-  onCompareToggle?: (nodeId: number, newState: boolean) => void;
+  /** Called when the compare checkbox is toggled. Receives (node identity key, newState). */
+  onCompareToggle?: (nodeKey: string, newState: boolean) => void;
   /** Current user's watch for this node, if any */
   watch?: NodeWatch;
   /** From useNodeWatches — loading/error for watch list */
@@ -63,7 +63,7 @@ function InfrastructureNodeCardInner({
                 e.preventDefault();
                 const newState = !compareSelected;
                 setCompareSelected(newState);
-                onCompareToggle?.(node.meshtastic_node_id, newState);
+                onCompareToggle?.(node.node_id_str || String(node.internal_id), newState);
               }}
             >
               <span

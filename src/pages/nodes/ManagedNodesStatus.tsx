@@ -246,19 +246,11 @@ function ProtocolManagedNodesPageContent({
         <CardHeader>
           <CardTitle>{config.labels.managedNodesTitle}</CardTitle>
           <CardDescription>
-            Operator view of feeder fleet health.
-            {config.features.showInfrastructureLink ? (
-              <>
-                {' '}
-                For RF-side observed infrastructure, use{' '}
-                <Link to="/nodes/infrastructure" className="underline">
-                  Mesh Infrastructure
-                </Link>
-                .
-              </>
-            ) : (
-              <> MeshCore feeders reporting packets to the API.</>
-            )}
+            Operator view of feeder fleet health. For RF-side observed infrastructure, use{' '}
+            <Link to={config.routes.infrastructure} className="underline">
+              Mesh Infrastructure
+            </Link>
+            .
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-3 sm:grid-cols-5">

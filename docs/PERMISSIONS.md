@@ -6,17 +6,17 @@ API contract: [meshflow-api `docs/permissions/README.md`](https://github.com/psk
 
 ## Route matrix
 
-| Route                                                  | Guest (logged out) | User (JWT) | Notes                                         |
-| ------------------------------------------------------ | ------------------ | ---------- | --------------------------------------------- |
-| `/`, `/nodes`, `/nodes/:id`                            | yes                | yes        | Map/detail use redacted API fields when guest |
-| `/map`                                                 | yes                | yes        | Positions only when authenticated             |
-| `/messages`, `/meshcore/messages`                      | yes                | yes        |                                               |
-| `/traceroutes/*` (read pages)                          | yes                | yes        | Trigger UI needs feeder                       |
-| `/login`, `/auth/callback`                             | yes                | yes        |                                               |
-| `/nodes/:id/claim`, `/nodes/my-nodes`                  | no                 | yes        | Protected                                     |
-| `/user/*`, `/nodes/monitor`, `/nodes/dx-monitoring`    | no                 | yes        | Protected                                     |
-| `/nodes/infrastructure/export`, `/nodes/managed-nodes` | no                 | feeder+    | Protected; operator pages                     |
-| `/user/api-keys`                                       | no                 | feeder+    | Protected                                     |
+| Route                                                                                                       | Guest (logged out) | User (JWT) | Notes                                        |
+| ----------------------------------------------------------------------------------------------------------- | ------------------ | ---------- | -------------------------------------------- |
+| `/`, `/nodes`, `/nodes/:id`                                                                                 | yes                | yes        | Map on list page; detail redacted for guests |
+| `/map`                                                                                                      | yes                | yes        | Redirects to `/nodes`                        |
+| `/messages`, `/meshcore/messages`                                                                           | yes                | yes        |                                              |
+| `/traceroutes/*` (read pages)                                                                               | yes                | yes        | Trigger UI needs feeder                      |
+| `/login`, `/auth/callback`                                                                                  | yes                | yes        |                                              |
+| `/nodes/:id/claim`, `/nodes/my-nodes`                                                                       | no                 | yes        | Protected                                    |
+| `/user/*`, `/nodes/monitor`, `/nodes/dx-monitoring`                                                         | no                 | yes        | Protected                                    |
+| `/nodes/infrastructure`, `/meshcore/infrastructure`, `/nodes/infrastructure/export`, `/nodes/managed-nodes` | no                 | feeder+    | Protected; operator pages                    |
+| `/user/api-keys`                                                                                            | no                 | feeder+    | Protected                                    |
 
 ## Implementation
 

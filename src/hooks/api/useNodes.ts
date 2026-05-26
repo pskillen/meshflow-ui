@@ -262,12 +262,12 @@ export type RecentNodeCounts = Record<string, number>;
  * Suspense-enabled hook to fetch recent node counts by time window.
  * Returns: { "2": n, "24": n, "168": n, "720": n, "2160": n, "all": n }
  */
-export function useRecentNodeCountsSuspense() {
+export function useRecentNodeCountsSuspense(protocol?: 'meshtastic' | 'meshcore') {
   const api = useMeshflowApi();
   const query = useSuspenseQuery<RecentNodeCounts, Error>({
     refetchInterval: 1000 * 60, // 1 minute
-    queryKey: ['nodes', 'recent-counts'],
-    queryFn: () => api.getRecentNodeCounts(),
+    queryKey: ['nodes', 'recent-counts', protocol ?? 'all'],
+    queryFn: () => api.getRecentNodeCounts(protocol),
   });
   return query.data;
 }
@@ -324,6 +324,7 @@ export interface UseInfrastructureNodesOptions {
   pageSize?: number;
   lastHeardAfter?: Date;
   includeClientBase?: boolean;
+  protocol?: 'meshtastic' | 'meshcore';
 }
 
 export interface UseManagedNodesSuspenseOptions {
@@ -339,16 +340,18 @@ export function useInfrastructureNodesSuspense(options?: UseInfrastructureNodesO
   const api = useMeshflowApi();
   const pageSize = options?.pageSize || 500;
   const lastHeardAfterKey = options?.lastHeardAfter ? roundToFiveMinutes(options.lastHeardAfter) : null;
+  const protocol = options?.protocol ?? 'meshtastic';
 
   const nodesQuery = useSuspenseInfiniteQuery<PaginatedResponse<ObservedNode>, Error>({
     refetchInterval: 1000 * 60, // 1 minute
-    queryKey: ['nodes', 'infrastructure', pageSize, lastHeardAfterKey, options?.includeClientBase ?? false],
+    queryKey: ['nodes', 'infrastructure', protocol, pageSize, lastHeardAfterKey, options?.includeClientBase ?? false],
     queryFn: async ({ pageParam = 1 }) =>
       api.getInfrastructureNodes({
         page: pageParam as number,
         pageSize,
         lastHeardAfter: options?.lastHeardAfter,
         includeClientBase: options?.includeClientBase,
+        protocol,
       }),
     initialPageParam: 1,
     getNextPageParam: (lastPage, allPages) => (lastPage.next ? allPages.length + 1 : undefined),
@@ -384,9 +387,10 @@ export function useAllInfrastructureNodesSuspense(options?: UseInfrastructureNod
   const api = useMeshflowApi();
   const lastHeardAfterKey = options?.lastHeardAfter ? roundToFiveMinutes(options.lastHeardAfter) : null;
   const includeClientBase = options?.includeClientBase ?? false;
+  const protocol = options?.protocol ?? 'meshtastic';
 
   const query = useSuspenseQuery({
-    queryKey: ['nodes', 'infrastructure', 'all-pages', lastHeardAfterKey, includeClientBase],
+    queryKey: ['nodes', 'infrastructure', 'all-pages', protocol, lastHeardAfterKey, includeClientBase],
     queryFn: async () => {
       const all: ObservedNode[] = [];
       let page = 1;
@@ -396,6 +400,7 @@ export function useAllInfrastructureNodesSuspense(options?: UseInfrastructureNod
           pageSize: INFRASTRUCTURE_FULL_FETCH_PAGE_SIZE,
           lastHeardAfter: options?.lastHeardAfter,
           includeClientBase: options?.includeClientBase,
+          protocol,
         });
         all.push(...res.results);
         if (!res.next || res.results.length === 0) {

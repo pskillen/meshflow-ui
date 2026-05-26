@@ -1,0 +1,21 @@
+{
+  "count": 3,
+  "next": null,
+  "previous": null,
+  "results": [
+    {
+      "id": 101,
+      "recorded_at": "2025-03-14T12:00:00Z",
+      "stat_type": "mc_packet_volume",
+      "constellation_id": null,
+      "value": { "count": 8, "by_type": { "advert": 3, "channel_text": 5, "contact_text": 0, "raw": 0 } }
+    },
+    {
+      "id": 102,
+      "recorded_at": "2025-03-15T12:00:00Z",
+      "stat_type": "mc_packet_volume",
+      "constellation_id": null,
+      "value": { "count": 12, "by_type": { "advert": 4, "channel_text": 8, "contact_text": 0, "raw": 0 } }
+    }
+  ]
+}

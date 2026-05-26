@@ -14,12 +14,8 @@ export class DashboardPage extends BasePage {
     return this.page.getByText('Meshflow Map');
   }
 
-  get meshActivityHeading() {
-    return this.page.getByText('Mesh Activity');
-  }
-
-  get nodeActivityHeading() {
-    return this.page.getByText('Node Activity');
+  get meshStatsHeading() {
+    return this.page.getByText('Mesh stats');
   }
 
   get nodesPageLink() {
@@ -33,26 +29,13 @@ export class DashboardPage extends BasePage {
   async expectLoaded() {
     await expect(this.recentlyActiveNodesHeading).toBeVisible();
     await expect(this.meshflowMapHeading).toBeVisible();
-    await expect(this.meshActivityHeading).toBeVisible();
-    await expect(this.nodeActivityHeading).toBeVisible();
+    await expect(this.meshStatsHeading).toBeVisible();
   }
 
   async expectNodeCounts(values: (string | number)[]) {
     const section = this.page.getByTestId('dashboard-recently-active-nodes');
     for (const value of values) {
       await expect(section.getByText(String(value), { exact: true })).toBeVisible();
-    }
-  }
-
-  async expectNodeActivityTableEmpty() {
-    await expect(this.page.getByText(/no nodes found/i)).toBeVisible();
-  }
-
-  async expectNodeActivityTableHasNodes(count?: number) {
-    const table = this.page.getByRole('table').filter({ has: this.page.getByText('Node Name') });
-    await expect(table).toBeVisible();
-    if (count !== undefined && count > 0) {
-      await expect(table.getByRole('row')).toHaveCount(count + 1);
     }
   }
 

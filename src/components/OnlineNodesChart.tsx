@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { CartesianGrid, XAxis, YAxis, Bar, Line, ComposedChart } from 'recharts';
+import { CartesianGrid, XAxis, YAxis, Bar, Line, ComposedChart, Legend } from 'recharts';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
@@ -9,20 +9,29 @@ import { TimeRangeSelect, TimeRangeOption } from '@/components/TimeRangeSelect';
 import { useStatsSnapshotsForTypesSuspense } from '@/hooks/api/useStatsSnapshots';
 import { subDays } from 'date-fns';
 import { Payload, ValueType, NameType } from 'recharts/types/component/DefaultTooltipContent';
-import { getAggregationWindow, aggregateStats } from '@/lib/stats-aggregation';
+import {
+  aggregateStats,
+  getAggregationWindow,
+  globalSnapshotRows,
+  mergeMeshtasticMeshcoreSeries,
+  snapshotsToCountSeries,
+} from '@/lib/stats-aggregation';
+import {
+  type MeshStatsProtocolScope,
+  type OnlineNodesChartMetric,
+  onlineNodesMetricStatTypes,
+} from '@/lib/stats-snapshot-types';
 
-/** Which snapshot series this chart displays (each gets its own Y-axis scale). */
-export type OnlineNodesChartMetric = 'online_nodes' | 'new_nodes';
+export type { OnlineNodesChartMetric };
 
 interface OnlineNodesChartProps {
   title: string;
   description?: string;
   config: ChartConfig;
-  /** Snapshot type; use separate chart instances for online vs new nodes so scales are readable. */
   metric: OnlineNodesChartMetric;
+  protocolScope?: MeshStatsProtocolScope;
   timeRangeOptions?: TimeRangeOption[];
   defaultTimeRange?: string;
-  /** When true, render without Card/TimeRangeSelect; use dateRange from parent */
   embedded?: boolean;
   dateRange?: { startDate: Date; endDate: Date };
   movingAverage?: boolean;
@@ -33,6 +42,7 @@ export function OnlineNodesChart({
   description,
   config,
   metric,
+  protocolScope = 'meshtastic',
   timeRangeOptions = [
     { key: '48h', label: 'Last 48 hours' },
     { key: '1d', label: 'Today' },
@@ -63,9 +73,8 @@ export function OnlineNodesChart({
     [dateRange.startDate, dateRange.endDate]
   );
 
-  const statTypes = React.useMemo(() => [metric] as const, [metric]);
+  const statTypes = React.useMemo(() => onlineNodesMetricStatTypes(metric, protocolScope), [metric, protocolScope]);
   const snapshotResults = useStatsSnapshotsForTypesSuspense(statTypes, params);
-  const snapshots = metric === 'online_nodes' ? snapshotResults.online_nodes : snapshotResults.new_nodes;
 
   const handleTimeRangeChange = (value: string, timeRange: { startDate: Date; endDate: Date }) => {
     if (value === timeRangeLabel) return;
@@ -78,16 +87,31 @@ export function OnlineNodesChart({
     [dateRange.startDate, dateRange.endDate, metric]
   );
 
-  const chartData = React.useMemo(() => {
-    const rows = snapshots?.results?.filter((s) => s.constellation_id === null) ?? [];
-    const raw = rows
-      .map((s) => ({
-        timestamp: new Date(s.recorded_at).getTime(),
-        value: s.value?.count ?? 0,
-      }))
-      .sort((a, b) => a.timestamp - b.timestamp);
+  const overlayMode = protocolScope === 'both';
+  const mcStatType = metric === 'online_nodes' ? 'mc_online_nodes' : 'mc_new_nodes';
 
+  const chartData = React.useMemo(() => {
     const mergeMethod = metric === 'online_nodes' ? 'average' : 'sum';
+
+    if (overlayMode) {
+      const mtRaw = snapshotsToCountSeries(globalSnapshotRows(snapshotResults[metric]));
+      const mcRaw = snapshotsToCountSeries(globalSnapshotRows(snapshotResults[mcStatType]));
+      const mtAgg = aggregateStats(mtRaw, aggregationWindow, mergeMethod);
+      const mcAgg = aggregateStats(mcRaw, aggregationWindow, mergeMethod);
+      const merged = mergeMeshtasticMeshcoreSeries(mtAgg, mcAgg);
+      if (metric === 'new_nodes') {
+        return merged.map((p) => ({
+          ...p,
+          meshtastic: Math.round(p.meshtastic),
+          meshcore: Math.round(p.meshcore),
+        }));
+      }
+      return merged;
+    }
+
+    const statKey = protocolScope === 'meshcore' ? mcStatType : metric;
+    const rows = globalSnapshotRows(snapshotResults[statKey]);
+    const raw = snapshotsToCountSeries(rows);
     const aggregated = aggregateStats(raw, aggregationWindow, mergeMethod);
     const rounded = metric === 'new_nodes' ? aggregated.map((p) => ({ ...p, value: Math.round(p.value) })) : aggregated;
 
@@ -98,11 +122,16 @@ export function OnlineNodesChart({
       const avg = window.length > 0 ? window.reduce((acc, i) => acc + i.value, 0) / window.length : 0;
       return { ...stat, movingAverage: avg };
     });
-  }, [snapshots, aggregationWindow, metric]);
+  }, [snapshotResults, aggregationWindow, metric, overlayMode, protocolScope, mcStatType]);
 
   const yAxisDomain = React.useMemo(() => {
     if (!chartData.length) return [0, 'auto'] as [number, 'auto'];
-    const values = chartData.flatMap((item) => [item.value, item.movingAverage]);
+    const values = overlayMode
+      ? (chartData as { meshtastic: number; meshcore: number }[]).flatMap((item) => [item.meshtastic, item.meshcore])
+      : (chartData as { value: number; movingAverage?: number }[]).flatMap((item) => [
+          item.value,
+          item.movingAverage ?? 0,
+        ]);
     const maxVal = Math.max(...values, 0);
     if (metric === 'new_nodes') {
       const top = maxVal <= 0 ? 1 : Math.max(Math.ceil(maxVal * 1.15), maxVal + 1);
@@ -110,7 +139,7 @@ export function OnlineNodesChart({
     }
     const maxOnline = Math.max(...values, 1);
     return [0, maxOnline] as [number, number];
-  }, [chartData, metric]);
+  }, [chartData, metric, overlayMode]);
 
   const tickFormatter = (value: number) => {
     const date = new Date(value);
@@ -137,13 +166,15 @@ export function OnlineNodesChart({
 
   const chartContent = (
     <ChartContainer config={config} className="aspect-auto h-[250px] w-full">
-      <ComposedChart data={chartData}>
-        <defs>
-          <linearGradient id={`fillOnlineNodes-${metric}`} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="5%" stopColor="var(--color-value)" stopOpacity={1.0} />
-            <stop offset="95%" stopColor="var(--color-value)" stopOpacity={0.1} />
-          </linearGradient>
-        </defs>
+      <ComposedChart data={chartData as Record<string, number>[]}>
+        {!overlayMode && (
+          <defs>
+            <linearGradient id={`fillOnlineNodes-${metric}`} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor="var(--color-value)" stopOpacity={1.0} />
+              <stop offset="95%" stopColor="var(--color-value)" stopOpacity={0.1} />
+            </linearGradient>
+          </defs>
+        )}
         <CartesianGrid vertical={false} />
         <XAxis
           dataKey="timestamp"
@@ -169,16 +200,26 @@ export function OnlineNodesChart({
           cursor={false}
           content={<ChartTooltipContent labelFormatter={tooltipLabelFormatter} indicator="dot" />}
         />
-        <Bar dataKey="value" fill="var(--color-value)" fillOpacity={0.7} barSize={8} />
-        {movingAverage && (
-          <Line
-            type="monotone"
-            dataKey="movingAverage"
-            stroke="var(--color-value)"
-            strokeWidth={2}
-            dot={false}
-            name={aggregationWindow === 'hourly' ? '24h Moving Average' : 'Moving Average'}
-          />
+        {overlayMode ? (
+          <>
+            <Legend />
+            <Bar dataKey="meshtastic" fill="var(--color-meshtastic)" fillOpacity={0.75} barSize={8} name="Meshtastic" />
+            <Bar dataKey="meshcore" fill="var(--color-meshcore)" fillOpacity={0.75} barSize={8} name="MeshCore" />
+          </>
+        ) : (
+          <>
+            <Bar dataKey="value" fill="var(--color-value)" fillOpacity={0.7} barSize={8} />
+            {movingAverage && (
+              <Line
+                type="monotone"
+                dataKey="movingAverage"
+                stroke="var(--color-value)"
+                strokeWidth={2}
+                dot={false}
+                name={aggregationWindow === 'hourly' ? '24h Moving Average' : 'Moving Average'}
+              />
+            )}
+          </>
         )}
       </ComposedChart>
     </ChartContainer>
