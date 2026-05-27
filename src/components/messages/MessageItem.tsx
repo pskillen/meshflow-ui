@@ -1,5 +1,7 @@
 import { TextMessage, type PacketObservation, type MeshCoreHeardObservation } from '@/lib/models';
 import { messageProtocol } from '@/lib/message-protocol';
+import { HeardPathMap } from '@/components/messages/HeardPathMap';
+import { isMeshCoreHeardObservation, messageToHeardPathLegs } from '@/components/messages/heard-path-map-adapters';
 import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -11,22 +13,20 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { ExternalLink } from 'lucide-react';
 import { nodeDetailPath } from '@/lib/node-detail-routes';
 
-function isMeshCoreHeard(obs: PacketObservation | MeshCoreHeardObservation): obs is MeshCoreHeardObservation {
-  return typeof (obs as MeshCoreHeardObservation).observer === 'string';
-}
-
 function HeardDialog({
-  observations,
-  protocol,
+  message,
   size = 'sm',
   className,
 }: {
-  observations: TextMessage['heard'] | undefined;
-  protocol: ReturnType<typeof messageProtocol>;
+  message: TextMessage;
   size?: 'sm' | 'xs';
   className?: string;
 }) {
+  const observations = message.heard;
   const count = observations?.length || 0;
+  const { sender, legs } = useMemo(() => messageToHeardPathLegs(message), [message]);
+  const protocol = messageProtocol(message);
+
   return (
     <Dialog>
       <DialogTrigger asChild>
@@ -43,22 +43,52 @@ function HeardDialog({
           {count} heard
         </Button>
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Message Heard By</DialogTitle>
         </DialogHeader>
+        <HeardPathMap sender={sender} legs={legs} />
         <div className="space-y-4 mt-4">
           {observations?.length ? (
             observations.map((observation, index) => {
-              if (protocol === 'meshcore' || isMeshCoreHeard(observation)) {
+              if (protocol === 'meshcore' || isMeshCoreHeardObservation(observation)) {
                 const mc = observation as MeshCoreHeardObservation;
+                const observerLabel = mc.observer.short_name || mc.observer.node_id_str;
+                const observerLink = nodeDetailPath({
+                  internal_id: mc.observer.internal_id ?? undefined,
+                  node_id_str: mc.observer.node_id_str,
+                  protocol: 2,
+                });
                 return (
-                  <div key={`${mc.observer}-${index}`} className="flex items-start space-x-4 p-2 border rounded-md">
+                  <div
+                    key={`${mc.observer.node_id_str}-${index}`}
+                    className="flex items-start space-x-4 p-2 border rounded-md"
+                  >
                     <div className="flex-1">
-                      <div className="font-semibold">{mc.observer}</div>
+                      <div className="font-semibold">
+                        {observerLink ? (
+                          <Link to={observerLink} className="hover:underline">
+                            {observerLabel}
+                          </Link>
+                        ) : (
+                          observerLabel
+                        )}
+                      </div>
+                      {mc.observer.long_name && (
+                        <div className="text-sm text-muted-foreground">{mc.observer.long_name}</div>
+                      )}
                       <div className="text-xs text-muted-foreground">
                         {format(new Date(mc.rx_time), 'MMM d, yyyy h:mm a')}
                       </div>
+                      {mc.resolved_path && mc.resolved_path.length > 0 && (
+                        <div className="mt-2 flex flex-wrap gap-1">
+                          {mc.resolved_path.map((hop) => (
+                            <Badge key={hop.hash} variant="outline" className="font-mono text-xs">
+                              {hop.hash}
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
                     </div>
                     <div className="text-right text-xs">
                       {mc.rx_rssi != null && <div>RSSI: {mc.rx_rssi.toFixed(1)}</div>}
@@ -184,7 +214,7 @@ export const MessageItem = memo(function MessageItem({
             title={fullTime}
           />
         ) : null}
-        <HeardDialog observations={message.heard} protocol={proto} />
+        <HeardDialog message={message} />
       </header>
       <div className="pl-8">
         <p className="whitespace-pre-wrap text-sm">{message.message_text}</p>
@@ -210,7 +240,7 @@ export const MessageItem = memo(function MessageItem({
                 <span className="text-xs text-muted-foreground">
                   {reply.sent_at ? format(new Date(reply.sent_at), 'MMM d, h:mm a') : ''}
                 </span>
-                <HeardDialog observations={reply.heard} protocol={proto} size="xs" />
+                <HeardDialog message={reply} size="xs" />
               </div>
             ))}
           </div>
@@ -241,7 +271,7 @@ export const MessageItem = memo(function MessageItem({
               {contMsg.is_emoji && <span className="ml-1 text-xs text-muted-foreground">(emoji)</span>}
               <div className="mt-1 flex items-center gap-2">
                 <span className="text-xs text-muted-foreground">{contTime}</span>
-                <HeardDialog observations={contMsg.heard} protocol={messageProtocol(contMsg)} size="xs" />
+                <HeardDialog message={contMsg} size="xs" />
               </div>
               {contReplies.length > 0 && (
                 <div className="mt-2 ml-3 border-l-2 border-muted pl-3 space-y-1">
@@ -254,7 +284,7 @@ export const MessageItem = memo(function MessageItem({
                       <span className="text-xs text-muted-foreground">
                         {reply.sent_at ? format(new Date(reply.sent_at), 'MMM d, h:mm a') : ''}
                       </span>
-                      <HeardDialog observations={reply.heard} protocol={proto} size="xs" />
+                      <HeardDialog message={reply} size="xs" />
                     </div>
                   ))}
                 </div>
