@@ -47,7 +47,11 @@ function HeardDialog({
         <DialogHeader>
           <DialogTitle>Message Heard By</DialogTitle>
         </DialogHeader>
-        <HeardPathMap sender={sender} legs={legs} />
+        <HeardPathMap
+          sender={sender}
+          legs={legs}
+          senderName={message.mc_sender_label || message.sender?.short_name || message.sender?.long_name || null}
+        />
         {message.mc_sender_candidates && message.mc_sender_candidates.length > 1 && (
           <p className="text-xs text-muted-foreground -mt-2">
             Multiple nodes match sender &quot;{message.mc_sender_label}&quot; — map uses feeder positions only.

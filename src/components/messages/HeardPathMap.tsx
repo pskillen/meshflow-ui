@@ -23,6 +23,8 @@ export type HeardPathLeg = {
 export type HeardPathMapProps = {
   sender: { label: string; position: MapPosition } | null;
   legs: HeardPathLeg[];
+  /** Display name when sender position is missing (e.g. parsed MC channel prefix). */
+  senderName?: string | null;
 };
 
 function toLatLng(pos: MapPosition): LatLng {
@@ -33,7 +35,7 @@ function hasPositionedWaypoints(waypoints: TracerouteRouteNode[]): boolean {
   return waypoints.some((node) => node.position != null);
 }
 
-export function HeardPathMap({ sender, legs }: HeardPathMapProps) {
+export function HeardPathMap({ sender, legs, senderName }: HeardPathMapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const tileLayerRef = useRef<L.TileLayer | null>(null);
@@ -75,17 +77,20 @@ export function HeardPathMap({ sender, legs }: HeardPathMapProps) {
 
   useEffect(() => {
     const map = mapInstanceRef.current;
-    if (!map || !senderPos) return;
+    if (!map || legs.length === 0) return;
 
     layersRef.current.forEach((layer) => layer.remove());
     layersRef.current = [];
 
     const bounds = L.latLngBounds([]);
-    const senderMarker = L.marker(senderPos, {
-      icon: createNodeIcon(sender?.label ?? 'S', SENDER_COLOR, false),
-    }).addTo(map);
-    layersRef.current.push(senderMarker);
-    bounds.extend(senderPos);
+
+    if (senderPos) {
+      const senderMarker = L.marker(senderPos, {
+        icon: createNodeIcon(sender?.label ?? 'S', SENDER_COLOR, false),
+      }).addTo(map);
+      layersRef.current.push(senderMarker);
+      bounds.extend(senderPos);
+    }
 
     legs.forEach((leg, index) => {
       const receiverPos = toLatLng(leg.receiver.position);
@@ -95,6 +100,10 @@ export function HeardPathMap({ sender, legs }: HeardPathMapProps) {
       }).addTo(map);
       layersRef.current.push(receiverMarker);
       bounds.extend(receiverPos);
+
+      if (!senderPos) {
+        return;
+      }
 
       const segments =
         leg.pathKnown && hasPositionedWaypoints(leg.waypoints)
@@ -150,27 +159,33 @@ export function HeardPathMap({ sender, legs }: HeardPathMapProps) {
     }
   }, [sender, senderPos, legs]);
 
-  if (!senderPos) {
-    return (
-      <div className="flex min-h-[200px] items-center justify-center rounded-md border bg-muted/30 text-sm text-muted-foreground">
-        No map — sender position unknown
-      </div>
-    );
-  }
-
   if (legs.length === 0) {
     return (
       <div className="flex min-h-[200px] items-center justify-center rounded-md border bg-muted/30 text-sm text-muted-foreground">
-        No feeder positions available for map
+        {senderPos ? 'No feeder positions available for map' : 'No map — sender and feeder positions unknown'}
       </div>
     );
   }
 
+  const showSenderWarning = !senderPos;
+  const warningLabel = senderName?.trim() || sender?.label;
+
   return (
-    <div
-      ref={mapRef}
-      style={{ height: '280px', position: 'relative', zIndex: 1 }}
-      className="map-container rounded-md border"
-    />
+    <div className="relative rounded-md border" style={{ height: '280px' }}>
+      <div
+        ref={mapRef}
+        style={{ height: '100%', position: 'relative', zIndex: 1 }}
+        className="map-container rounded-md"
+      />
+      {showSenderWarning && (
+        <div
+          className="pointer-events-none absolute left-2 right-2 top-2 z-[1000] rounded-md border border-amber-500/60 bg-amber-50/95 px-3 py-2 text-xs text-amber-950 shadow-sm dark:border-amber-600/50 dark:bg-amber-950/90 dark:text-amber-50"
+          role="status"
+        >
+          Sender position unknown
+          {warningLabel ? ` (${warningLabel})` : ''} — feeders shown; path lines omitted.
+        </div>
+      )}
+    </div>
   );
 }
