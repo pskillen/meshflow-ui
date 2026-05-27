@@ -48,6 +48,11 @@ function HeardDialog({
           <DialogTitle>Message Heard By</DialogTitle>
         </DialogHeader>
         <HeardPathMap sender={sender} legs={legs} />
+        {message.mc_sender_candidates && message.mc_sender_candidates.length > 1 && (
+          <p className="text-xs text-muted-foreground -mt-2">
+            Multiple nodes match sender &quot;{message.mc_sender_label}&quot; — map uses feeder positions only.
+          </p>
+        )}
         <div className="space-y-4 mt-4">
           {observations?.length ? (
             observations.map((observation, index) => {

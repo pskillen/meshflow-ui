@@ -1,4 +1,5 @@
 import { buildSegments, midpoint, type LatLng } from '@/lib/map-path-segments';
+import { MAP_NODE_MARKER_CSS } from '@/lib/map-marker-styles';
 import type { TracerouteRouteNode } from '@/lib/models';
 import { useMapTileUrl } from '@/hooks/useMapTileUrl';
 import { createNodeIcon } from '@/components/nodes/map-utils';
@@ -50,13 +51,7 @@ export function HeardPathMap({ sender, legs }: HeardPathMapProps) {
 
       const style = document.createElement('style');
       style.id = 'heard-path-map-styles';
-      style.textContent = `
-        .map-container .leaflet-tile-pane { z-index: 1; }
-        .map-container .leaflet-overlay-pane { z-index: 400; }
-        .map-container .leaflet-marker-pane { z-index: 600; }
-        .map-container .leaflet-tooltip-pane { z-index: 650; }
-        .traceroute-unknown-label { font-size: 11px; font-family: monospace; background: rgba(255,255,255,0.9); border: 1px dashed #999; padding: 2px 6px; }
-      `;
+      style.textContent = MAP_NODE_MARKER_CSS;
       document.head.appendChild(style);
 
       return () => {
@@ -149,7 +144,8 @@ export function HeardPathMap({ sender, legs }: HeardPathMapProps) {
         } else {
           map.fitBounds(bounds, { padding: [40, 40], maxZoom: 15 });
         }
-      }, 50);
+        map.invalidateSize();
+      }, 150);
       return () => clearTimeout(t);
     }
   }, [sender, senderPos, legs]);

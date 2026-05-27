@@ -41,6 +41,88 @@ describe('heard path adapters', () => {
     expect(legs[0].waypoints).toHaveLength(0);
   });
 
+  it('meshCoreHeardToLegs uses single mc_sender_candidate with position as sender', () => {
+    const message: TextMessage = {
+      id: '3',
+      packet_id: 3,
+      protocol: 'meshcore',
+      sender: null,
+      sender_position: { latitude: 55.0, longitude: -4.0 },
+      mc_sender_label: 'WMF',
+      mc_sender_candidates: [
+        {
+          internal_id: '00000000-0000-4000-8000-000000000099',
+          node_id_str: 'mc:wmf',
+          long_name: 'WMF',
+          short_name: 'WMF',
+          position: { latitude: 55.0, longitude: -4.0 },
+        },
+      ],
+      recipient_meshtastic_node_id: null,
+      channel: 1,
+      sent_at: new Date().toISOString(),
+      message_text: 'WMF: hi',
+      is_emoji: false,
+      reply_to_meshtastic_packet_id: null,
+      heard: [],
+    };
+    const { sender } = meshCoreHeardToLegs(message);
+    expect(sender?.label).toBe('WMF');
+    expect(sender?.position.latitude).toBe(55.0);
+  });
+
+  it('meshCoreHeardToLegs omits sender when multiple positioned candidates', () => {
+    const pos = { latitude: 55.0, longitude: -4.0 };
+    const message: TextMessage = {
+      id: '4',
+      packet_id: 4,
+      protocol: 'meshcore',
+      sender: null,
+      mc_sender_label: 'WMF',
+      mc_sender_candidates: [
+        {
+          internal_id: '1',
+          node_id_str: 'mc:a',
+          long_name: 'WMF',
+          short_name: 'A',
+          position: pos,
+        },
+        {
+          internal_id: '2',
+          node_id_str: 'mc:b',
+          long_name: 'WMF',
+          short_name: 'B',
+          position: pos,
+        },
+      ],
+      recipient_meshtastic_node_id: null,
+      channel: 1,
+      sent_at: new Date().toISOString(),
+      message_text: 'WMF: hi',
+      is_emoji: false,
+      reply_to_meshtastic_packet_id: null,
+      heard: [
+        {
+          observer: {
+            node_id_str: 'mc:feed',
+            internal_id: null,
+            long_name: 'Feeder',
+            short_name: 'F',
+            position: { latitude: 55.2, longitude: -4.2 },
+          },
+          rx_time: new Date().toISOString(),
+          rx_rssi: -90,
+          rx_snr: 2,
+          path_hashes: ['aa'],
+          path_known: false,
+        },
+      ],
+    };
+    const { sender, legs } = meshCoreHeardToLegs(message);
+    expect(sender).toBeNull();
+    expect(legs).toHaveLength(1);
+  });
+
   it('meshCoreHeardToLegs maps resolved_path to waypoints without position', () => {
     const message: TextMessage = {
       id: '2',

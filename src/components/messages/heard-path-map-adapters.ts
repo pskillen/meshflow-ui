@@ -1,4 +1,11 @@
-import type { MapPosition, MeshCoreHeardObservation, PacketObservation, ResolvedHop, TextMessage } from '@/lib/models';
+import type {
+  MapPosition,
+  McSenderCandidate,
+  MeshCoreHeardObservation,
+  PacketObservation,
+  ResolvedHop,
+  TextMessage,
+} from '@/lib/models';
 import type { TracerouteRouteNode } from '@/lib/models';
 import type { HeardPathLeg } from './HeardPathMap';
 
@@ -8,6 +15,38 @@ export function isMeshCoreHeardObservation(
   obs: PacketObservation | MeshCoreHeardObservation
 ): obs is MeshCoreHeardObservation {
   return 'path_hashes' in obs;
+}
+
+function senderFromMcCandidates(candidates: McSenderCandidate[] | undefined): {
+  label: string;
+  position: MapPosition;
+} | null {
+  if (!candidates?.length) return null;
+  const positioned = candidates.filter((c) => c.position != null) as Array<
+    McSenderCandidate & { position: MapPosition }
+  >;
+  if (positioned.length !== 1) return null;
+  const node = positioned[0];
+  return {
+    label: node.short_name || node.long_name || node.node_id_str,
+    position: node.position,
+  };
+}
+
+function mapSender(message: TextMessage): { label: string; position: MapPosition } | null {
+  if (message.sender && message.sender_position) {
+    return {
+      label: message.sender.short_name || message.sender.node_id_str,
+      position: message.sender_position,
+    };
+  }
+  if (message.sender_position) {
+    return {
+      label: message.sender?.short_name || message.mc_sender_label || message.sender?.node_id_str || 'Sender',
+      position: message.sender_position,
+    };
+  }
+  return senderFromMcCandidates(message.mc_sender_candidates);
 }
 
 function hopToWaypoint(hop: ResolvedHop): TracerouteRouteNode {
@@ -23,14 +62,7 @@ export function meshtasticHeardToLegs(message: TextMessage): {
   sender: { label: string; position: MapPosition } | null;
   legs: HeardPathLeg[];
 } {
-  const senderPos = message.sender_position;
-  const sender =
-    message.sender && senderPos
-      ? {
-          label: message.sender.short_name || message.sender.node_id_str,
-          position: senderPos,
-        }
-      : null;
+  const sender = mapSender(message);
 
   const legs: HeardPathLeg[] = [];
   for (const obs of message.heard) {
@@ -53,14 +85,7 @@ export function meshCoreHeardToLegs(message: TextMessage): {
   sender: { label: string; position: MapPosition } | null;
   legs: HeardPathLeg[];
 } {
-  const senderPos = message.sender_position;
-  const sender =
-    message.sender && senderPos
-      ? {
-          label: message.sender.short_name || message.sender.node_id_str,
-          position: senderPos,
-        }
-      : null;
+  const sender = mapSender(message);
 
   const legs: HeardPathLeg[] = [];
   for (const obs of message.heard) {

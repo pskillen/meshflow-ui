@@ -329,6 +329,15 @@ export interface TextMessageSender {
   short_name: string | null;
 }
 
+/** MC channel sender inferred from ``{name}: {body}`` prefix (see API docs). */
+export interface McSenderCandidate {
+  internal_id: string;
+  node_id_str: string;
+  long_name: string | null;
+  short_name: string | null;
+  position: MapPosition | null;
+}
+
 export interface MapPosition {
   latitude: number;
   longitude: number;
@@ -386,6 +395,8 @@ export interface TextMessage {
   protocol?: MeshProtocol | 'meshtastic' | 'meshcore' | string;
   sender: TextMessageSender | null;
   sender_position?: MapPosition | null;
+  mc_sender_label?: string | null;
+  mc_sender_candidates?: McSenderCandidate[];
   recipient_meshtastic_node_id: number | null;
   channel: number;
   sent_at: string; // ISO date string
