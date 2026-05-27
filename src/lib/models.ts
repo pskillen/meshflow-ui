@@ -329,6 +329,20 @@ export interface TextMessageSender {
   short_name: string | null;
 }
 
+/** MC channel sender inferred from ``{name}: {body}`` prefix (see API docs). */
+export interface McSenderCandidate {
+  internal_id: string;
+  node_id_str: string;
+  long_name: string | null;
+  short_name: string | null;
+  position: MapPosition | null;
+}
+
+export interface MapPosition {
+  latitude: number;
+  longitude: number;
+}
+
 export interface PacketObservationObserver {
   meshtastic_node_id: number;
   node_id_str: string;
@@ -338,19 +352,41 @@ export interface PacketObservationObserver {
 
 export interface PacketObservation {
   observer: PacketObservationObserver;
+  observer_position?: MapPosition | null;
   rx_time: string; // ISO date string
   rx_rssi: number | null;
   rx_snr: number | null;
   direct_from_sender: boolean;
   hop_count: number | null;
+  path_known?: boolean;
 }
 
-/** MeshCore heard row shape from text message API (observer is node_id_str string). */
+export interface ResolvedHop {
+  hash: string;
+  status: 'unknown' | 'ambiguous' | 'resolved';
+  node_id_str: string | null;
+  internal_id: string | null;
+  long_name: string | null;
+  ambiguous: boolean;
+}
+
+export interface HeardObserver {
+  node_id_str: string;
+  internal_id: string | null;
+  long_name: string | null;
+  short_name: string | null;
+  position: MapPosition | null;
+}
+
+/** MeshCore heard row from text message API. */
 export interface MeshCoreHeardObservation {
-  observer: string;
+  observer: HeardObserver;
   rx_time: string;
   rx_rssi: number | null;
   rx_snr: number | null;
+  path_hashes?: string[] | null;
+  resolved_path?: ResolvedHop[];
+  path_known: boolean;
 }
 
 export interface TextMessage {
@@ -358,6 +394,9 @@ export interface TextMessage {
   packet_id: number | string;
   protocol?: MeshProtocol | 'meshtastic' | 'meshcore' | string;
   sender: TextMessageSender | null;
+  sender_position?: MapPosition | null;
+  mc_sender_label?: string | null;
+  mc_sender_candidates?: McSenderCandidate[];
   recipient_meshtastic_node_id: number | null;
   channel: number;
   sent_at: string; // ISO date string

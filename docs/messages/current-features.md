@@ -43,7 +43,9 @@ A **Discord-like** (non-bubble, dense, single-column) layout is **not** implemen
 
 ### Consecutive message grouping
 
-- Same `sender.node_id_str`, within **15 minutes**, on the **main** timeline (not replies): rendered as one card.
+- Same sender key, within **15 minutes**, on the **main** timeline (not replies): rendered as one card.
+- **MT:** `sender.node_id_str`.
+- **MC channel text:** single `mc_sender_candidates` entry → that node’s `node_id_str`; multiple candidates → `mc-ambiguous:{label}` (same parsed name only).
 - Primary message keeps full header; **continuations** appear below a divider with time + heard only (no repeated avatar row).
 
 ### Threading and reactions (Meshtastic-oriented)
@@ -71,11 +73,14 @@ MeshCore may not use MT reply/emoji semantics; UI still runs the same grouping l
 - **MC:** `MeshCoreHeardObservation` — observer string (`node_id_str`), rx time, RSSI/SNR (no hop/direct badge).
 - Shown on main messages, continuations, and inline replies (smaller button variant).
 
-### Sender links
+### Sender display and links
 
-- **MT** `!hex` senders: name links to `/nodes/{numericId}` (parsed from `node_id_str`).
-- **Mobile:** extra external-link icon on small screens.
-- **MC / anonymous:** label only, no node link (`parseNodeId` fails for non-hex ids).
+- **MT** `!hex` senders: name links to node detail (parsed from `node_id_str`).
+- **MC channel text** (`sender` null): inferred via API `mc_sender_label` / `mc_sender_candidates` (`messageSenderDisplay`):
+  - **0 candidates:** “Anonymous”, no link.
+  - **1 candidate:** node name + link to MeshCore node detail.
+  - **>1 candidates:** parsed label + “N matches” badge (tooltip lists candidate names); no link.
+- **Mobile:** extra external-link icon on small screens when a link exists.
 
 ### Pagination
 

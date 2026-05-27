@@ -1,4 +1,5 @@
-import { AutoTraceRoute, TracerouteRouteNode } from '@/lib/models';
+import { AutoTraceRoute } from '@/lib/models';
+import { buildSegments, midpoint, type LatLng } from '@/lib/map-path-segments';
 import { useMapTileUrl } from '@/hooks/useMapTileUrl';
 import { createNodeIcon } from '@/components/nodes/map-utils';
 import L from 'leaflet';
@@ -11,8 +12,6 @@ const TARGET_COLOR = '#16a34a';
 const INTERMEDIATE_COLOR = '#64748b';
 const FAILED_LINE_COLOR = '#dc2626';
 const UNKNOWN_NODE_ID = 0xffffffff;
-
-type LatLng = [number, number];
 
 function getSourcePos(tr: AutoTraceRoute): LatLng | null {
   const pos = tr.source_node?.position;
@@ -28,57 +27,6 @@ function getTargetPos(tr: AutoTraceRoute): LatLng | null {
     return [pos.latitude, pos.longitude];
   }
   return null;
-}
-
-interface Segment {
-  latlngs: LatLng[];
-  dashed: boolean;
-  unknownLabels: { node_id_str: string }[];
-}
-
-function buildSegments(startPos: LatLng | null, nodes: TracerouteRouteNode[], endPos: LatLng | null): Segment[] {
-  if (!startPos || !endPos) return [];
-  const segments: Segment[] = [];
-  let solidRun: LatLng[] = [startPos];
-  let pendingUnknowns: { node_id_str: string }[] = [];
-
-  for (const node of nodes) {
-    if (node.position) {
-      const pos: LatLng = [node.position.latitude, node.position.longitude];
-      if (pendingUnknowns.length > 0) {
-        segments.push({
-          latlngs: [solidRun[solidRun.length - 1], pos],
-          dashed: true,
-          unknownLabels: pendingUnknowns,
-        });
-        pendingUnknowns = [];
-      }
-      solidRun.push(pos);
-    } else {
-      if (solidRun.length >= 2) {
-        segments.push({ latlngs: [...solidRun], dashed: false, unknownLabels: [] });
-      }
-      solidRun = [solidRun[solidRun.length - 1]];
-      pendingUnknowns.push({ node_id_str: node.node_id_str });
-    }
-  }
-
-  if (pendingUnknowns.length > 0) {
-    segments.push({
-      latlngs: [solidRun[solidRun.length - 1], endPos],
-      dashed: true,
-      unknownLabels: pendingUnknowns,
-    });
-  } else {
-    solidRun.push(endPos);
-    segments.push({ latlngs: solidRun, dashed: false, unknownLabels: [] });
-  }
-
-  return segments;
-}
-
-function midpoint(a: LatLng, b: LatLng): LatLng {
-  return [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
 }
 
 export function TracerouteMap({ traceroute }: { traceroute: AutoTraceRoute }) {
