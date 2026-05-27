@@ -5,6 +5,8 @@ import { MessageItem } from './MessageItem';
 import { Button } from '@/components/ui/button';
 import type { TextMessage } from '@/lib/models';
 import type { ProtocolSlug } from '@/lib/mesh-protocol';
+import { messageSenderGroupingKey } from '@/lib/message-display-sender';
+import { messageProtocol } from '@/lib/message-protocol';
 
 const CONSECUTIVE_THRESHOLD_MINUTES = 15;
 
@@ -59,10 +61,11 @@ export function MessageList({ channel, constellationId, nodeId, protocol }: Mess
       let j = i + 1;
       while (j < mainMessages.length) {
         const next = mainMessages[j];
-        const sameSender =
-          next.sender?.node_id_str != null &&
-          msg.sender?.node_id_str != null &&
-          next.sender.node_id_str === msg.sender.node_id_str;
+        const msgProto = messageProtocol(msg);
+        const nextProto = messageProtocol(next);
+        const msgKey = messageSenderGroupingKey(msg, msgProto);
+        const nextKey = messageSenderGroupingKey(next, nextProto);
+        const sameSender = msgKey != null && nextKey != null && msgKey === nextKey;
         const withinWindow =
           msg.sent_at &&
           next.sent_at &&

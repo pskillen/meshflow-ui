@@ -11,6 +11,7 @@ import { StaleReportedTime } from '@/components/nodes/StaleReportedTime';
 import { Link } from 'react-router-dom';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ExternalLink } from 'lucide-react';
+import { messageSenderDisplay } from '@/lib/message-display-sender';
 import { nodeDetailPath } from '@/lib/node-detail-routes';
 
 function HeardDialog({
@@ -157,15 +158,7 @@ export const MessageItem = memo(function MessageItem({
   continuationMessages = [],
 }: MessageItemProps) {
   const proto = messageProtocol(message);
-  const senderDetailPath = useMemo(() => {
-    if (!message.sender?.node_id_str) {
-      return null;
-    }
-    return nodeDetailPath({
-      node_id_str: message.sender.node_id_str,
-      protocol: proto === 'meshcore' ? 2 : 1,
-    });
-  }, [message.sender, proto]);
+  const senderDisplay = useMemo(() => messageSenderDisplay(message, proto), [message, proto]);
   const fullTime = useMemo(() => {
     return message.sent_at ? format(new Date(message.sent_at), 'MMM d, yyyy h:mm a') : 'Unknown time';
   }, [message.sent_at]);
@@ -182,7 +175,7 @@ export const MessageItem = memo(function MessageItem({
     return map;
   }, [emojiReactions]);
 
-  const senderName = message.sender?.short_name || message.sender?.node_id_str || 'Anonymous';
+  const senderName = senderDisplay.name;
 
   return (
     <article className="mb-3 rounded-lg border border-slate-200 dark:border-slate-600 bg-card p-3">
@@ -195,16 +188,17 @@ export const MessageItem = memo(function MessageItem({
         </Avatar>
         <div className="min-w-0 flex-1 flex items-center gap-2">
           {/* Desktop: sender name as link. Mobile: sender name + subtle icon link */}
-          {senderDetailPath != null ? (
+          {senderDisplay.detailPath != null ? (
             <>
               <Link
-                to={senderDetailPath}
+                to={senderDisplay.detailPath}
                 className="font-medium text-foreground hover:underline truncate md:max-w-[200px]"
+                title={senderDisplay.title}
               >
                 {senderName}
               </Link>
               <Link
-                to={senderDetailPath}
+                to={senderDisplay.detailPath}
                 className="shrink-0 p-0.5 text-muted-foreground hover:text-foreground md:sr-only"
                 aria-label={`View node ${senderName} details`}
               >
@@ -212,7 +206,14 @@ export const MessageItem = memo(function MessageItem({
               </Link>
             </>
           ) : (
-            <span className="font-medium truncate">{senderName}</span>
+            <span className="font-medium truncate" title={senderDisplay.title}>
+              {senderName}
+            </span>
+          )}
+          {senderDisplay.ambiguous && (
+            <Badge variant="outline" className="shrink-0 text-xs font-normal" title={senderDisplay.title}>
+              {message.mc_sender_candidates?.length} matches
+            </Badge>
           )}
         </div>
         {message.sent_at ? (
