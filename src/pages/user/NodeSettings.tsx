@@ -35,6 +35,7 @@ import {
 import { SetupManagedNode } from '@/components/nodes/SetupManagedNode';
 import { apiKeyLinksManagedNode, isObservedNodeManaged, managedNodeStableKey } from '@/lib/managed-node-enrollment';
 import { meshProtocolFromManagedNode } from '@/lib/mesh-protocol';
+import { filterChannelsForProtocol, formatMessageChannelLabel } from '@/lib/message-channels';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMeshtasticApi } from '@/hooks/api/useApi';
 import { cn } from '@/lib/utils';
@@ -484,13 +485,29 @@ function stripHashtagPrefix(value: string): string {
   return value.replace(/^#+/, '').trim();
 }
 
-function mcChannelsFromNode(node: OwnedManagedNode): McChannelApplyEntry[] {
+type McChannelRowState = McChannelApplyEntry & {
+  linkMode: 'existing' | 'new';
+  linkedChannelId?: number;
+};
+
+function mcChannelRowsFromNode(node: OwnedManagedNode): McChannelRowState[] {
   return (node.mc_channels ?? []).map((ch) => ({
     mc_channel_idx: ch.mc_channel_idx,
     name: ch.name,
     mc_channel_type: ch.mc_channel_type,
     mc_hashtag: ch.mc_channel_type === 'HASHTAG' ? (ch.mc_hashtag ?? stripHashtagPrefix(ch.name)) : ch.mc_hashtag,
+    linkMode: 'new' as const,
+    linkedChannelId: ch.id,
   }));
+}
+
+function rowToApplyEntry(row: McChannelRowState): McChannelApplyEntry {
+  return {
+    mc_channel_idx: row.mc_channel_idx,
+    name: row.name,
+    mc_channel_type: row.mc_channel_type,
+    mc_hashtag: row.mc_hashtag,
+  };
 }
 
 function applyMcChannelErrorMessage(err: unknown): string {
@@ -513,11 +530,17 @@ function MeshCoreChannelSettings({ node }: { node: OwnedManagedNode }) {
   const api = useMeshtasticApi();
   const queryClient = useQueryClient();
   const internalId = node.internal_id;
-  const [rows, setRows] = useState<McChannelApplyEntry[]>(() => mcChannelsFromNode(node));
+  const constellationId = node.constellation.id;
+  const { data: constellationChannels = [] } = useConstellationChannels(constellationId);
+  const mcCatalog = useMemo(
+    () => filterChannelsForProtocol(constellationChannels, 'meshcore'),
+    [constellationChannels]
+  );
+  const [rows, setRows] = useState<McChannelRowState[]>(() => mcChannelRowsFromNode(node));
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    setRows(mcChannelsFromNode(node));
+    setRows(mcChannelRowsFromNode(node));
   }, [node]);
 
   const applyToRadio = useMutation({
@@ -525,7 +548,7 @@ function MeshCoreChannelSettings({ node }: { node: OwnedManagedNode }) {
       if (!internalId) {
         throw new Error('Missing feeder internal_id');
       }
-      return api.applyMcChannelConfig(internalId, rows);
+      return api.applyMcChannelConfig(internalId, rows.map(rowToApplyEntry));
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['managed-nodes', 'mine'] });
@@ -533,11 +556,34 @@ function MeshCoreChannelSettings({ node }: { node: OwnedManagedNode }) {
     },
   });
 
-  const updateRow = (index: number, patch: Partial<McChannelApplyEntry>) => {
+  const applyCatalogChannel = (index: number, channelId: number) => {
+    const ch = mcCatalog.find((c) => c.id === channelId);
+    if (!ch) return;
+    const isHashtag = String(ch.mc_channel_type ?? '').toUpperCase() === 'HASHTAG';
+    const tag = isHashtag ? stripHashtagPrefix(ch.mc_hashtag ?? ch.name) : '';
+    setRows((prev) =>
+      prev.map((r, i) => {
+        if (i !== index) return r;
+        return {
+          ...r,
+          linkMode: 'existing',
+          linkedChannelId: ch.id,
+          mc_channel_type: isHashtag ? 'HASHTAG' : 'PUBLIC',
+          name: isHashtag ? tag : ch.name,
+          mc_hashtag: isHashtag ? tag || null : null,
+        };
+      })
+    );
+  };
+
+  const updateRow = (index: number, patch: Partial<McChannelRowState>) => {
     setRows((prev) =>
       prev.map((r, i) => {
         if (i !== index) return r;
         const next = { ...r, ...patch };
+        if (patch.linkMode === 'new') {
+          next.linkedChannelId = undefined;
+        }
         if (next.mc_channel_type === 'HASHTAG') {
           const tag = stripHashtagPrefix(next.mc_hashtag ?? next.name);
           return { ...next, name: tag, mc_hashtag: tag || null };
@@ -553,7 +599,13 @@ function MeshCoreChannelSettings({ node }: { node: OwnedManagedNode }) {
     while (used.has(idx) && idx < 63) idx += 1;
     setRows((prev) => [
       ...prev,
-      { mc_channel_idx: idx, name: `Channel ${idx}`, mc_channel_type: 'PUBLIC', mc_hashtag: null },
+      {
+        mc_channel_idx: idx,
+        name: `Channel ${idx}`,
+        mc_channel_type: 'PUBLIC',
+        mc_hashtag: null,
+        linkMode: 'new',
+      },
     ]);
   };
 
@@ -595,75 +647,115 @@ function MeshCoreChannelSettings({ node }: { node: OwnedManagedNode }) {
           ) : (
             <div className="space-y-3">
               {rows.map((row, index) => (
-                <div key={`${row.mc_channel_idx}-${index}`} className="grid gap-2 sm:grid-cols-2">
-                  <div>
-                    <Label className="text-xs">Index</Label>
-                    <p className="text-sm font-mono">{row.mc_channel_idx}</p>
+                <div
+                  key={`${row.mc_channel_idx}-${index}`}
+                  className="rounded-md border border-border bg-background p-3 space-y-3"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-sm font-medium">
+                      Device slot <span className="font-mono text-muted-foreground">{row.mc_channel_idx}</span>
+                    </span>
+                    <Button type="button" variant="ghost" size="sm" onClick={() => removeRow(index)}>
+                      Remove
+                    </Button>
                   </div>
-                  <div>
-                    <Label className="text-xs">Type</Label>
+                  <div className="space-y-2">
+                    <Label className="text-xs">Channel source</Label>
                     <Select
-                      value={row.mc_channel_type}
-                      onValueChange={(v) => {
-                        const type = v as McChannelSnapshot['mc_channel_type'];
-                        if (type === 'HASHTAG') {
-                          const tag = stripHashtagPrefix(row.mc_hashtag ?? row.name);
-                          updateRow(index, {
-                            mc_channel_type: type,
-                            name: tag,
-                            mc_hashtag: tag || null,
-                          });
-                        } else {
-                          updateRow(index, { mc_channel_type: type, mc_hashtag: null });
-                        }
-                      }}
+                      value={row.linkMode}
+                      onValueChange={(v) => updateRow(index, { linkMode: v as 'existing' | 'new' })}
                     >
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="PUBLIC">Public</SelectItem>
-                        <SelectItem value="HASHTAG">Hashtag</SelectItem>
+                        <SelectItem value="existing">Link existing constellation channel</SelectItem>
+                        <SelectItem value="new">Create new channel</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
-                  {row.mc_channel_type === 'HASHTAG' ? (
-                    <div className="sm:col-span-2">
-                      <Label className="text-xs">Hashtag</Label>
-                      <div className="flex">
-                        <span
-                          className="inline-flex h-9 items-center rounded-l-md border border-r-0 border-input bg-muted px-3 text-sm text-muted-foreground"
-                          aria-hidden
-                        >
-                          #
-                        </span>
-                        <input
-                          className="flex h-9 w-full rounded-r-md border border-input bg-background px-3 text-sm"
-                          value={row.mc_hashtag ?? ''}
-                          onChange={(e) => updateRow(index, { mc_hashtag: e.target.value })}
-                          placeholder="galloway"
-                          aria-label="Hashtag name"
-                        />
-                      </div>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        Stored on the radio as #{row.mc_hashtag || '…'} (name and hashtag are the same).
-                      </p>
+                  {row.linkMode === 'existing' ? (
+                    <div className="space-y-2">
+                      <Label className="text-xs">Constellation channel</Label>
+                      <Select
+                        value={row.linkedChannelId != null ? String(row.linkedChannelId) : ''}
+                        onValueChange={(v) => applyCatalogChannel(index, Number(v))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select channel…" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {mcCatalog.map((ch) => (
+                            <SelectItem key={ch.id} value={String(ch.id)}>
+                              {formatMessageChannelLabel(ch)}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {mcCatalog.length === 0 ? (
+                        <p className="text-xs text-muted-foreground">No MeshCore channels in this constellation yet.</p>
+                      ) : null}
                     </div>
                   ) : (
-                    <div className="sm:col-span-2">
-                      <Label className="text-xs">Name</Label>
-                      <input
-                        className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-                        value={row.name}
-                        onChange={(e) => updateRow(index, { name: e.target.value })}
-                      />
+                    <div className="space-y-2">
+                      <div className="space-y-2">
+                        <Label className="text-xs">Type</Label>
+                        <Select
+                          value={row.mc_channel_type}
+                          onValueChange={(v) => {
+                            const type = v as McChannelSnapshot['mc_channel_type'];
+                            if (type === 'HASHTAG') {
+                              const tag = stripHashtagPrefix(row.mc_hashtag ?? row.name);
+                              updateRow(index, {
+                                mc_channel_type: type,
+                                name: tag,
+                                mc_hashtag: tag || null,
+                              });
+                            } else {
+                              updateRow(index, { mc_channel_type: type, mc_hashtag: null });
+                            }
+                          }}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="PUBLIC">Public</SelectItem>
+                            <SelectItem value="HASHTAG">Hashtag</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      {row.mc_channel_type === 'HASHTAG' ? (
+                        <div>
+                          <Label className="text-xs">Hashtag</Label>
+                          <div className="flex">
+                            <span
+                              className="inline-flex h-9 items-center rounded-l-md border border-r-0 border-input bg-muted px-3 text-sm text-muted-foreground"
+                              aria-hidden
+                            >
+                              #
+                            </span>
+                            <input
+                              className="flex h-9 w-full rounded-r-md border border-input bg-background px-3 text-sm"
+                              value={row.mc_hashtag ?? ''}
+                              onChange={(e) => updateRow(index, { mc_hashtag: e.target.value })}
+                              placeholder="test"
+                              aria-label="Hashtag name"
+                            />
+                          </div>
+                        </div>
+                      ) : (
+                        <div>
+                          <Label className="text-xs">Name</Label>
+                          <input
+                            className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+                            value={row.name}
+                            onChange={(e) => updateRow(index, { name: e.target.value })}
+                          />
+                        </div>
+                      )}
                     </div>
                   )}
-                  <div className="sm:col-span-2">
-                    <Button type="button" variant="ghost" size="sm" onClick={() => removeRow(index)}>
-                      Remove
-                    </Button>
-                  </div>
                 </div>
               ))}
             </div>
