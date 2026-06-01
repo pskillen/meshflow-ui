@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { meshtasticHeardToLegs, meshCoreHeardToLegs } from './heard-path-map-adapters';
+import {
+  meshCoreHeardLegs,
+  meshCoreHeardToLegs,
+  meshtasticHeardToLegs,
+  resolvedHopsFromObservation,
+} from './heard-path-map-adapters';
 import type { TextMessage } from '@/lib/models';
 
 describe('heard path adapters', () => {
@@ -167,5 +172,141 @@ describe('heard path adapters', () => {
     expect(legs[0].waypoints[0].node_id_str).toBe('aa');
     expect(legs[0].waypoints[0].position).toBeNull();
     expect(legs[0].pathKnown).toBe(false);
+  });
+
+  it('meshCoreHeardLegs includes feeder without observer position', () => {
+    const message: TextMessage = {
+      id: '5',
+      packet_id: 5,
+      protocol: 'meshcore',
+      sender: { node_id_str: 'mc:abc', long_name: 'X', short_name: 'X' },
+      sender_position: { latitude: 55.0, longitude: -4.0 },
+      recipient_meshtastic_node_id: null,
+      channel: 1,
+      sent_at: new Date().toISOString(),
+      message_text: 'mc',
+      is_emoji: false,
+      reply_to_meshtastic_packet_id: null,
+      heard: [
+        {
+          observer: {
+            node_id_str: 'mc:feed',
+            internal_id: null,
+            long_name: 'Feeder',
+            short_name: 'F',
+            position: null,
+          },
+          rx_time: new Date().toISOString(),
+          rx_rssi: -90,
+          rx_snr: 2,
+          path_hashes: ['aa'],
+          path_known: false,
+        },
+      ],
+    };
+    const { legs } = meshCoreHeardLegs(message);
+    expect(legs).toHaveLength(1);
+    expect(legs[0].receiverPosition).toBeNull();
+    expect(legs[0].hops).toHaveLength(1);
+    expect(legs[0].hops[0].hash).toBe('aa');
+  });
+
+  it('meshCoreHeardLegs returns distinct paths per feeder', () => {
+    const message: TextMessage = {
+      id: '6',
+      packet_id: 6,
+      protocol: 'meshcore',
+      sender: { node_id_str: 'mc:abc', long_name: 'X', short_name: 'X' },
+      sender_position: { latitude: 55.0, longitude: -4.0 },
+      recipient_meshtastic_node_id: null,
+      channel: 1,
+      sent_at: new Date().toISOString(),
+      message_text: 'mc',
+      is_emoji: false,
+      reply_to_meshtastic_packet_id: null,
+      heard: [
+        {
+          observer: {
+            node_id_str: 'mc:f1',
+            internal_id: null,
+            long_name: 'F1',
+            short_name: 'F1',
+            position: { latitude: 55.1, longitude: -4.1 },
+          },
+          rx_time: new Date().toISOString(),
+          rx_rssi: -90,
+          rx_snr: 2,
+          path_hashes: ['aa'],
+          resolved_path: [
+            {
+              hash: 'aa',
+              status: 'unknown',
+              node_id_str: null,
+              internal_id: null,
+              long_name: null,
+              ambiguous: false,
+            },
+          ],
+          path_known: false,
+        },
+        {
+          observer: {
+            node_id_str: 'mc:f2',
+            internal_id: null,
+            long_name: 'F2',
+            short_name: 'F2',
+            position: { latitude: 55.2, longitude: -4.2 },
+          },
+          rx_time: new Date().toISOString(),
+          rx_rssi: -88,
+          rx_snr: 3,
+          path_hashes: ['aa', 'cc'],
+          resolved_path: [
+            {
+              hash: 'aa',
+              status: 'unknown',
+              node_id_str: null,
+              internal_id: null,
+              long_name: null,
+              ambiguous: false,
+            },
+            {
+              hash: 'cc',
+              status: 'unknown',
+              node_id_str: null,
+              internal_id: null,
+              long_name: null,
+              ambiguous: false,
+            },
+          ],
+          path_known: false,
+        },
+      ],
+    };
+    const { legs } = meshCoreHeardLegs(message);
+    expect(legs).toHaveLength(2);
+    expect(legs[0].hops).toHaveLength(1);
+    expect(legs[1].hops).toHaveLength(2);
+    expect(legs[0].lineColor).not.toBe(legs[1].lineColor);
+  });
+
+  it('resolvedHopsFromObservation falls back to path_hashes', () => {
+    const hops = resolvedHopsFromObservation({
+      observer: {
+        node_id_str: 'mc:f',
+        internal_id: null,
+        long_name: null,
+        short_name: 'F',
+        position: null,
+      },
+      rx_time: new Date().toISOString(),
+      rx_rssi: null,
+      rx_snr: null,
+      path_hashes: ['de', 'ad'],
+      path_known: false,
+    });
+    expect(hops).toHaveLength(2);
+    expect(hops[0].status).toBe('unknown');
+    expect(hops[1].hash).toBe('ad');
   });
 });
