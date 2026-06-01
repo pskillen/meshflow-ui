@@ -7,9 +7,9 @@ import L from 'leaflet';
 import { useEffect, useRef } from 'react';
 import 'leaflet/dist/leaflet.css';
 
+import { HEARD_PATH_LEG_COLORS, HEARD_PATH_SENDER_COLOR } from './heard-path-constants';
+
 const DEFAULT_CENTER: LatLng = [55.8642, -4.2518];
-const SENDER_COLOR = '#16a34a';
-const LEG_COLORS = ['#2563eb', '#0891b2', '#7c3aed', '#db2777', '#ea580c'];
 
 export type MapPosition = { latitude: number; longitude: number };
 
@@ -86,7 +86,7 @@ export function HeardPathMap({ sender, legs, senderName }: HeardPathMapProps) {
 
     if (senderPos) {
       const senderMarker = L.marker(senderPos, {
-        icon: createNodeIcon(sender?.label ?? 'S', SENDER_COLOR, false),
+        icon: createNodeIcon(sender?.label ?? 'S', HEARD_PATH_SENDER_COLOR, false),
       }).addTo(map);
       layersRef.current.push(senderMarker);
       bounds.extend(senderPos);
@@ -94,7 +94,7 @@ export function HeardPathMap({ sender, legs, senderName }: HeardPathMapProps) {
 
     legs.forEach((leg, index) => {
       const receiverPos = toLatLng(leg.receiver.position);
-      const color = leg.lineColor ?? LEG_COLORS[index % LEG_COLORS.length];
+      const color = leg.lineColor ?? HEARD_PATH_LEG_COLORS[index % HEARD_PATH_LEG_COLORS.length];
       const receiverMarker = L.marker(receiverPos, {
         icon: createNodeIcon(leg.receiver.label, color, false),
       }).addTo(map);
