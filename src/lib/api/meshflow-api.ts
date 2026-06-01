@@ -34,6 +34,9 @@ import {
   DxNotificationSettings,
   DxNotificationSettingsWrite,
   MeshCorePacketListItem,
+  MeshCorePathEdgeBucket,
+  MeshCorePathSegment,
+  MeshCorePathSegmentAnnotateBody,
 } from '../models';
 import {
   ApiConfig,
@@ -42,6 +45,7 @@ import {
   PaginationParams,
   StatsSnapshotsParams,
   DxEventsQueryParams,
+  PathTracingQueryParams,
 } from '@/lib/types';
 import { parseNodeWatchFromAPI, parseObservedNodeFromAPI } from './api-utils';
 import type { RfProfile, RfProfileUpdateBody, RfPropagationPollResult, RfPropagationRenderRow } from '@/lib/models';
@@ -511,6 +515,38 @@ export class MeshflowApi extends BaseApi {
     if (params?.payload_type != null) searchParams.append('payload_type', String(params.payload_type));
     if (params?.from_pubkey_prefix) searchParams.append('from_pubkey_prefix', params.from_pubkey_prefix);
     return this.get('/meshcore/packets/', searchParams);
+  }
+
+  private appendPathTracingParams(searchParams: URLSearchParams, params?: PathTracingQueryParams) {
+    if (params?.page) searchParams.append('page', params.page.toString());
+    if (params?.page_size) searchParams.append('page_size', params.page_size.toString());
+    if (params?.bucket_start_after) searchParams.append('bucket_start_after', params.bucket_start_after);
+    if (params?.bucket_start_before) searchParams.append('bucket_start_before', params.bucket_start_before);
+    if (params?.observer) searchParams.append('observer', params.observer);
+    if (params?.constellation != null) searchParams.append('constellation', String(params.constellation));
+    if (params?.from_hash) searchParams.append('from_hash', params.from_hash);
+    if (params?.to_hash) searchParams.append('to_hash', params.to_hash);
+    if (params?.resolved != null) searchParams.append('resolved', params.resolved ? 'true' : 'false');
+    if (params?.status) searchParams.append('status', params.status);
+    if (params?.hash_mode != null) searchParams.append('hash_mode', String(params.hash_mode));
+    if (params?.hash_size != null) searchParams.append('hash_size', String(params.hash_size));
+    if (params?.segment_hash) searchParams.append('segment_hash', params.segment_hash);
+  }
+
+  async getPathTracingEdges(params?: PathTracingQueryParams): Promise<PaginatedResponse<MeshCorePathEdgeBucket>> {
+    const searchParams = new URLSearchParams();
+    this.appendPathTracingParams(searchParams, params);
+    return this.get('/meshcore/path-tracing/edges/', searchParams);
+  }
+
+  async getPathTracingSegments(params?: PathTracingQueryParams): Promise<PaginatedResponse<MeshCorePathSegment>> {
+    const searchParams = new URLSearchParams();
+    this.appendPathTracingParams(searchParams, params);
+    return this.get('/meshcore/path-tracing/segments/', searchParams);
+  }
+
+  async annotatePathSegment(segmentId: string, body: MeshCorePathSegmentAnnotateBody): Promise<MeshCorePathSegment> {
+    return this.patch(`/meshcore/path-tracing/segments/${segmentId}/`, body);
   }
 
   async getManagedNodes(

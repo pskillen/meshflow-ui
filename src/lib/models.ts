@@ -154,6 +154,55 @@ export interface GeoClassification {
   };
 }
 
+export interface MeshCorePathObservedNodeMinimal {
+  internal_id: string;
+  node_id_str: string | null;
+  long_name: string | null;
+}
+
+export interface MeshCorePathEdgeBucket {
+  id: string;
+  bucket_start: string;
+  bucket_size: string;
+  from_kind: string;
+  to_kind: string;
+  from_hash: string;
+  to_hash: string;
+  observer: string | null;
+  observer_name: string | null;
+  constellation: number | null;
+  constellation_name: string | null;
+  packet_count: number;
+  observation_count: number;
+  first_seen_at: string | null;
+  last_seen_at: string | null;
+  avg_snr: number | null;
+  min_snr: number | null;
+  max_snr: number | null;
+  direction: string;
+  resolved: boolean;
+}
+
+export interface MeshCorePathSegment {
+  id: string;
+  segment_hash: string;
+  hash_size: number | null;
+  hash_mode: number | null;
+  status: string;
+  source: string;
+  resolver_version: number;
+  confidence: number | null;
+  observed_node: MeshCorePathObservedNodeMinimal | null;
+  first_seen_at: string;
+  last_seen_at: string;
+}
+
+export interface MeshCorePathSegmentAnnotateBody {
+  observed_node_id?: string | null;
+  node_id_str?: string | null;
+  status?: string;
+}
+
 export interface MeshCorePacketListItem {
   id: string;
   payload_type: number;

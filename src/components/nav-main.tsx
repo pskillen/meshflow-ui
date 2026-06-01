@@ -142,6 +142,11 @@ function buildNavSections(showDxMonitoring: boolean): NavSection[] {
       label: 'MeshCore',
       items: [
         { title: 'Dashboard', url: '/meshcore/dashboard', icon: BarChartIcon },
+        {
+          title: 'Passive path (preview)',
+          url: '/meshcore/path-tracing',
+          icon: RouteIcon,
+        },
         { title: 'Messages', url: '/meshcore/messages', icon: MessageSquareIcon },
         {
           title: 'Nodes',
