@@ -1,7 +1,16 @@
-import { TextMessage, type PacketObservation, type MeshCoreHeardObservation } from '@/lib/models';
+import { TextMessage, type PacketObservation } from '@/lib/models';
 import { messageProtocol } from '@/lib/message-protocol';
+import { HeardPathGeoMap } from '@/components/messages/HeardPathGeoMap';
 import { HeardPathMap } from '@/components/messages/HeardPathMap';
-import { isMeshCoreHeardObservation, messageToHeardPathLegs } from '@/components/messages/heard-path-map-adapters';
+import { MeshCoreHeardPathsPanel } from '@/components/messages/MeshCoreHeardPathsPanel';
+import { PathHopChain } from '@/components/messages/PathHopChain';
+import {
+  isMeshCoreHeardMessage,
+  isMeshCoreHeardObservation,
+  meshCoreHeardLegs,
+  messageToHeardPathLegs,
+  resolvedHopsFromObservation,
+} from '@/components/messages/heard-path-map-adapters';
 import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -14,6 +23,83 @@ import { ExternalLink } from 'lucide-react';
 import { messageSenderDisplay } from '@/lib/message-display-sender';
 import { nodeDetailPath } from '@/lib/node-detail-routes';
 
+function MeshCoreHeardDialogBody({ message }: { message: TextMessage }) {
+  const { sender, senderDisplayLabel, legs } = useMemo(() => meshCoreHeardLegs(message), [message]);
+  const senderKnown = sender != null;
+
+  const geoFeeders = useMemo(
+    () =>
+      legs
+        .filter((leg) => leg.receiverPosition != null)
+        .map((leg) => ({
+          label: leg.receiverLabel,
+          position: leg.receiverPosition!,
+          color: leg.lineColor,
+        })),
+    [legs]
+  );
+
+  const geoSender = sender ? { label: sender.label, position: sender.position } : null;
+
+  return (
+    <>
+      <HeardPathGeoMap
+        sender={geoSender}
+        feeders={geoFeeders}
+        senderName={message.mc_sender_label || message.sender?.short_name || message.sender?.long_name || null}
+      />
+      {message.mc_sender_candidates && message.mc_sender_candidates.length > 1 && (
+        <p className="text-xs text-muted-foreground -mt-2">
+          Multiple nodes match sender &quot;{message.mc_sender_label}&quot; — map uses feeder positions only.
+        </p>
+      )}
+      <MeshCoreHeardPathsPanel legs={legs} senderDisplayLabel={senderDisplayLabel} senderKnown={senderKnown} />
+      <div className="space-y-4 mt-4">
+        {legs.map((leg, index) => {
+          const mc = leg.observation;
+          const observerLink = nodeDetailPath({
+            internal_id: mc.observer.internal_id ?? undefined,
+            node_id_str: mc.observer.node_id_str,
+            protocol: 2,
+          });
+          const hops = resolvedHopsFromObservation(mc);
+          return (
+            <div
+              key={`${mc.observer.node_id_str}-${index}`}
+              className="grid gap-3 rounded-md border p-3 sm:grid-cols-2 sm:gap-4"
+              style={{ borderLeftWidth: 4, borderLeftColor: leg.lineColor }}
+            >
+              <div className="min-w-0">
+                <div className="font-semibold">
+                  {observerLink ? (
+                    <Link to={observerLink} className="hover:underline">
+                      {leg.receiverLabel}
+                    </Link>
+                  ) : (
+                    leg.receiverLabel
+                  )}
+                </div>
+                {mc.observer.long_name && <div className="text-sm text-muted-foreground">{mc.observer.long_name}</div>}
+                <div className="text-xs text-muted-foreground">
+                  {format(new Date(mc.rx_time), 'MMM d, yyyy h:mm a')}
+                </div>
+                <div className="mt-2 text-right text-xs sm:text-left">
+                  {mc.rx_rssi != null && <div>RSSI: {mc.rx_rssi.toFixed(1)}</div>}
+                  {mc.rx_snr != null && <div>SNR: {mc.rx_snr.toFixed(1)}</div>}
+                </div>
+              </div>
+              <div className="min-w-0 border-t pt-3 sm:border-t-0 sm:border-l sm:pl-4 sm:pt-0">
+                <div className="text-xs font-medium text-muted-foreground mb-1">Path (this feeder)</div>
+                <PathHopChain hops={hops} />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </>
+  );
+}
+
 function HeardDialog({
   message,
   size = 'sm',
@@ -25,6 +111,7 @@ function HeardDialog({
 }) {
   const observations = message.heard;
   const count = observations?.length || 0;
+  const meshCore = isMeshCoreHeardMessage(message);
   const { sender, legs } = useMemo(() => messageToHeardPathLegs(message), [message]);
   const protocol = messageProtocol(message);
 
@@ -48,95 +135,56 @@ function HeardDialog({
         <DialogHeader>
           <DialogTitle>Message Heard By</DialogTitle>
         </DialogHeader>
-        <HeardPathMap
-          sender={sender}
-          legs={legs}
-          senderName={message.mc_sender_label || message.sender?.short_name || message.sender?.long_name || null}
-        />
-        {message.mc_sender_candidates && message.mc_sender_candidates.length > 1 && (
-          <p className="text-xs text-muted-foreground -mt-2">
-            Multiple nodes match sender &quot;{message.mc_sender_label}&quot; — map uses feeder positions only.
-          </p>
-        )}
-        <div className="space-y-4 mt-4">
-          {observations?.length ? (
-            observations.map((observation, index) => {
-              if (protocol === 'meshcore' || isMeshCoreHeardObservation(observation)) {
-                const mc = observation as MeshCoreHeardObservation;
-                const observerLabel = mc.observer.short_name || mc.observer.node_id_str;
-                const observerLink = nodeDetailPath({
-                  internal_id: mc.observer.internal_id ?? undefined,
-                  node_id_str: mc.observer.node_id_str,
-                  protocol: 2,
-                });
-                return (
-                  <div
-                    key={`${mc.observer.node_id_str}-${index}`}
-                    className="flex items-start space-x-4 p-2 border rounded-md"
-                  >
-                    <div className="flex-1">
-                      <div className="font-semibold">
-                        {observerLink ? (
-                          <Link to={observerLink} className="hover:underline">
-                            {observerLabel}
-                          </Link>
+        {meshCore ? (
+          <MeshCoreHeardDialogBody message={message} />
+        ) : (
+          <>
+            <HeardPathMap
+              sender={sender}
+              legs={legs}
+              senderName={message.mc_sender_label || message.sender?.short_name || message.sender?.long_name || null}
+            />
+            <div className="space-y-4 mt-4">
+              {observations?.length ? (
+                observations.map((observation) => {
+                  if (protocol === 'meshcore' || isMeshCoreHeardObservation(observation)) {
+                    return null;
+                  }
+                  const mt = observation as PacketObservation;
+                  return (
+                    <div
+                      key={mt.observer.meshtastic_node_id}
+                      className="flex items-start space-x-4 p-2 border rounded-md"
+                    >
+                      <div className="flex-1">
+                        <div className="font-semibold">{mt.observer.short_name || mt.observer.node_id_str}</div>
+                        {mt.observer.long_name && (
+                          <div className="text-sm text-muted-foreground">{mt.observer.long_name}</div>
+                        )}
+                        <div className="text-xs text-muted-foreground">
+                          {format(new Date(mt.rx_time), 'MMM d, yyyy h:mm a')}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        {mt.direct_from_sender ? (
+                          <div>
+                            <Badge variant="secondary">Direct</Badge>
+                            {mt.rx_rssi != null && <div className="text-xs mt-1">RSSI: {mt.rx_rssi.toFixed(1)}</div>}
+                            {mt.rx_snr != null && <div className="text-xs">SNR: {mt.rx_snr.toFixed(1)}</div>}
+                          </div>
                         ) : (
-                          observerLabel
+                          <Badge variant="outline">Hop: {mt.hop_count}</Badge>
                         )}
                       </div>
-                      {mc.observer.long_name && (
-                        <div className="text-sm text-muted-foreground">{mc.observer.long_name}</div>
-                      )}
-                      <div className="text-xs text-muted-foreground">
-                        {format(new Date(mc.rx_time), 'MMM d, yyyy h:mm a')}
-                      </div>
-                      {mc.resolved_path && mc.resolved_path.length > 0 && (
-                        <div className="mt-2 flex flex-wrap gap-1">
-                          {mc.resolved_path.map((hop) => (
-                            <Badge key={hop.hash} variant="outline" className="font-mono text-xs">
-                              {hop.hash}
-                            </Badge>
-                          ))}
-                        </div>
-                      )}
                     </div>
-                    <div className="text-right text-xs">
-                      {mc.rx_rssi != null && <div>RSSI: {mc.rx_rssi.toFixed(1)}</div>}
-                      {mc.rx_snr != null && <div>SNR: {mc.rx_snr.toFixed(1)}</div>}
-                    </div>
-                  </div>
-                );
-              }
-              const mt = observation as PacketObservation;
-              return (
-                <div key={mt.observer.meshtastic_node_id} className="flex items-start space-x-4 p-2 border rounded-md">
-                  <div className="flex-1">
-                    <div className="font-semibold">{mt.observer.short_name || mt.observer.node_id_str}</div>
-                    {mt.observer.long_name && (
-                      <div className="text-sm text-muted-foreground">{mt.observer.long_name}</div>
-                    )}
-                    <div className="text-xs text-muted-foreground">
-                      {format(new Date(mt.rx_time), 'MMM d, yyyy h:mm a')}
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    {mt.direct_from_sender ? (
-                      <div>
-                        <Badge variant="secondary">Direct</Badge>
-                        {mt.rx_rssi != null && <div className="text-xs mt-1">RSSI: {mt.rx_rssi.toFixed(1)}</div>}
-                        {mt.rx_snr != null && <div className="text-xs">SNR: {mt.rx_snr.toFixed(1)}</div>}
-                      </div>
-                    ) : (
-                      <Badge variant="outline">Hop: {mt.hop_count}</Badge>
-                    )}
-                  </div>
-                </div>
-              );
-            })
-          ) : (
-            <div className="text-center text-muted-foreground">No observation data available</div>
-          )}
-        </div>
+                  );
+                })
+              ) : (
+                <div className="text-center text-muted-foreground">No observation data available</div>
+              )}
+            </div>
+          </>
+        )}
       </DialogContent>
     </Dialog>
   );
