@@ -65,7 +65,7 @@ flowchart TB
 ### `message-channels.ts`
 
 - `filterChannelsForProtocol`: match `MessageChannel.protocol`; channels with **no** protocol field are treated as **Meshtastic-only** (legacy).
-- `formatMessageChannelLabel`: appends `(#mc_channel_idx)` when set.
+- `formatMessageChannelLabel`: uses API `display_label` when set; for HASHTAG channels formats as `#tag` (device slot index is not on `MessageChannel`).
 
 ### Data hooks
 
@@ -107,6 +107,6 @@ Query keys include `protocol`, `channelId`, `constellationId`, `nodeId`, `pageSi
 
 `TextMessage` in `src/lib/models.ts` matches API v2 shape (`heard`, `is_emoji`, `reply_to_meshtastic_packet_id`, `protocol`).
 
-`Constellation` in the UI **does not** currently declare `protocol`, though OpenAPI and Django expose `Constellation.protocol` (single protocol per constellation in the data model). Channel rows have `protocol`, `mc_channel_idx`, `mc_channel_type` (optional on `MessageChannel`).
+`Constellation` in the UI **does not** currently declare `protocol`, though OpenAPI and Django expose `Constellation.protocol` (single protocol per constellation in the data model). Channel rows have `protocol`, `mc_channel_type`, `mc_hashtag`, `display_label` (optional on `MessageChannel`). Per-feeder device slots live on `ManagedNode.mc_channels` mirror entries (`mc_channel_idx` on feeder link), not on the constellation channel row.
 
-MeshCore channel **admin/sync** UI lives on **Node settings** (`NodeSettings.tsx`), not on the messages page.
+MeshCore channel **assign / apply** UI lives on **Node settings** (`MeshCoreChannelEditor` in `NodeSettings.tsx`), not on the messages page.

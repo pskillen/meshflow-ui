@@ -30,11 +30,11 @@ Depends on [#277] so the auto-selected constellation is protocol-valid.
 
 ### [#281 — Better channels UI](https://github.com/pskillen/meshflow-ui/issues/281)
 
-| Area            | Today                                 | Target                                                                              |
-| --------------- | ------------------------------------- | ----------------------------------------------------------------------------------- |
-| Channel control | Single `<select>`, one active channel | Search/filter; grid or list; show `mc_channel_idx`, type (PUBLIC/HASHTAG), protocol |
-| Scale           | Poor for 10+ MC channels              | Desktop/tablet usable at 10+                                                        |
-| MC ops          | Not on messages page                  | Surface sync/apply status where API allows (link to node settings or inline status) |
+| Area            | Today                                 | Target                                                                                          |
+| --------------- | ------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| Channel control | Single `<select>`, one active channel | Search/filter; grid or list; show `display_label` / `#hashtag`, type (PUBLIC/HASHTAG), protocol |
+| Scale           | Poor for 10+ MC channels              | Desktop/tablet usable at 10+                                                                    |
+| MC ops          | Not on messages page                  | Surface sync/apply status where API allows (link to node settings or inline status)             |
 
 Likely layout: **constellation tabs** (row 1) + **channel sidebar or chip list** (row 2) + **message pane** — works for MT (few channels) and MC (many).
 
