@@ -649,8 +649,10 @@ export interface MessageChannel {
   name: string;
   constellation: number;
   protocol?: MeshProtocol | 'meshtastic' | 'meshcore' | string;
-  mc_channel_idx?: number | null;
+  /** Operator-facing label from API (#hashtag or public name). */
+  display_label?: string | null;
   mc_channel_type?: string | null;
+  mc_hashtag?: string | null;
 }
 
 export interface Constellation {

@@ -24,17 +24,12 @@ import {
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import {
-  ObservedNode,
-  type McChannelApplyEntry,
-  type McChannelSnapshot,
-  type MessageChannel,
-  type OwnedManagedNode,
-  type NodeApiKey,
-} from '@/lib/models';
+import { ObservedNode, type MessageChannel, type OwnedManagedNode, type NodeApiKey } from '@/lib/models';
 import { SetupManagedNode } from '@/components/nodes/SetupManagedNode';
 import { apiKeyLinksManagedNode, isObservedNodeManaged, managedNodeStableKey } from '@/lib/managed-node-enrollment';
-import { meshProtocolFromManagedNode } from '@/lib/mesh-protocol';
+import { meshProtocolFromManagedNode, meshProtocolFromObservedNode } from '@/lib/mesh-protocol';
+
+import { MeshCoreChannelEditor } from '@/components/nodes/MeshCoreChannelEditor';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMeshtasticApi } from '@/hooks/api/useApi';
 import { cn } from '@/lib/utils';
@@ -89,6 +84,23 @@ function NodeSettingsContent() {
 
   const isNodeManaged = (observed: ObservedNode) => isObservedNodeManaged(observed, myManagedNodes);
 
+  const meshtasticClaimedNodes = useMemo(
+    () => myClaimedNodes.filter((n) => meshProtocolFromObservedNode(n) === 1),
+    [myClaimedNodes]
+  );
+  const meshcoreClaimedNodes = useMemo(
+    () => myClaimedNodes.filter((n) => meshProtocolFromObservedNode(n) === 2),
+    [myClaimedNodes]
+  );
+  const meshtasticManagedNodes = useMemo(
+    () => myManagedNodes.filter((n) => meshProtocolFromManagedNode(n) === 1),
+    [myManagedNodes]
+  );
+  const meshcoreManagedNodes = useMemo(
+    () => myManagedNodes.filter((n) => meshProtocolFromManagedNode(n) === 2),
+    [myManagedNodes]
+  );
+
   // Fetch API keys
   const { data: apiKeys, isLoading: isLoadingApiKeys } = useQuery({
     queryKey: ['api-keys'],
@@ -120,48 +132,21 @@ function NodeSettingsContent() {
             </CardHeader>
             <CardContent>
               {myClaimedNodes.length > 0 ? (
-                <div className="space-y-4">
-                  {myClaimedNodes.map((node) => (
-                    <div key={node.meshtastic_node_id} className="border rounded-md p-4">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <h3 className="font-medium">{node.short_name || node.node_id_str}</h3>
-                          <p className="text-sm text-slate-500 dark:text-slate-400">{node.long_name}</p>
-                          <p className="text-xs text-slate-400">Node ID: {node.node_id_str}</p>
-                          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-                            Last heard: <StaleReportedTime at={node.last_heard ?? null} fallback="Never" />
-                          </p>
-                        </div>
-                      </div>
-                      <div className="mt-2 flex gap-2">
-                        <Link
-                          to={observedNodeDetailPath(node) ?? '#'}
-                          className="text-blue-500 hover:text-blue-700 text-sm"
-                        >
-                          View Node
-                        </Link>
-                        {!isNodeManaged(node) && (
-                          <Button
-                            onClick={() => handleRunAsManagedNode(node)}
-                            size="sm"
-                            variant="outline"
-                            className="text-xs"
-                          >
-                            <Radio className="mr-1 h-3 w-3" />
-                            Convert to Managed Node
-                          </Button>
-                        )}
-                        <Button
-                          onClick={() => setUnclaimMyNodesTarget(node)}
-                          size="sm"
-                          variant="outline"
-                          className="text-xs text-destructive border-destructive/40 hover:bg-destructive/10"
-                        >
-                          Unclaim node
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
+                <div className="space-y-8">
+                  <ClaimedNodesProtocolSection
+                    title="Meshtastic"
+                    nodes={meshtasticClaimedNodes}
+                    isNodeManaged={isNodeManaged}
+                    onRunAsManaged={handleRunAsManagedNode}
+                    onUnclaim={setUnclaimMyNodesTarget}
+                  />
+                  <ClaimedNodesProtocolSection
+                    title="MeshCore"
+                    nodes={meshcoreClaimedNodes}
+                    isNodeManaged={isNodeManaged}
+                    onRunAsManaged={handleRunAsManagedNode}
+                    onUnclaim={setUnclaimMyNodesTarget}
+                  />
                 </div>
               ) : (
                 <div className="text-slate-500 dark:text-slate-400 py-4">
@@ -269,54 +254,28 @@ function NodeSettingsContent() {
             </CardHeader>
             <CardContent>
               {myManagedNodes.length > 0 ? (
-                <Accordion type="multiple" className="space-y-2">
-                  {myManagedNodes.map((node) => {
-                    const nodeApiKeys = apiKeys?.filter((key) => apiKeyLinksManagedNode(key, node)) || [];
-                    const stableKey = managedNodeStableKey(node);
-                    return (
-                      <AccordionItem
-                        key={stableKey}
-                        value={`node-${stableKey}`}
-                        className="border-2 border-slate-300 dark:border-slate-500 rounded-lg bg-slate-50/80 dark:bg-slate-950/40 shadow-sm"
-                      >
-                        <AccordionTrigger className="px-4 py-3 hover:no-underline">
-                          <div className="flex flex-1 items-center justify-between text-left">
-                            <div>
-                              <h3 className="font-medium">{node.short_name || node.node_id_str}</h3>
-                              <div className="flex items-center gap-2 mt-1">
-                                <Badge
-                                  style={{ backgroundColor: node.constellation.map_color }}
-                                  className="text-white text-xs"
-                                >
-                                  {node.constellation.name}
-                                </Badge>
-                                <span className="text-xs text-slate-500 dark:text-slate-400">
-                                  Last heard: <StaleReportedTime at={node.last_heard ?? null} fallback="Never" />
-                                </span>
-                                {nodeApiKeys.length > 0 && (
-                                  <span className="text-xs text-slate-500 dark:text-slate-400">
-                                    • {nodeApiKeys.length} API key{nodeApiKeys.length !== 1 ? 's' : ''}
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        </AccordionTrigger>
-                        <AccordionContent className="px-4 pb-4">
-                          <ManagedNodeSettings
-                            node={node}
-                            nodeApiKeys={nodeApiKeys}
-                            config={config}
-                            isLoadingApiKeys={isLoadingApiKeys}
-                            handleCopyToClipboard={handleCopyToClipboard}
-                            onShowSetupInstructions={setSetupInstructionsKey}
-                            onRequestUnmanage={() => setUnmanageManagedTarget(node)}
-                          />
-                        </AccordionContent>
-                      </AccordionItem>
-                    );
-                  })}
-                </Accordion>
+                <div className="space-y-8">
+                  <ManagedNodesProtocolSection
+                    title="Meshtastic"
+                    nodes={meshtasticManagedNodes}
+                    apiKeys={apiKeys}
+                    config={config}
+                    isLoadingApiKeys={isLoadingApiKeys}
+                    handleCopyToClipboard={handleCopyToClipboard}
+                    onShowSetupInstructions={setSetupInstructionsKey}
+                    onRequestUnmanage={setUnmanageManagedTarget}
+                  />
+                  <ManagedNodesProtocolSection
+                    title="MeshCore"
+                    nodes={meshcoreManagedNodes}
+                    apiKeys={apiKeys}
+                    config={config}
+                    isLoadingApiKeys={isLoadingApiKeys}
+                    handleCopyToClipboard={handleCopyToClipboard}
+                    onShowSetupInstructions={setSetupInstructionsKey}
+                    onRequestUnmanage={setUnmanageManagedTarget}
+                  />
+                </div>
               ) : (
                 <Alert>
                   <AlertCircle className="h-4 w-4" />
@@ -451,6 +410,151 @@ function NodeSettingsContent() {
   );
 }
 
+function claimedNodeStableKey(node: ObservedNode): string {
+  return node.internal_id ?? node.node_id_str ?? String(node.meshtastic_node_id ?? '');
+}
+
+function ClaimedNodesProtocolSection({
+  title,
+  nodes,
+  isNodeManaged,
+  onRunAsManaged,
+  onUnclaim,
+}: {
+  title: string;
+  nodes: ObservedNode[];
+  isNodeManaged: (node: ObservedNode) => boolean;
+  onRunAsManaged: (node: ObservedNode) => void;
+  onUnclaim: (node: ObservedNode) => void;
+}) {
+  return (
+    <section className="space-y-3">
+      <h3 className="text-sm font-semibold text-foreground">{title}</h3>
+      {nodes.length > 0 ? (
+        <div className="space-y-4">
+          {nodes.map((node) => (
+            <div key={claimedNodeStableKey(node)} className="border rounded-md p-4">
+              <div className="flex justify-between items-start">
+                <div>
+                  <h4 className="font-medium">{node.short_name || node.node_id_str}</h4>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">{node.long_name}</p>
+                  <p className="text-xs text-slate-400">Node ID: {node.node_id_str}</p>
+                  <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+                    Last heard: <StaleReportedTime at={node.last_heard ?? null} fallback="Never" />
+                  </p>
+                </div>
+              </div>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <Link to={observedNodeDetailPath(node) ?? '#'} className="text-blue-500 hover:text-blue-700 text-sm">
+                  View Node
+                </Link>
+                {!isNodeManaged(node) && (
+                  <Button onClick={() => onRunAsManaged(node)} size="sm" variant="outline" className="text-xs">
+                    <Radio className="mr-1 h-3 w-3" />
+                    Convert to Managed Node
+                  </Button>
+                )}
+                <Button
+                  onClick={() => onUnclaim(node)}
+                  size="sm"
+                  variant="outline"
+                  className="text-xs text-destructive border-destructive/40 hover:bg-destructive/10"
+                >
+                  Unclaim node
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="text-sm text-muted-foreground">No {title} nodes claimed.</p>
+      )}
+    </section>
+  );
+}
+
+function ManagedNodesProtocolSection({
+  title,
+  nodes,
+  apiKeys,
+  config,
+  isLoadingApiKeys,
+  handleCopyToClipboard,
+  onShowSetupInstructions,
+  onRequestUnmanage,
+}: {
+  title: string;
+  nodes: OwnedManagedNode[];
+  apiKeys: NodeApiKey[] | undefined;
+  config: ReturnType<typeof useConfig>;
+  isLoadingApiKeys: boolean;
+  handleCopyToClipboard: (text: string) => void;
+  onShowSetupInstructions: (
+    params: {
+      apiKey: string;
+      nodeShortName: string;
+      protocol: 'meshtastic' | 'meshcore';
+      botDefaults?: { ignorePortnums?: string | null; hopLimit?: number | null };
+    } | null
+  ) => void;
+  onRequestUnmanage: (node: OwnedManagedNode) => void;
+}) {
+  return (
+    <section className="space-y-3">
+      <h3 className="text-sm font-semibold text-foreground">{title}</h3>
+      {nodes.length > 0 ? (
+        <Accordion type="multiple" className="space-y-2">
+          {nodes.map((node) => {
+            const nodeApiKeys = apiKeys?.filter((key) => apiKeyLinksManagedNode(key, node)) || [];
+            const stableKey = managedNodeStableKey(node);
+            return (
+              <AccordionItem
+                key={stableKey}
+                value={`node-${stableKey}`}
+                className="border-2 border-slate-300 dark:border-slate-500 rounded-lg bg-slate-50/80 dark:bg-slate-950/40 shadow-sm"
+              >
+                <AccordionTrigger className="px-4 py-3 hover:no-underline">
+                  <div className="flex flex-1 items-center justify-between text-left">
+                    <div>
+                      <h4 className="font-medium">{node.short_name || node.node_id_str}</h4>
+                      <div className="flex flex-wrap items-center gap-2 mt-1">
+                        <Badge style={{ backgroundColor: node.constellation.map_color }} className="text-white text-xs">
+                          {node.constellation.name}
+                        </Badge>
+                        <span className="text-xs text-slate-500 dark:text-slate-400">
+                          Last heard: <StaleReportedTime at={node.last_heard ?? null} fallback="Never" />
+                        </span>
+                        {nodeApiKeys.length > 0 && (
+                          <span className="text-xs text-slate-500 dark:text-slate-400">
+                            • {nodeApiKeys.length} API key{nodeApiKeys.length !== 1 ? 's' : ''}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent className="px-4 pb-4">
+                  <ManagedNodeSettings
+                    node={node}
+                    nodeApiKeys={nodeApiKeys}
+                    config={config}
+                    isLoadingApiKeys={isLoadingApiKeys}
+                    handleCopyToClipboard={handleCopyToClipboard}
+                    onShowSetupInstructions={onShowSetupInstructions}
+                    onRequestUnmanage={() => onRequestUnmanage(node)}
+                  />
+                </AccordionContent>
+              </AccordionItem>
+            );
+          })}
+        </Accordion>
+      ) : (
+        <p className="text-sm text-muted-foreground">No {title} managed nodes.</p>
+      )}
+    </section>
+  );
+}
+
 function channelMappingsFromNode(node: OwnedManagedNode) {
   return {
     meshtastic_channel_0: node.meshtastic_channel_0?.id ?? null,
@@ -480,216 +584,9 @@ function channelMappingsEqual(a: ChannelMappings, b: ChannelMappings): boolean {
   });
 }
 
-function stripHashtagPrefix(value: string): string {
-  return value.replace(/^#+/, '').trim();
-}
-
-function mcChannelsFromNode(node: OwnedManagedNode): McChannelApplyEntry[] {
-  return (node.mc_channels ?? []).map((ch) => ({
-    mc_channel_idx: ch.mc_channel_idx,
-    name: ch.name,
-    mc_channel_type: ch.mc_channel_type,
-    mc_hashtag: ch.mc_channel_type === 'HASHTAG' ? (ch.mc_hashtag ?? stripHashtagPrefix(ch.name)) : ch.mc_hashtag,
-  }));
-}
-
-function applyMcChannelErrorMessage(err: unknown): string {
-  const data = (err as { data?: { detail?: string; code?: string } })?.data as
-    | { detail?: string; code?: string }
-    | undefined;
-  if (data?.code === 'feeder_bot_not_connected') {
-    return data.detail ?? 'Feeder bot is not connected via WebSocket.';
-  }
-  if (data?.code === 'command_dispatch_unavailable') {
-    return data.detail ?? 'Could not dispatch the command (channel layer unavailable).';
-  }
-  if (data?.detail) {
-    return String(data.detail);
-  }
-  return 'Could not apply channel config to the radio.';
-}
-
 function MeshCoreChannelSettings({ node }: { node: OwnedManagedNode }) {
-  const api = useMeshtasticApi();
-  const queryClient = useQueryClient();
-  const internalId = node.internal_id;
-  const [rows, setRows] = useState<McChannelApplyEntry[]>(() => mcChannelsFromNode(node));
   const [open, setOpen] = useState(false);
-
-  useEffect(() => {
-    setRows(mcChannelsFromNode(node));
-  }, [node]);
-
-  const applyToRadio = useMutation({
-    mutationFn: () => {
-      if (!internalId) {
-        throw new Error('Missing feeder internal_id');
-      }
-      return api.applyMcChannelConfig(internalId, rows);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['managed-nodes', 'mine'] });
-      setOpen(false);
-    },
-  });
-
-  const updateRow = (index: number, patch: Partial<McChannelApplyEntry>) => {
-    setRows((prev) =>
-      prev.map((r, i) => {
-        if (i !== index) return r;
-        const next = { ...r, ...patch };
-        if (next.mc_channel_type === 'HASHTAG') {
-          const tag = stripHashtagPrefix(next.mc_hashtag ?? next.name);
-          return { ...next, name: tag, mc_hashtag: tag || null };
-        }
-        return { ...next, mc_hashtag: null };
-      })
-    );
-  };
-
-  const addRow = () => {
-    const used = new Set(rows.map((r) => r.mc_channel_idx));
-    let idx = 0;
-    while (used.has(idx) && idx < 63) idx += 1;
-    setRows((prev) => [
-      ...prev,
-      { mc_channel_idx: idx, name: `Channel ${idx}`, mc_channel_type: 'PUBLIC', mc_hashtag: null },
-    ]);
-  };
-
-  const removeRow = (index: number) => {
-    setRows((prev) => prev.filter((_, i) => i !== index));
-  };
-
-  const syncedLabel = node.mc_channels_synced_at
-    ? `Last synced from radio: ${new Date(node.mc_channels_synced_at).toLocaleString()}`
-    : 'Not synced yet — start the bot with upload enabled to mirror device channels.';
-
-  return (
-    <div className="border rounded-md bg-slate-50/50 dark:bg-slate-900/30 overflow-hidden">
-      <button
-        type="button"
-        aria-expanded={open}
-        className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left text-sm font-medium hover:bg-slate-100/80 dark:hover:bg-slate-800/50 transition-colors"
-        onClick={() => setOpen((o) => !o)}
-      >
-        <span className="flex min-w-0 items-center gap-2">
-          <ChevronDown
-            className={cn('h-4 w-4 shrink-0 text-muted-foreground transition-transform', open && 'rotate-180')}
-          />
-          <span className="truncate">MeshCore channels</span>
-        </span>
-        <span className="shrink-0 text-xs font-normal text-muted-foreground">
-          {(node.mc_channels ?? []).length} on radio
-        </span>
-      </button>
-      {open ? (
-        <div className="space-y-3 border-t border-slate-200/80 dark:border-slate-700/80 px-4 pb-4 pt-3">
-          <p className="text-xs text-muted-foreground">{syncedLabel}</p>
-          <p className="text-xs text-muted-foreground">
-            The radio is the source of truth. Edits here are sent to the device when you apply; the bot re-syncs the API
-            mirror afterward. The feeder bot must be online (WebSocket).
-          </p>
-          {rows.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No channels in the API mirror yet.</p>
-          ) : (
-            <div className="space-y-3">
-              {rows.map((row, index) => (
-                <div key={`${row.mc_channel_idx}-${index}`} className="grid gap-2 sm:grid-cols-2">
-                  <div>
-                    <Label className="text-xs">Index</Label>
-                    <p className="text-sm font-mono">{row.mc_channel_idx}</p>
-                  </div>
-                  <div>
-                    <Label className="text-xs">Type</Label>
-                    <Select
-                      value={row.mc_channel_type}
-                      onValueChange={(v) => {
-                        const type = v as McChannelSnapshot['mc_channel_type'];
-                        if (type === 'HASHTAG') {
-                          const tag = stripHashtagPrefix(row.mc_hashtag ?? row.name);
-                          updateRow(index, {
-                            mc_channel_type: type,
-                            name: tag,
-                            mc_hashtag: tag || null,
-                          });
-                        } else {
-                          updateRow(index, { mc_channel_type: type, mc_hashtag: null });
-                        }
-                      }}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="PUBLIC">Public</SelectItem>
-                        <SelectItem value="HASHTAG">Hashtag</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  {row.mc_channel_type === 'HASHTAG' ? (
-                    <div className="sm:col-span-2">
-                      <Label className="text-xs">Hashtag</Label>
-                      <div className="flex">
-                        <span
-                          className="inline-flex h-9 items-center rounded-l-md border border-r-0 border-input bg-muted px-3 text-sm text-muted-foreground"
-                          aria-hidden
-                        >
-                          #
-                        </span>
-                        <input
-                          className="flex h-9 w-full rounded-r-md border border-input bg-background px-3 text-sm"
-                          value={row.mc_hashtag ?? ''}
-                          onChange={(e) => updateRow(index, { mc_hashtag: e.target.value })}
-                          placeholder="galloway"
-                          aria-label="Hashtag name"
-                        />
-                      </div>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        Stored on the radio as #{row.mc_hashtag || '…'} (name and hashtag are the same).
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="sm:col-span-2">
-                      <Label className="text-xs">Name</Label>
-                      <input
-                        className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-                        value={row.name}
-                        onChange={(e) => updateRow(index, { name: e.target.value })}
-                      />
-                    </div>
-                  )}
-                  <div className="sm:col-span-2">
-                    <Button type="button" variant="ghost" size="sm" onClick={() => removeRow(index)}>
-                      Remove
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-          <div className="flex flex-wrap gap-2">
-            <Button type="button" variant="outline" size="sm" onClick={addRow}>
-              Add channel
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              disabled={!internalId || applyToRadio.isPending || rows.length === 0}
-              onClick={() => applyToRadio.mutate()}
-            >
-              {applyToRadio.isPending ? 'Applying…' : 'Apply to radio'}
-            </Button>
-            {applyToRadio.isError && (
-              <span className="text-sm text-destructive" role="alert">
-                {applyMcChannelErrorMessage(applyToRadio.error)}
-              </span>
-            )}
-          </div>
-        </div>
-      ) : null}
-    </div>
-  );
+  return <MeshCoreChannelEditor node={node} open={open} onOpenChange={setOpen} />;
 }
 
 function ManagedNodeSettings({
