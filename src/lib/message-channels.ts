@@ -35,9 +35,21 @@ export function filterChannelsForProtocol(channels: MessageChannel[], protocol: 
   });
 }
 
+function isHashtagChannel(ch: MessageChannel): boolean {
+  const t = String(ch.mc_channel_type ?? '').toUpperCase();
+  return t === 'HASHTAG';
+}
+
+/** Operator-facing label for Messages / pickers (no device index). */
 export function formatMessageChannelLabel(ch: MessageChannel): string {
-  if (ch.mc_channel_idx != null) {
-    return `${ch.name} (#${ch.mc_channel_idx})`;
+  if (ch.display_label?.trim()) {
+    return ch.display_label.trim();
+  }
+  if (isHashtagChannel(ch)) {
+    const tag = (ch.mc_hashtag ?? ch.name ?? '').replace(/^#+/, '').trim();
+    if (tag) {
+      return `#${tag}`;
+    }
   }
   return ch.name;
 }
