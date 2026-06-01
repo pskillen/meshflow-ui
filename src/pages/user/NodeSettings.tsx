@@ -34,7 +34,7 @@ import {
 } from '@/lib/models';
 import { SetupManagedNode } from '@/components/nodes/SetupManagedNode';
 import { apiKeyLinksManagedNode, isObservedNodeManaged, managedNodeStableKey } from '@/lib/managed-node-enrollment';
-import { meshProtocolFromManagedNode } from '@/lib/mesh-protocol';
+import { meshProtocolFromManagedNode, meshProtocolFromObservedNode } from '@/lib/mesh-protocol';
 import { filterChannelsForProtocol, formatMessageChannelLabel } from '@/lib/message-channels';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMeshtasticApi } from '@/hooks/api/useApi';
@@ -90,6 +90,23 @@ function NodeSettingsContent() {
 
   const isNodeManaged = (observed: ObservedNode) => isObservedNodeManaged(observed, myManagedNodes);
 
+  const meshtasticClaimedNodes = useMemo(
+    () => myClaimedNodes.filter((n) => meshProtocolFromObservedNode(n) === 1),
+    [myClaimedNodes]
+  );
+  const meshcoreClaimedNodes = useMemo(
+    () => myClaimedNodes.filter((n) => meshProtocolFromObservedNode(n) === 2),
+    [myClaimedNodes]
+  );
+  const meshtasticManagedNodes = useMemo(
+    () => myManagedNodes.filter((n) => meshProtocolFromManagedNode(n) === 1),
+    [myManagedNodes]
+  );
+  const meshcoreManagedNodes = useMemo(
+    () => myManagedNodes.filter((n) => meshProtocolFromManagedNode(n) === 2),
+    [myManagedNodes]
+  );
+
   // Fetch API keys
   const { data: apiKeys, isLoading: isLoadingApiKeys } = useQuery({
     queryKey: ['api-keys'],
@@ -121,48 +138,21 @@ function NodeSettingsContent() {
             </CardHeader>
             <CardContent>
               {myClaimedNodes.length > 0 ? (
-                <div className="space-y-4">
-                  {myClaimedNodes.map((node) => (
-                    <div key={node.meshtastic_node_id} className="border rounded-md p-4">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <h3 className="font-medium">{node.short_name || node.node_id_str}</h3>
-                          <p className="text-sm text-slate-500 dark:text-slate-400">{node.long_name}</p>
-                          <p className="text-xs text-slate-400">Node ID: {node.node_id_str}</p>
-                          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-                            Last heard: <StaleReportedTime at={node.last_heard ?? null} fallback="Never" />
-                          </p>
-                        </div>
-                      </div>
-                      <div className="mt-2 flex gap-2">
-                        <Link
-                          to={observedNodeDetailPath(node) ?? '#'}
-                          className="text-blue-500 hover:text-blue-700 text-sm"
-                        >
-                          View Node
-                        </Link>
-                        {!isNodeManaged(node) && (
-                          <Button
-                            onClick={() => handleRunAsManagedNode(node)}
-                            size="sm"
-                            variant="outline"
-                            className="text-xs"
-                          >
-                            <Radio className="mr-1 h-3 w-3" />
-                            Convert to Managed Node
-                          </Button>
-                        )}
-                        <Button
-                          onClick={() => setUnclaimMyNodesTarget(node)}
-                          size="sm"
-                          variant="outline"
-                          className="text-xs text-destructive border-destructive/40 hover:bg-destructive/10"
-                        >
-                          Unclaim node
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
+                <div className="space-y-8">
+                  <ClaimedNodesProtocolSection
+                    title="Meshtastic"
+                    nodes={meshtasticClaimedNodes}
+                    isNodeManaged={isNodeManaged}
+                    onRunAsManaged={handleRunAsManagedNode}
+                    onUnclaim={setUnclaimMyNodesTarget}
+                  />
+                  <ClaimedNodesProtocolSection
+                    title="MeshCore"
+                    nodes={meshcoreClaimedNodes}
+                    isNodeManaged={isNodeManaged}
+                    onRunAsManaged={handleRunAsManagedNode}
+                    onUnclaim={setUnclaimMyNodesTarget}
+                  />
                 </div>
               ) : (
                 <div className="text-slate-500 dark:text-slate-400 py-4">
@@ -270,54 +260,28 @@ function NodeSettingsContent() {
             </CardHeader>
             <CardContent>
               {myManagedNodes.length > 0 ? (
-                <Accordion type="multiple" className="space-y-2">
-                  {myManagedNodes.map((node) => {
-                    const nodeApiKeys = apiKeys?.filter((key) => apiKeyLinksManagedNode(key, node)) || [];
-                    const stableKey = managedNodeStableKey(node);
-                    return (
-                      <AccordionItem
-                        key={stableKey}
-                        value={`node-${stableKey}`}
-                        className="border-2 border-slate-300 dark:border-slate-500 rounded-lg bg-slate-50/80 dark:bg-slate-950/40 shadow-sm"
-                      >
-                        <AccordionTrigger className="px-4 py-3 hover:no-underline">
-                          <div className="flex flex-1 items-center justify-between text-left">
-                            <div>
-                              <h3 className="font-medium">{node.short_name || node.node_id_str}</h3>
-                              <div className="flex items-center gap-2 mt-1">
-                                <Badge
-                                  style={{ backgroundColor: node.constellation.map_color }}
-                                  className="text-white text-xs"
-                                >
-                                  {node.constellation.name}
-                                </Badge>
-                                <span className="text-xs text-slate-500 dark:text-slate-400">
-                                  Last heard: <StaleReportedTime at={node.last_heard ?? null} fallback="Never" />
-                                </span>
-                                {nodeApiKeys.length > 0 && (
-                                  <span className="text-xs text-slate-500 dark:text-slate-400">
-                                    • {nodeApiKeys.length} API key{nodeApiKeys.length !== 1 ? 's' : ''}
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        </AccordionTrigger>
-                        <AccordionContent className="px-4 pb-4">
-                          <ManagedNodeSettings
-                            node={node}
-                            nodeApiKeys={nodeApiKeys}
-                            config={config}
-                            isLoadingApiKeys={isLoadingApiKeys}
-                            handleCopyToClipboard={handleCopyToClipboard}
-                            onShowSetupInstructions={setSetupInstructionsKey}
-                            onRequestUnmanage={() => setUnmanageManagedTarget(node)}
-                          />
-                        </AccordionContent>
-                      </AccordionItem>
-                    );
-                  })}
-                </Accordion>
+                <div className="space-y-8">
+                  <ManagedNodesProtocolSection
+                    title="Meshtastic"
+                    nodes={meshtasticManagedNodes}
+                    apiKeys={apiKeys}
+                    config={config}
+                    isLoadingApiKeys={isLoadingApiKeys}
+                    handleCopyToClipboard={handleCopyToClipboard}
+                    onShowSetupInstructions={setSetupInstructionsKey}
+                    onRequestUnmanage={setUnmanageManagedTarget}
+                  />
+                  <ManagedNodesProtocolSection
+                    title="MeshCore"
+                    nodes={meshcoreManagedNodes}
+                    apiKeys={apiKeys}
+                    config={config}
+                    isLoadingApiKeys={isLoadingApiKeys}
+                    handleCopyToClipboard={handleCopyToClipboard}
+                    onShowSetupInstructions={setSetupInstructionsKey}
+                    onRequestUnmanage={setUnmanageManagedTarget}
+                  />
+                </div>
               ) : (
                 <Alert>
                   <AlertCircle className="h-4 w-4" />
@@ -449,6 +413,151 @@ function NodeSettingsContent() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+function claimedNodeStableKey(node: ObservedNode): string {
+  return node.internal_id ?? node.node_id_str ?? String(node.meshtastic_node_id ?? '');
+}
+
+function ClaimedNodesProtocolSection({
+  title,
+  nodes,
+  isNodeManaged,
+  onRunAsManaged,
+  onUnclaim,
+}: {
+  title: string;
+  nodes: ObservedNode[];
+  isNodeManaged: (node: ObservedNode) => boolean;
+  onRunAsManaged: (node: ObservedNode) => void;
+  onUnclaim: (node: ObservedNode) => void;
+}) {
+  return (
+    <section className="space-y-3">
+      <h3 className="text-sm font-semibold text-foreground">{title}</h3>
+      {nodes.length > 0 ? (
+        <div className="space-y-4">
+          {nodes.map((node) => (
+            <div key={claimedNodeStableKey(node)} className="border rounded-md p-4">
+              <div className="flex justify-between items-start">
+                <div>
+                  <h4 className="font-medium">{node.short_name || node.node_id_str}</h4>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">{node.long_name}</p>
+                  <p className="text-xs text-slate-400">Node ID: {node.node_id_str}</p>
+                  <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+                    Last heard: <StaleReportedTime at={node.last_heard ?? null} fallback="Never" />
+                  </p>
+                </div>
+              </div>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <Link to={observedNodeDetailPath(node) ?? '#'} className="text-blue-500 hover:text-blue-700 text-sm">
+                  View Node
+                </Link>
+                {!isNodeManaged(node) && (
+                  <Button onClick={() => onRunAsManaged(node)} size="sm" variant="outline" className="text-xs">
+                    <Radio className="mr-1 h-3 w-3" />
+                    Convert to Managed Node
+                  </Button>
+                )}
+                <Button
+                  onClick={() => onUnclaim(node)}
+                  size="sm"
+                  variant="outline"
+                  className="text-xs text-destructive border-destructive/40 hover:bg-destructive/10"
+                >
+                  Unclaim node
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="text-sm text-muted-foreground">No {title} nodes claimed.</p>
+      )}
+    </section>
+  );
+}
+
+function ManagedNodesProtocolSection({
+  title,
+  nodes,
+  apiKeys,
+  config,
+  isLoadingApiKeys,
+  handleCopyToClipboard,
+  onShowSetupInstructions,
+  onRequestUnmanage,
+}: {
+  title: string;
+  nodes: OwnedManagedNode[];
+  apiKeys: NodeApiKey[] | undefined;
+  config: ReturnType<typeof useConfig>;
+  isLoadingApiKeys: boolean;
+  handleCopyToClipboard: (text: string) => void;
+  onShowSetupInstructions: (
+    params: {
+      apiKey: string;
+      nodeShortName: string;
+      protocol: 'meshtastic' | 'meshcore';
+      botDefaults?: { ignorePortnums?: string | null; hopLimit?: number | null };
+    } | null
+  ) => void;
+  onRequestUnmanage: (node: OwnedManagedNode) => void;
+}) {
+  return (
+    <section className="space-y-3">
+      <h3 className="text-sm font-semibold text-foreground">{title}</h3>
+      {nodes.length > 0 ? (
+        <Accordion type="multiple" className="space-y-2">
+          {nodes.map((node) => {
+            const nodeApiKeys = apiKeys?.filter((key) => apiKeyLinksManagedNode(key, node)) || [];
+            const stableKey = managedNodeStableKey(node);
+            return (
+              <AccordionItem
+                key={stableKey}
+                value={`node-${stableKey}`}
+                className="border-2 border-slate-300 dark:border-slate-500 rounded-lg bg-slate-50/80 dark:bg-slate-950/40 shadow-sm"
+              >
+                <AccordionTrigger className="px-4 py-3 hover:no-underline">
+                  <div className="flex flex-1 items-center justify-between text-left">
+                    <div>
+                      <h4 className="font-medium">{node.short_name || node.node_id_str}</h4>
+                      <div className="flex flex-wrap items-center gap-2 mt-1">
+                        <Badge style={{ backgroundColor: node.constellation.map_color }} className="text-white text-xs">
+                          {node.constellation.name}
+                        </Badge>
+                        <span className="text-xs text-slate-500 dark:text-slate-400">
+                          Last heard: <StaleReportedTime at={node.last_heard ?? null} fallback="Never" />
+                        </span>
+                        {nodeApiKeys.length > 0 && (
+                          <span className="text-xs text-slate-500 dark:text-slate-400">
+                            • {nodeApiKeys.length} API key{nodeApiKeys.length !== 1 ? 's' : ''}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent className="px-4 pb-4">
+                  <ManagedNodeSettings
+                    node={node}
+                    nodeApiKeys={nodeApiKeys}
+                    config={config}
+                    isLoadingApiKeys={isLoadingApiKeys}
+                    handleCopyToClipboard={handleCopyToClipboard}
+                    onShowSetupInstructions={onShowSetupInstructions}
+                    onRequestUnmanage={() => onRequestUnmanage(node)}
+                  />
+                </AccordionContent>
+              </AccordionItem>
+            );
+          })}
+        </Accordion>
+      ) : (
+        <p className="text-sm text-muted-foreground">No {title} managed nodes.</p>
+      )}
+    </section>
   );
 }
 
