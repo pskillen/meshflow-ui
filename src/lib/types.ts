@@ -44,6 +44,21 @@ export interface DxEventsQueryParams extends PaginationParams {
   first_observed_before?: string;
 }
 
+/** Query params for MeshCore passive path tracing list endpoints. */
+export interface PathTracingQueryParams extends PaginationParams {
+  bucket_start_after?: string;
+  bucket_start_before?: string;
+  observer?: string;
+  constellation?: number;
+  from_hash?: string;
+  to_hash?: string;
+  resolved?: boolean;
+  status?: string;
+  hash_mode?: number;
+  hash_size?: number;
+  segment_hash?: string;
+}
+
 export interface ApiAuthConfig {
   type: 'none' | 'token' | 'basic' | 'oauth' | 'apiKey';
   token?: string;
