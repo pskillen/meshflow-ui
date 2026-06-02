@@ -290,6 +290,63 @@ describe('heard path adapters', () => {
     expect(legs[0].lineColor).not.toBe(legs[1].lineColor);
   });
 
+  it('meshCoreHeardToLegs draws positioned hop polylines when path_known', () => {
+    const message: TextMessage = {
+      id: '7',
+      packet_id: 7,
+      protocol: 'meshcore',
+      sender: { node_id_str: 'mc:abc', long_name: 'X', short_name: 'X' },
+      sender_position: { latitude: 55.0, longitude: -4.0 },
+      recipient_meshtastic_node_id: null,
+      channel: 1,
+      sent_at: new Date().toISOString(),
+      message_text: 'mc',
+      is_emoji: false,
+      reply_to_meshtastic_packet_id: null,
+      heard: [
+        {
+          observer: {
+            node_id_str: 'mc:feed',
+            internal_id: null,
+            long_name: 'Feeder',
+            short_name: 'F',
+            position: { latitude: 55.2, longitude: -4.2 },
+          },
+          rx_time: new Date().toISOString(),
+          rx_rssi: -90,
+          rx_snr: 2,
+          path_hashes: ['aa', 'bb'],
+          resolved_path: [
+            {
+              hash: 'aa',
+              status: 'resolved',
+              node_id_str: 'mc:hop1',
+              internal_id: '1',
+              long_name: 'Hop1',
+              ambiguous: false,
+              position: { latitude: 55.05, longitude: -4.05 },
+            },
+            {
+              hash: 'bb',
+              status: 'resolved',
+              node_id_str: 'mc:hop2',
+              internal_id: '2',
+              long_name: 'Hop2',
+              ambiguous: false,
+              position: { latitude: 55.1, longitude: -4.1 },
+            },
+          ],
+          path_known: true,
+        },
+      ],
+    };
+    const { legs } = meshCoreHeardToLegs(message);
+    expect(legs[0].pathKnown).toBe(true);
+    expect(legs[0].waypoints).toHaveLength(2);
+    expect(legs[0].waypoints[0].position).toEqual({ latitude: 55.05, longitude: -4.05 });
+    expect(legs[0].waypoints[0].short_name).toBe('Hop1');
+  });
+
   it('resolvedHopsFromObservation falls back to path_hashes', () => {
     const hops = resolvedHopsFromObservation({
       observer: {
