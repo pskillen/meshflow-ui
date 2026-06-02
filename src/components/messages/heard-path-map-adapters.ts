@@ -82,11 +82,12 @@ export function heardPathSenderDisplayLabel(
 }
 
 function hopToWaypoint(hop: ResolvedHop): TracerouteRouteNode {
+  const label = hop.long_name || hop.node_id_str || hop.hash;
   return {
     meshtastic_node_id: UNKNOWN_NODE_ID,
-    node_id_str: hop.hash,
-    short_name: hop.hash,
-    position: null,
+    node_id_str: hop.node_id_str || hop.hash,
+    short_name: label,
+    position: hop.position ?? null,
   };
 }
 
@@ -139,7 +140,7 @@ export function meshtasticHeardToLegs(message: TextMessage): {
   return { sender, legs };
 }
 
-/** Geo map legs for MC: positioned feeders only (hop polylines not drawn on map). */
+/** Geo map legs for MC: feeders with position; hop polylines when path_known and hop positions exist. */
 export function meshCoreHeardToLegs(message: TextMessage): {
   sender: { label: string; position: MapPosition } | null;
   legs: HeardPathLeg[];

@@ -417,6 +417,7 @@ export interface ResolvedHop {
   internal_id: string | null;
   long_name: string | null;
   ambiguous: boolean;
+  position?: MapPosition | null;
 }
 
 export interface HeardObserver {
