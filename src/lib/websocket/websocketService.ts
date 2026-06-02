@@ -27,6 +27,7 @@ class WebSocketService {
   private reconnectDelay = 2000; // Start with 2 seconds
   private connectionState: ConnectionState = ConnectionState.DISCONNECTED;
   private baseUrl: string = '';
+  private authListenersRegistered = false;
 
   /**
    * Initialize the WebSocket service with the base URL
@@ -35,6 +36,11 @@ class WebSocketService {
   initialize(baseUrl: string) {
     // Convert http/https to ws/wss
     this.baseUrl = baseUrl.replace(/^http/, 'ws');
+
+    if (this.authListenersRegistered) {
+      return;
+    }
+    this.authListenersRegistered = true;
 
     // Listen for auth events to reconnect when token changes
     eventService.subscribe(AuthEventType.AUTH_TOKEN_REFRESHED, () => {

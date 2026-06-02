@@ -1,7 +1,7 @@
-import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from 'react';
+import React, { createContext, useContext, useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useConfig } from './ConfigProvider';
 import { useLocation } from 'react-router-dom';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from '@/hooks/use-toast';
 import { websocketService, WebSocketEventType, ConnectionState } from '@/lib/websocket/websocketService';
 import { TextMessage } from '@/lib/models';
 import { eventService } from '@/lib/events/eventService';
@@ -36,10 +36,14 @@ export function useWebSocket() {
 export function WebSocketProvider({ children }: { children: React.ReactNode }) {
   const config = useConfig();
   const location = useLocation();
-  const { toast } = useToast();
+  const pathnameRef = useRef(location.pathname);
 
   const [connectionState, setConnectionState] = useState<ConnectionState>(ConnectionState.DISCONNECTED);
   const [unreadMessages, setUnreadMessages] = useState<TextMessage[]>([]);
+
+  useEffect(() => {
+    pathnameRef.current = location.pathname;
+  }, [location.pathname]);
 
   const markAsReadForProtocol = useCallback((protocol: MessageProtocolSlug) => {
     setUnreadMessages((prev) => prev.filter((m) => messageProtocol(m) !== protocol));
@@ -77,7 +81,7 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
 
     const messageHandler = (message: TextMessage) => {
       const proto = messageProtocol(message);
-      if (isOnMessagesPage(location.pathname, proto)) {
+      if (isOnMessagesPage(pathnameRef.current, proto)) {
         return;
       }
 
@@ -104,7 +108,7 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
       eventService.unsubscribe(WebSocketEventType.MESSAGE_RECEIVED, messageHandler);
       websocketService.disconnect();
     };
-  }, [config.apis.meshBot.baseUrl, toast, location.pathname]);
+  }, [config.apis.meshBot.baseUrl]);
 
   useEffect(() => {
     if (isOnMessagesPage(location.pathname, 'meshtastic')) {
