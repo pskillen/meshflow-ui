@@ -35,21 +35,65 @@ export function filterChannelsForProtocol(channels: MessageChannel[], protocol: 
   });
 }
 
+export type McChannelTypeLabel = 'PUBLIC' | 'HASHTAG';
+
+/** Normalize meshflow-api mc_channel_type (integer or wire string) to PUBLIC / HASHTAG. */
+export function normalizeMcChannelTypeLabel(
+  mcChannelType: string | number | null | undefined
+): McChannelTypeLabel | null {
+  if (mcChannelType === null || mcChannelType === undefined) {
+    return null;
+  }
+  if (typeof mcChannelType === 'number') {
+    if (mcChannelType === 2) {
+      return 'HASHTAG';
+    }
+    if (mcChannelType === 1) {
+      return 'PUBLIC';
+    }
+    return null;
+  }
+  const t = String(mcChannelType).trim().toUpperCase();
+  if (t === 'HASHTAG' || t === '2') {
+    return 'HASHTAG';
+  }
+  if (t === 'PUBLIC' || t === '1') {
+    return 'PUBLIC';
+  }
+  return null;
+}
+
+/** MeshCoreChannelType.HASHTAG in meshflow-api (integer or wire string). */
+export function isMcHashtagChannelType(mcChannelType: string | number | null | undefined): boolean {
+  if (mcChannelType === null || mcChannelType === undefined) {
+    return false;
+  }
+  if (typeof mcChannelType === 'number') {
+    return mcChannelType === 2;
+  }
+  const t = String(mcChannelType).trim().toUpperCase();
+  return t === 'HASHTAG' || t === '2';
+}
+
+export function formatMcHashtagLabel(tag: string): string {
+  const normalized = tag.replace(/^#+/, '').trim();
+  return normalized ? `#${normalized}` : '#';
+}
+
 function isHashtagChannel(ch: MessageChannel): boolean {
-  const t = String(ch.mc_channel_type ?? '').toUpperCase();
-  return t === 'HASHTAG';
+  return isMcHashtagChannelType(ch.mc_channel_type);
 }
 
 /** Operator-facing label for Messages / pickers (no device index). */
 export function formatMessageChannelLabel(ch: MessageChannel): string {
-  if (ch.display_label?.trim()) {
-    return ch.display_label.trim();
-  }
   if (isHashtagChannel(ch)) {
     const tag = (ch.mc_hashtag ?? ch.name ?? '').replace(/^#+/, '').trim();
     if (tag) {
-      return `#${tag}`;
+      return formatMcHashtagLabel(tag);
     }
+  }
+  if (ch.display_label?.trim()) {
+    return ch.display_label.trim();
   }
   return ch.name;
 }

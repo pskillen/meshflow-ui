@@ -1,5 +1,11 @@
 import type { McChannelApplyEntry, McChannelSnapshot, MessageChannel, OwnedManagedNode } from '@/lib/models';
-import { formatMessageChannelLabel } from '@/lib/message-channels';
+import {
+  formatMcHashtagLabel,
+  formatMessageChannelLabel,
+  isMcHashtagChannelType,
+  normalizeMcChannelTypeLabel,
+  type McChannelTypeLabel,
+} from '@/lib/message-channels';
 
 export type McChannelDraft = {
   mc_channel_type: 'PUBLIC' | 'HASHTAG';
@@ -18,16 +24,55 @@ export function stripHashtagPrefix(value: string): string {
   return value.replace(/^#+/, '').trim();
 }
 
-export function isHashtagType(type: string | undefined): boolean {
-  return String(type ?? '').toUpperCase() === 'HASHTAG';
+export function isHashtagType(type: string | number | null | undefined): boolean {
+  return isMcHashtagChannelType(type);
 }
 
 export function formatMcChannelDraftLabel(draft: McChannelDraft): string {
   if (isHashtagType(draft.mc_channel_type)) {
     const tag = stripHashtagPrefix(draft.mc_hashtag ?? draft.name);
-    return tag ? `#${tag}` : 'Hashtag channel';
+    return tag ? formatMcHashtagLabel(tag) : 'Hashtag channel';
   }
   return (draft.name || 'Public channel').trim();
+}
+
+export type McChannelRowDisplay = {
+  label: string;
+  typeLabel: McChannelTypeLabel | null;
+};
+
+export function messageChannelRowDisplay(ch: MessageChannel): McChannelRowDisplay {
+  return {
+    label: formatMessageChannelLabel(ch),
+    typeLabel: normalizeMcChannelTypeLabel(ch.mc_channel_type),
+  };
+}
+
+export function assignedMcChannelRowDisplay(
+  assigned: AssignedMcChannel,
+  catalog: MessageChannel[],
+  feederSnapshots: McChannelSnapshot[]
+): McChannelRowDisplay {
+  if (assigned.catalogId != null) {
+    const fromCatalog = catalog.find((c) => c.id === assigned.catalogId);
+    if (fromCatalog) {
+      return messageChannelRowDisplay(fromCatalog);
+    }
+    const fromFeeder = feederSnapshots.find((c) => c.id === assigned.catalogId);
+    if (fromFeeder) {
+      return {
+        label: snapshotToLabel(fromFeeder),
+        typeLabel: normalizeMcChannelTypeLabel(fromFeeder.mc_channel_type),
+      };
+    }
+  }
+  if (assigned.draft) {
+    return {
+      label: formatMcChannelDraftLabel(assigned.draft),
+      typeLabel: assigned.draft.mc_channel_type,
+    };
+  }
+  return { label: 'Channel', typeLabel: null };
 }
 
 export function formatAssignedMcChannelLabel(
@@ -54,7 +99,7 @@ export function formatAssignedMcChannelLabel(
 function snapshotToLabel(ch: McChannelSnapshot): string {
   if (isHashtagType(ch.mc_channel_type)) {
     const tag = stripHashtagPrefix(ch.mc_hashtag ?? ch.name);
-    return tag ? `#${tag}` : ch.name;
+    return tag ? formatMcHashtagLabel(tag) : ch.name;
   }
   return ch.name;
 }

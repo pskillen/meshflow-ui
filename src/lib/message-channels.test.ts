@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { filterChannelsForProtocol, formatMessageChannelLabel } from './message-channels';
+import {
+  filterChannelsForProtocol,
+  formatMessageChannelLabel,
+  normalizeMcChannelTypeLabel,
+} from './message-channels';
 import type { MessageChannel } from '@/lib/models';
 
 describe('message-channels', () => {
@@ -34,6 +38,24 @@ describe('message-channels', () => {
       constellation: 1,
       protocol: 'meshcore',
       mc_channel_type: 'HASHTAG',
+      mc_hashtag: 'galloway',
+    };
+    expect(formatMessageChannelLabel(ch)).toBe('#galloway');
+  });
+
+  it('normalizes mc_channel_type integer to type label', () => {
+    expect(normalizeMcChannelTypeLabel(1)).toBe('PUBLIC');
+    expect(normalizeMcChannelTypeLabel(2)).toBe('HASHTAG');
+    expect(normalizeMcChannelTypeLabel('HASHTAG')).toBe('HASHTAG');
+  });
+
+  it('formats hashtag label when mc_channel_type is API integer (2)', () => {
+    const ch: MessageChannel = {
+      id: 5,
+      name: 'Galloway',
+      constellation: 1,
+      protocol: 'meshcore',
+      mc_channel_type: 2,
       mc_hashtag: 'galloway',
     };
     expect(formatMessageChannelLabel(ch)).toBe('#galloway');

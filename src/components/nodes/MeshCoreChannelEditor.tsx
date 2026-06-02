@@ -14,16 +14,18 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useConstellationChannels } from '@/hooks/api/useConstellations';
 import { useMeshtasticApi } from '@/hooks/api/useApi';
-import { filterChannelsForProtocol, formatMessageChannelLabel } from '@/lib/message-channels';
+import { filterChannelsForProtocol } from '@/lib/message-channels';
 import {
   assignedFromFeeder,
+  assignedMcChannelRowDisplay,
   assignedOrderKey,
   assignedToApplyEntries,
-  formatAssignedMcChannelLabel,
+  messageChannelRowDisplay,
   newDraftChannel,
   reorderAssigned,
   type AssignedMcChannel,
 } from '@/lib/mc-channel-editor';
+import { McChannelNameWithType } from '@/components/nodes/McChannelNameWithType';
 import type { OwnedManagedNode } from '@/lib/models';
 import { cn } from '@/lib/utils';
 
@@ -183,7 +185,7 @@ export function MeshCoreChannelEditor({ node, open, onOpenChange }: MeshCoreChan
                           className="flex w-full items-center justify-between gap-2 rounded-md border border-transparent px-3 py-2.5 text-left text-sm hover:bg-muted/80 active:bg-muted"
                           onClick={() => assignFromCatalog(ch.id)}
                         >
-                          <span className="font-medium truncate">{formatMessageChannelLabel(ch)}</span>
+                          <McChannelNameWithType {...messageChannelRowDisplay(ch)} />
                           <Plus className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
                         </button>
                       </li>
@@ -267,11 +269,9 @@ export function MeshCoreChannelEditor({ node, open, onOpenChange }: MeshCoreChan
                         className="flex items-center gap-1 rounded-md border border-border bg-card pl-2 pr-1 py-1"
                       >
                         <span className="text-xs font-mono text-muted-foreground w-5 shrink-0">{index}</span>
-                        <span className="flex-1 min-w-0 text-sm font-medium truncate py-1.5">
-                          {formatAssignedMcChannelLabel(row, catalog, feederSnapshots)}
-                          {row.draft ? (
-                            <span className="ml-1 text-xs font-normal text-muted-foreground">(new)</span>
-                          ) : null}
+                        <span className="flex flex-1 min-w-0 flex-wrap items-baseline gap-x-1.5 gap-y-0 text-sm py-1.5">
+                          <McChannelNameWithType {...assignedMcChannelRowDisplay(row, catalog, feederSnapshots)} />
+                          {row.draft ? <span className="text-xs font-normal text-muted-foreground">(new)</span> : null}
                         </span>
                         <div className="flex shrink-0 items-center">
                           <Button
@@ -345,9 +345,9 @@ export function MeshCoreChannelEditor({ node, open, onOpenChange }: MeshCoreChan
           </DialogHeader>
           <ul className="text-sm space-y-1 max-h-40 overflow-y-auto rounded-md border border-border p-2 bg-muted/30">
             {assigned.map((row, index) => (
-              <li key={row.clientId} className="truncate">
-                <span className="font-mono text-muted-foreground mr-2">{index}</span>
-                {formatAssignedMcChannelLabel(row, catalog, feederSnapshots)}
+              <li key={row.clientId} className="flex items-baseline gap-2 min-w-0">
+                <span className="font-mono text-muted-foreground shrink-0">{index}</span>
+                <McChannelNameWithType {...assignedMcChannelRowDisplay(row, catalog, feederSnapshots)} />
               </li>
             ))}
           </ul>
