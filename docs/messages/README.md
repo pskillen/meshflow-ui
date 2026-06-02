@@ -31,4 +31,4 @@ Documentation for the Meshflow UI **text message history** experience (Meshtasti
 
 - OpenAPI: `GET /api/messages/text/` (`channel_id`, `constellation_id`, `protocol`, `sender_node_id`, pagination)
 - WebSocket: `/ws/messages/?token=…` — pushes `TextMessage` payloads
-- Constellations/channels: `Constellation.protocol`, `MessageChannel.protocol`, `mc_channel_idx`, `mc_channel_type` ([meshflow-api text-message-channels](https://github.com/pskillen/meshflow-api/blob/main/docs/features/meshcore/text-message-channels.md))
+- Constellations/channels: `Constellation.protocol`, `MessageChannel.protocol`, `display_label`, `mc_channel_type` ([meshflow-api text-message-channels](https://github.com/pskillen/meshflow-api/blob/main/docs/features/meshcore/text-message-channels.md))

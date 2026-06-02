@@ -16,15 +16,15 @@ Reverse-engineered from the codebase as of the docs migration. Meshtastic (MT) a
 
 ### Channels
 
-| Protocol | Typical channels                                          | UI labelling                                                 |
-| -------- | --------------------------------------------------------- | ------------------------------------------------------------ |
-| **MT**   | Often 1 primary (+ occasional second)                     | Channel `name`                                               |
-| **MC**   | Many per constellation — **PUBLIC** and **HASHTAG** types | `name` + `(#mc_channel_idx)` via `formatMessageChannelLabel` |
+| Protocol | Typical channels                                          | UI labelling                                                                         |
+| -------- | --------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| **MT**   | Often 1 primary (+ occasional second)                     | Channel `name`                                                                       |
+| **MC**   | Many per constellation — **PUBLIC** and **HASHTAG** types | `display_label` or `#hashtag` via `formatMessageChannelLabel` (no device slot index) |
 
 - Channel list: filtered with `filterChannelsForProtocol` (by `MessageChannel.protocol`).
 - Legacy channels without `protocol` appear only on **Meshtastic** pages.
 - Only **one channel** is loaded/displayed at a time; switching channel refetches/rebinds `MessageList`.
-- `mc_channel_type` / `mc_hashtag` are **not** shown on the messages picker (only index in label). Hashtag display names may equal hashtag string on the radio.
+- `mc_channel_type` is not shown separately on the messages picker; hashtags appear as `#tag` when `display_label` / `mc_hashtag` are set.
 
 ### Multi-channel support summary
 
