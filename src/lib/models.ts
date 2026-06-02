@@ -651,7 +651,7 @@ export interface MessageChannel {
   protocol?: MeshProtocol | 'meshtastic' | 'meshcore' | string;
   /** Operator-facing label from API (#hashtag or public name). */
   display_label?: string | null;
-  mc_channel_type?: string | null;
+  mc_channel_type?: string | number | null;
   mc_hashtag?: string | null;
 }
 

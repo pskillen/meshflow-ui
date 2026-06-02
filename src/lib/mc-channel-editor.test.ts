@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import {
   assignedFromFeeder,
+  assignedMcChannelRowDisplay,
   assignedOrderKey,
   assignedToApplyEntries,
   formatAssignedMcChannelLabel,
   formatMcChannelDraftLabel,
+  messageChannelRowDisplay,
   newDraftChannel,
   reorderAssigned,
 } from './mc-channel-editor';
@@ -53,6 +55,29 @@ describe('mc-channel-editor', () => {
     ).toBe('#test');
     expect(formatMcChannelDraftLabel(newDraftChannel('HASHTAG', 'mesh'))).toBe('#mesh');
     expect(formatMcChannelDraftLabel(newDraftChannel('PUBLIC', 'Scotland'))).toBe('Scotland');
+  });
+
+  it('includes type label in row display for catalog and draft', () => {
+    expect(messageChannelRowDisplay(catalog[1])).toEqual({ label: '#test', typeLabel: 'HASHTAG' });
+    expect(
+      assignedMcChannelRowDisplay({ clientId: 'd', draft: newDraftChannel('PUBLIC', 'Scotland') }, catalog, [])
+    ).toEqual({ label: 'Scotland', typeLabel: 'PUBLIC' });
+  });
+
+  it('formats hashtag labels when catalog mc_channel_type is API integer', () => {
+    const intCatalog: MessageChannel[] = [
+      {
+        id: 11,
+        name: 'test',
+        constellation: 1,
+        protocol: 'meshcore',
+        mc_channel_type: 2,
+        mc_hashtag: 'test',
+      },
+    ];
+    expect(
+      formatAssignedMcChannelLabel({ clientId: 'a', catalogId: 11 }, intCatalog, feederSnapshots)
+    ).toBe('#test');
   });
 
   it('maps assigned order to apply entries with slot indices', () => {
