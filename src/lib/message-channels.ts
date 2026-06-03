@@ -1,5 +1,6 @@
 import type { MeshProtocol, MessageChannel } from '@/lib/models';
 import type { ProtocolSlug } from '@/lib/mesh-protocol';
+import { formatRegionScopeSuffix } from '@/lib/mc-region-scope';
 
 /** Normalize API protocol field (number or string) to a route slug; null when absent. */
 export function protocolSlugFromApiValue(
@@ -86,14 +87,15 @@ function isHashtagChannel(ch: MessageChannel): boolean {
 
 /** Operator-facing label for Messages / pickers (no device index). */
 export function formatMessageChannelLabel(ch: MessageChannel): string {
-  if (isHashtagChannel(ch)) {
-    const tag = (ch.mc_hashtag ?? ch.name ?? '').replace(/^#+/, '').trim();
-    if (tag) {
-      return formatMcHashtagLabel(tag);
-    }
-  }
   if (ch.display_label?.trim()) {
     return ch.display_label.trim();
   }
-  return ch.name;
+  const scope = formatRegionScopeSuffix(ch.region_scope);
+  if (isHashtagChannel(ch)) {
+    const tag = (ch.name ?? '').replace(/^#+/, '').trim();
+    if (tag) {
+      return `${formatMcHashtagLabel(tag)}${scope}`;
+    }
+  }
+  return `${ch.name}${scope}`;
 }

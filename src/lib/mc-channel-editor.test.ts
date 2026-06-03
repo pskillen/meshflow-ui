@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
   assignedFromFeeder,
+  assignedIdentityKeys,
   assignedMcChannelRowDisplay,
   assignedOrderKey,
   assignedToApplyEntries,
   formatAssignedMcChannelLabel,
   formatMcChannelDraftLabel,
+  messageChannelIdentityKey,
   messageChannelRowDisplay,
   newDraftChannel,
   reorderAssigned,
@@ -27,8 +29,8 @@ describe('mc-channel-editor', () => {
       constellation: 1,
       protocol: 'meshcore',
       mc_channel_type: 'HASHTAG',
-      mc_hashtag: 'test',
-      display_label: '#test',
+      region_scope: 'sample-west',
+      display_label: '#test · sample-west',
     },
   ];
 
@@ -38,7 +40,7 @@ describe('mc-channel-editor', () => {
       mc_channel_idx: 0,
       name: 'test',
       mc_channel_type: 'HASHTAG',
-      mc_hashtag: 'test',
+      region_scope: 'sample-west',
     },
   ];
 
@@ -46,19 +48,56 @@ describe('mc-channel-editor', () => {
     const node = {
       mc_channels: feederSnapshots,
     } as OwnedManagedNode;
-    expect(assignedFromFeeder(node)).toEqual([{ clientId: 'catalog-11', catalogId: 11 }]);
+    expect(assignedFromFeeder(node)).toEqual([{ clientId: 'slot-0-11', catalogId: 11 }]);
+  });
+
+  it('treats scoped and unscoped catalog rows as distinct identities', () => {
+    const scoped = {
+      id: 11,
+      name: 'test',
+      constellation: 1,
+      protocol: 'meshcore' as const,
+      mc_channel_type: 'HASHTAG' as const,
+      region_scope: 'sample-west',
+    };
+    const unscoped = {
+      id: 12,
+      name: 'test',
+      constellation: 1,
+      protocol: 'meshcore' as const,
+      mc_channel_type: 'HASHTAG' as const,
+      region_scope: null,
+    };
+    expect(messageChannelIdentityKey(scoped)).not.toBe(messageChannelIdentityKey(unscoped));
+    const keys = assignedIdentityKeys([{ clientId: 'a', catalogId: 11 }], [scoped, unscoped], []);
+    expect(keys.has(messageChannelIdentityKey(scoped))).toBe(true);
+    expect(keys.has(messageChannelIdentityKey(unscoped))).toBe(false);
+  });
+
+  it('uses unique client ids per feeder slot', () => {
+    const node = {
+      mc_channels: [
+        { id: 11, mc_channel_idx: 0, name: 'a', mc_channel_type: 'PUBLIC' as const, region_scope: null },
+        { id: 12, mc_channel_idx: 1, name: 'b', mc_channel_type: 'PUBLIC' as const, region_scope: null },
+      ],
+    } as OwnedManagedNode;
+    const rows = assignedFromFeeder(node);
+    expect(rows[0].clientId).not.toBe(rows[1].clientId);
   });
 
   it('formats hashtag labels for catalog and draft rows', () => {
     expect(
       formatAssignedMcChannelLabel({ clientId: 'a', catalogId: 11 }, catalog, feederSnapshots)
-    ).toBe('#test');
-    expect(formatMcChannelDraftLabel(newDraftChannel('HASHTAG', 'mesh'))).toBe('#mesh');
+    ).toBe('#test · sample-west');
+    expect(formatMcChannelDraftLabel(newDraftChannel('HASHTAG', 'mesh', 'uk-wide'))).toBe('#mesh · uk-wide');
     expect(formatMcChannelDraftLabel(newDraftChannel('PUBLIC', 'Scotland'))).toBe('Scotland');
   });
 
   it('includes type label in row display for catalog and draft', () => {
-    expect(messageChannelRowDisplay(catalog[1])).toEqual({ label: '#test', typeLabel: 'HASHTAG' });
+    expect(messageChannelRowDisplay(catalog[1])).toEqual({
+      label: '#test · sample-west',
+      typeLabel: 'HASHTAG',
+    });
     expect(
       assignedMcChannelRowDisplay({ clientId: 'd', draft: newDraftChannel('PUBLIC', 'Scotland') }, catalog, [])
     ).toEqual({ label: 'Scotland', typeLabel: 'PUBLIC' });
@@ -72,17 +111,17 @@ describe('mc-channel-editor', () => {
         constellation: 1,
         protocol: 'meshcore',
         mc_channel_type: 2,
-        mc_hashtag: 'test',
+        region_scope: 'uk-wide',
       },
     ];
     expect(
       formatAssignedMcChannelLabel({ clientId: 'a', catalogId: 11 }, intCatalog, feederSnapshots)
-    ).toBe('#test');
+    ).toBe('#test · uk-wide');
   });
 
   it('maps assigned order to apply entries with slot indices', () => {
     const assigned = [
-      { clientId: 'd1', draft: newDraftChannel('HASHTAG', 'newtag') },
+      { clientId: 'd1', draft: newDraftChannel('HASHTAG', 'newtag', 'west') },
       { clientId: 'c1', catalogId: 10 },
     ];
     expect(assignedToApplyEntries(assigned, catalog, feederSnapshots)).toEqual([
@@ -90,13 +129,13 @@ describe('mc-channel-editor', () => {
         mc_channel_idx: 0,
         mc_channel_type: 'HASHTAG',
         name: 'newtag',
-        mc_hashtag: 'newtag',
+        region_scope: 'west',
       },
       {
         mc_channel_idx: 1,
         mc_channel_type: 'PUBLIC',
         name: 'Scotland',
-        mc_hashtag: null,
+        region_scope: null,
       },
     ]);
   });

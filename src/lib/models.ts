@@ -266,14 +266,14 @@ export interface McChannelSnapshot {
   name: string;
   mc_channel_idx: number;
   mc_channel_type: 'PUBLIC' | 'HASHTAG';
-  mc_hashtag: string | null;
+  region_scope: string | null;
 }
 
 export interface McChannelApplyEntry {
   mc_channel_idx: number;
   name: string;
   mc_channel_type: 'PUBLIC' | 'HASHTAG';
-  mc_hashtag?: string | null;
+  region_scope?: string | null;
 }
 
 // OwnedManagedNode extends ManagedNode with channel mappings
@@ -653,7 +653,7 @@ export interface MessageChannel {
   /** Operator-facing label from API (#hashtag or public name). */
   display_label?: string | null;
   mc_channel_type?: string | number | null;
-  mc_hashtag?: string | null;
+  region_scope?: string | null;
 }
 
 export interface Constellation {

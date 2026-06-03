@@ -15,7 +15,6 @@ describe('message-channels', () => {
       constellation: 1,
       protocol: 'meshcore',
       mc_channel_type: 'HASHTAG',
-      mc_hashtag: 'test',
       display_label: '#test',
     },
     { id: 3, name: 'Legacy', constellation: 1 },
@@ -31,16 +30,16 @@ describe('message-channels', () => {
     expect(formatMessageChannelLabel(channels[0])).toBe('MT Primary');
   });
 
-  it('derives hashtag label when display_label is absent', () => {
+  it('derives hashtag label with region scope when display_label is absent', () => {
     const ch: MessageChannel = {
       id: 4,
       name: 'galloway',
       constellation: 1,
       protocol: 'meshcore',
       mc_channel_type: 'HASHTAG',
-      mc_hashtag: 'galloway',
+      region_scope: 'sample-west',
     };
-    expect(formatMessageChannelLabel(ch)).toBe('#galloway');
+    expect(formatMessageChannelLabel(ch)).toBe('#galloway · sample-west');
   });
 
   it('normalizes mc_channel_type integer to type label', () => {
@@ -52,12 +51,12 @@ describe('message-channels', () => {
   it('formats hashtag label when mc_channel_type is API integer (2)', () => {
     const ch: MessageChannel = {
       id: 5,
-      name: 'Galloway',
+      name: 'galloway',
       constellation: 1,
       protocol: 'meshcore',
       mc_channel_type: 2,
-      mc_hashtag: 'galloway',
+      region_scope: 'uk-wide',
     };
-    expect(formatMessageChannelLabel(ch)).toBe('#galloway');
+    expect(formatMessageChannelLabel(ch)).toBe('#galloway · uk-wide');
   });
 });

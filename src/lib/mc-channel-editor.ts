@@ -6,11 +6,12 @@ import {
   normalizeMcChannelTypeLabel,
   type McChannelTypeLabel,
 } from '@/lib/message-channels';
+import { formatRegionScopeSuffix, normalizeRegionScope } from '@/lib/mc-region-scope';
 
 export type McChannelDraft = {
   mc_channel_type: 'PUBLIC' | 'HASHTAG';
   name: string;
-  mc_hashtag: string | null;
+  region_scope: string | null;
 };
 
 /** Channel assigned to a feeder slot (order = device index). */
@@ -29,11 +30,12 @@ export function isHashtagType(type: string | number | null | undefined): boolean
 }
 
 export function formatMcChannelDraftLabel(draft: McChannelDraft): string {
+  const scope = formatRegionScopeSuffix(draft.region_scope);
   if (isHashtagType(draft.mc_channel_type)) {
-    const tag = stripHashtagPrefix(draft.mc_hashtag ?? draft.name);
-    return tag ? formatMcHashtagLabel(tag) : 'Hashtag channel';
+    const tag = stripHashtagPrefix(draft.name);
+    return tag ? `${formatMcHashtagLabel(tag)}${scope}` : `Hashtag channel${scope}`;
   }
-  return (draft.name || 'Public channel').trim();
+  return `${(draft.name || 'Public channel').trim()}${scope}`;
 }
 
 export type McChannelRowDisplay = {
@@ -97,33 +99,91 @@ export function formatAssignedMcChannelLabel(
 }
 
 function snapshotToLabel(ch: McChannelSnapshot): string {
+  const scope = formatRegionScopeSuffix(ch.region_scope);
   if (isHashtagType(ch.mc_channel_type)) {
-    const tag = stripHashtagPrefix(ch.mc_hashtag ?? ch.name);
-    return tag ? formatMcHashtagLabel(tag) : ch.name;
+    const tag = stripHashtagPrefix(ch.name);
+    return tag ? `${formatMcHashtagLabel(tag)}${scope}` : ch.name;
   }
-  return ch.name;
+  return `${ch.name}${scope}`;
 }
 
 export function messageChannelToDraft(ch: MessageChannel): McChannelDraft {
   const isHashtag = isHashtagType(ch.mc_channel_type ?? undefined);
   if (isHashtag) {
-    const tag = stripHashtagPrefix(ch.mc_hashtag ?? ch.name);
+    const tag = stripHashtagPrefix(ch.name);
     return {
       mc_channel_type: 'HASHTAG',
       name: tag,
-      mc_hashtag: tag || null,
+      region_scope: ch.region_scope ?? null,
     };
   }
   return {
     mc_channel_type: 'PUBLIC',
     name: (ch.name || 'Public').trim(),
-    mc_hashtag: null,
+    region_scope: ch.region_scope ?? null,
   };
+}
+
+/** Stable identity for scoped vs unscoped rows that share the same tag/name. */
+export function mcChannelIdentityKey(parts: {
+  mc_channel_type: string | number | null | undefined;
+  name: string;
+  region_scope?: string | null;
+}): string {
+  const type = isHashtagType(parts.mc_channel_type) ? 'HASHTAG' : 'PUBLIC';
+  const scope = (parts.region_scope ?? '').trim().toLowerCase();
+  const name =
+    type === 'HASHTAG' ? stripHashtagPrefix(parts.name).toLowerCase() : (parts.name || '').trim().toLowerCase();
+  return `${type}:${name}:${scope}`;
+}
+
+export function messageChannelIdentityKey(ch: MessageChannel): string {
+  return mcChannelIdentityKey({
+    mc_channel_type: ch.mc_channel_type,
+    name: ch.name,
+    region_scope: ch.region_scope,
+  });
+}
+
+export function assignedRowIdentityKey(
+  row: AssignedMcChannel,
+  catalog: MessageChannel[],
+  feederSnapshots: McChannelSnapshot[]
+): string | null {
+  if (row.catalogId != null) {
+    const fromCatalog = catalog.find((c) => c.id === row.catalogId);
+    if (fromCatalog) {
+      return messageChannelIdentityKey(fromCatalog);
+    }
+    const fromFeeder = feederSnapshots.find((c) => c.id === row.catalogId);
+    if (fromFeeder) {
+      return mcChannelIdentityKey(fromFeeder);
+    }
+  }
+  if (row.draft) {
+    return mcChannelIdentityKey(row.draft);
+  }
+  return null;
+}
+
+export function assignedIdentityKeys(
+  assigned: AssignedMcChannel[],
+  catalog: MessageChannel[],
+  feederSnapshots: McChannelSnapshot[]
+): Set<string> {
+  const keys = new Set<string>();
+  for (const row of assigned) {
+    const key = assignedRowIdentityKey(row, catalog, feederSnapshots);
+    if (key) {
+      keys.add(key);
+    }
+  }
+  return keys;
 }
 
 export function assignedFromFeeder(node: OwnedManagedNode): AssignedMcChannel[] {
   return (node.mc_channels ?? []).map((ch) => ({
-    clientId: `catalog-${ch.id}`,
+    clientId: `slot-${ch.mc_channel_idx}-${ch.id}`,
     catalogId: ch.id,
   }));
 }
@@ -138,25 +198,25 @@ function applyEntryFromCatalog(ch: MessageChannel, index: number): McChannelAppl
     mc_channel_idx: index,
     mc_channel_type: draft.mc_channel_type,
     name: draft.name,
-    mc_hashtag: draft.mc_hashtag,
+    region_scope: draft.region_scope,
   };
 }
 
 function applyEntryFromSnapshot(ch: McChannelSnapshot, index: number): McChannelApplyEntry {
   if (isHashtagType(ch.mc_channel_type)) {
-    const tag = stripHashtagPrefix(ch.mc_hashtag ?? ch.name);
+    const tag = stripHashtagPrefix(ch.name);
     return {
       mc_channel_idx: index,
       mc_channel_type: 'HASHTAG',
       name: tag,
-      mc_hashtag: tag || null,
+      region_scope: ch.region_scope ?? null,
     };
   }
   return {
     mc_channel_idx: index,
     mc_channel_type: 'PUBLIC',
     name: (ch.name || 'Public').trim(),
-    mc_hashtag: null,
+    region_scope: ch.region_scope ?? null,
   };
 }
 
@@ -178,34 +238,39 @@ export function assignedToApplyEntries(
     }
     if (row.draft) {
       if (row.draft.mc_channel_type === 'HASHTAG') {
-        const tag = stripHashtagPrefix(row.draft.mc_hashtag ?? row.draft.name);
+        const tag = stripHashtagPrefix(row.draft.name);
         return {
           mc_channel_idx: index,
           mc_channel_type: 'HASHTAG',
           name: tag,
-          mc_hashtag: tag || null,
+          region_scope: row.draft.region_scope,
         };
       }
       return {
         mc_channel_idx: index,
         mc_channel_type: 'PUBLIC',
         name: row.draft.name.trim() || 'Public',
-        mc_hashtag: null,
+        region_scope: row.draft.region_scope,
       };
     }
     throw new Error('Invalid assigned channel row');
   });
 }
 
-export function newDraftChannel(type: 'PUBLIC' | 'HASHTAG', nameInput: string): McChannelDraft {
+export function newDraftChannel(
+  type: 'PUBLIC' | 'HASHTAG',
+  nameInput: string,
+  regionScopeInput?: string
+): McChannelDraft {
+  const region_scope = normalizeRegionScope(regionScopeInput ?? null);
   if (type === 'HASHTAG') {
     const tag = stripHashtagPrefix(nameInput);
-    return { mc_channel_type: 'HASHTAG', name: tag, mc_hashtag: tag || null };
+    return { mc_channel_type: 'HASHTAG', name: tag, region_scope };
   }
   return {
     mc_channel_type: 'PUBLIC',
     name: nameInput.trim() || 'Public',
-    mc_hashtag: null,
+    region_scope,
   };
 }
 
