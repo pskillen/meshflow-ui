@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowDown, ArrowUp, ChevronDown, Plus, X } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -17,9 +17,11 @@ import { useMeshtasticApi } from '@/hooks/api/useApi';
 import { filterChannelsForProtocol } from '@/lib/message-channels';
 import {
   assignedFromFeeder,
+  assignedIdentityKeys,
   assignedMcChannelRowDisplay,
   assignedOrderKey,
   assignedToApplyEntries,
+  messageChannelIdentityKey,
   messageChannelRowDisplay,
   newDraftChannel,
   reorderAssigned,
@@ -74,7 +76,23 @@ export function MeshCoreChannelEditor({ node, open, onOpenChange }: MeshCoreChan
   const [newChannelError, setNewChannelError] = useState<string | null>(null);
   const [confirmApplyOpen, setConfirmApplyOpen] = useState(false);
 
+  const feederMirrorKey = useMemo(
+    () => (node.mc_channels ?? []).map((c) => `${c.mc_channel_idx}:${c.id}:${c.region_scope ?? ''}`).join('|'),
+    [node.mc_channels]
+  );
+
+  const editorResetKey = `${node.internal_id ?? ''}:${feederMirrorKey}`;
+  const lastEditorResetKey = useRef<string | null>(null);
+
   useEffect(() => {
+    if (!open) {
+      lastEditorResetKey.current = null;
+      return;
+    }
+    if (lastEditorResetKey.current === editorResetKey) {
+      return;
+    }
+    lastEditorResetKey.current = editorResetKey;
     const next = assignedFromFeeder(node);
     setAssigned(next);
     setInitialOrderKey(assignedOrderKey(next));
@@ -82,16 +100,16 @@ export function MeshCoreChannelEditor({ node, open, onOpenChange }: MeshCoreChan
     setNewNameInput('');
     setNewRegionScope('');
     setNewChannelError(null);
-  }, [node]);
+  }, [open, editorResetKey, node]);
 
-  const assignedCatalogIds = useMemo(
-    () => new Set(assigned.map((a) => a.catalogId).filter((id): id is number => id != null)),
-    [assigned]
+  const assignedKeys = useMemo(
+    () => assignedIdentityKeys(assigned, catalog, feederSnapshots),
+    [assigned, catalog, feederSnapshots]
   );
 
   const available = useMemo(
-    () => catalog.filter((ch) => !assignedCatalogIds.has(ch.id)),
-    [catalog, assignedCatalogIds]
+    () => catalog.filter((ch) => !assignedKeys.has(messageChannelIdentityKey(ch))),
+    [catalog, assignedKeys]
   );
 
   const orderChanged = assigned.length > 0 && assignedOrderKey(assigned) !== initialOrderKey;
@@ -111,11 +129,21 @@ export function MeshCoreChannelEditor({ node, open, onOpenChange }: MeshCoreChan
   });
 
   const assignFromCatalog = (channelId: number) => {
-    setAssigned((prev) => [...prev, { clientId: newClientId('catalog'), catalogId: channelId }]);
+    const ch = catalog.find((c) => c.id === channelId);
+    if (!ch) {
+      return;
+    }
+    const identity = messageChannelIdentityKey(ch);
+    setAssigned((prev) => {
+      if (assignedIdentityKeys(prev, catalog, feederSnapshots).has(identity)) {
+        return prev;
+      }
+      return [...prev, { clientId: newClientId('catalog'), catalogId: channelId }];
+    });
   };
 
-  const removeAssigned = (index: number) => {
-    setAssigned((prev) => prev.filter((_, i) => i !== index));
+  const removeAssigned = (clientId: string) => {
+    setAssigned((prev) => prev.filter((row) => row.clientId !== clientId));
   };
 
   const moveAssigned = (index: number, direction: -1 | 1) => {
@@ -325,7 +353,7 @@ export function MeshCoreChannelEditor({ node, open, onOpenChange }: MeshCoreChan
                             size="icon"
                             className="h-8 w-8 text-destructive"
                             aria-label="Remove from radio"
-                            onClick={() => removeAssigned(index)}
+                            onClick={() => removeAssigned(row.clientId)}
                           >
                             <X className="h-4 w-4" />
                           </Button>

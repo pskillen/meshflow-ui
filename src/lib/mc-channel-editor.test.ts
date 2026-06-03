@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
   assignedFromFeeder,
+  assignedIdentityKeys,
   assignedMcChannelRowDisplay,
   assignedOrderKey,
   assignedToApplyEntries,
   formatAssignedMcChannelLabel,
   formatMcChannelDraftLabel,
+  messageChannelIdentityKey,
   messageChannelRowDisplay,
   newDraftChannel,
   reorderAssigned,
@@ -46,7 +48,41 @@ describe('mc-channel-editor', () => {
     const node = {
       mc_channels: feederSnapshots,
     } as OwnedManagedNode;
-    expect(assignedFromFeeder(node)).toEqual([{ clientId: 'catalog-11', catalogId: 11 }]);
+    expect(assignedFromFeeder(node)).toEqual([{ clientId: 'slot-0-11', catalogId: 11 }]);
+  });
+
+  it('treats scoped and unscoped catalog rows as distinct identities', () => {
+    const scoped = {
+      id: 11,
+      name: 'test',
+      constellation: 1,
+      protocol: 'meshcore' as const,
+      mc_channel_type: 'HASHTAG' as const,
+      region_scope: 'sample-west',
+    };
+    const unscoped = {
+      id: 12,
+      name: 'test',
+      constellation: 1,
+      protocol: 'meshcore' as const,
+      mc_channel_type: 'HASHTAG' as const,
+      region_scope: null,
+    };
+    expect(messageChannelIdentityKey(scoped)).not.toBe(messageChannelIdentityKey(unscoped));
+    const keys = assignedIdentityKeys([{ clientId: 'a', catalogId: 11 }], [scoped, unscoped], []);
+    expect(keys.has(messageChannelIdentityKey(scoped))).toBe(true);
+    expect(keys.has(messageChannelIdentityKey(unscoped))).toBe(false);
+  });
+
+  it('uses unique client ids per feeder slot', () => {
+    const node = {
+      mc_channels: [
+        { id: 11, mc_channel_idx: 0, name: 'a', mc_channel_type: 'PUBLIC' as const, region_scope: null },
+        { id: 12, mc_channel_idx: 1, name: 'b', mc_channel_type: 'PUBLIC' as const, region_scope: null },
+      ],
+    } as OwnedManagedNode;
+    const rows = assignedFromFeeder(node);
+    expect(rows[0].clientId).not.toBe(rows[1].clientId);
   });
 
   it('formats hashtag labels for catalog and draft rows', () => {

@@ -124,9 +124,66 @@ export function messageChannelToDraft(ch: MessageChannel): McChannelDraft {
   };
 }
 
+/** Stable identity for scoped vs unscoped rows that share the same tag/name. */
+export function mcChannelIdentityKey(parts: {
+  mc_channel_type: string | number | null | undefined;
+  name: string;
+  region_scope?: string | null;
+}): string {
+  const type = isHashtagType(parts.mc_channel_type) ? 'HASHTAG' : 'PUBLIC';
+  const scope = (parts.region_scope ?? '').trim().toLowerCase();
+  const name =
+    type === 'HASHTAG' ? stripHashtagPrefix(parts.name).toLowerCase() : (parts.name || '').trim().toLowerCase();
+  return `${type}:${name}:${scope}`;
+}
+
+export function messageChannelIdentityKey(ch: MessageChannel): string {
+  return mcChannelIdentityKey({
+    mc_channel_type: ch.mc_channel_type,
+    name: ch.name,
+    region_scope: ch.region_scope,
+  });
+}
+
+export function assignedRowIdentityKey(
+  row: AssignedMcChannel,
+  catalog: MessageChannel[],
+  feederSnapshots: McChannelSnapshot[]
+): string | null {
+  if (row.catalogId != null) {
+    const fromCatalog = catalog.find((c) => c.id === row.catalogId);
+    if (fromCatalog) {
+      return messageChannelIdentityKey(fromCatalog);
+    }
+    const fromFeeder = feederSnapshots.find((c) => c.id === row.catalogId);
+    if (fromFeeder) {
+      return mcChannelIdentityKey(fromFeeder);
+    }
+  }
+  if (row.draft) {
+    return mcChannelIdentityKey(row.draft);
+  }
+  return null;
+}
+
+export function assignedIdentityKeys(
+  assigned: AssignedMcChannel[],
+  catalog: MessageChannel[],
+  feederSnapshots: McChannelSnapshot[]
+): Set<string> {
+  const keys = new Set<string>();
+  for (const row of assigned) {
+    const key = assignedRowIdentityKey(row, catalog, feederSnapshots);
+    if (key) {
+      keys.add(key);
+    }
+  }
+  return keys;
+}
+
 export function assignedFromFeeder(node: OwnedManagedNode): AssignedMcChannel[] {
   return (node.mc_channels ?? []).map((ch) => ({
-    clientId: `catalog-${ch.id}`,
+    clientId: `slot-${ch.mc_channel_idx}-${ch.id}`,
     catalogId: ch.id,
   }));
 }
