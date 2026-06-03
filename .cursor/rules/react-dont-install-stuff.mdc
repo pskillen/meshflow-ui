@@ -1,6 +1,0 @@
----
-description:
-globs:
-alwaysApply: false
----
-This is a React project using Typescript, Tailwind CSS, Shadcn. Don't install packages unless required, and check with me first.
