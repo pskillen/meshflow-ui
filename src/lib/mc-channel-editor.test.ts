@@ -27,8 +27,8 @@ describe('mc-channel-editor', () => {
       constellation: 1,
       protocol: 'meshcore',
       mc_channel_type: 'HASHTAG',
-      mc_hashtag: 'test',
-      display_label: '#test',
+      region_scope: 'sample-west',
+      display_label: '#test · sample-west',
     },
   ];
 
@@ -38,7 +38,7 @@ describe('mc-channel-editor', () => {
       mc_channel_idx: 0,
       name: 'test',
       mc_channel_type: 'HASHTAG',
-      mc_hashtag: 'test',
+      region_scope: 'sample-west',
     },
   ];
 
@@ -52,13 +52,16 @@ describe('mc-channel-editor', () => {
   it('formats hashtag labels for catalog and draft rows', () => {
     expect(
       formatAssignedMcChannelLabel({ clientId: 'a', catalogId: 11 }, catalog, feederSnapshots)
-    ).toBe('#test');
-    expect(formatMcChannelDraftLabel(newDraftChannel('HASHTAG', 'mesh'))).toBe('#mesh');
+    ).toBe('#test · sample-west');
+    expect(formatMcChannelDraftLabel(newDraftChannel('HASHTAG', 'mesh', 'uk-wide'))).toBe('#mesh · uk-wide');
     expect(formatMcChannelDraftLabel(newDraftChannel('PUBLIC', 'Scotland'))).toBe('Scotland');
   });
 
   it('includes type label in row display for catalog and draft', () => {
-    expect(messageChannelRowDisplay(catalog[1])).toEqual({ label: '#test', typeLabel: 'HASHTAG' });
+    expect(messageChannelRowDisplay(catalog[1])).toEqual({
+      label: '#test · sample-west',
+      typeLabel: 'HASHTAG',
+    });
     expect(
       assignedMcChannelRowDisplay({ clientId: 'd', draft: newDraftChannel('PUBLIC', 'Scotland') }, catalog, [])
     ).toEqual({ label: 'Scotland', typeLabel: 'PUBLIC' });
@@ -72,17 +75,17 @@ describe('mc-channel-editor', () => {
         constellation: 1,
         protocol: 'meshcore',
         mc_channel_type: 2,
-        mc_hashtag: 'test',
+        region_scope: 'uk-wide',
       },
     ];
     expect(
       formatAssignedMcChannelLabel({ clientId: 'a', catalogId: 11 }, intCatalog, feederSnapshots)
-    ).toBe('#test');
+    ).toBe('#test · uk-wide');
   });
 
   it('maps assigned order to apply entries with slot indices', () => {
     const assigned = [
-      { clientId: 'd1', draft: newDraftChannel('HASHTAG', 'newtag') },
+      { clientId: 'd1', draft: newDraftChannel('HASHTAG', 'newtag', 'west') },
       { clientId: 'c1', catalogId: 10 },
     ];
     expect(assignedToApplyEntries(assigned, catalog, feederSnapshots)).toEqual([
@@ -90,13 +93,13 @@ describe('mc-channel-editor', () => {
         mc_channel_idx: 0,
         mc_channel_type: 'HASHTAG',
         name: 'newtag',
-        mc_hashtag: 'newtag',
+        region_scope: 'west',
       },
       {
         mc_channel_idx: 1,
         mc_channel_type: 'PUBLIC',
         name: 'Scotland',
-        mc_hashtag: null,
+        region_scope: null,
       },
     ]);
   });

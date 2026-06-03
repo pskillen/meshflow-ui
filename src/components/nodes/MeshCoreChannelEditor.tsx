@@ -70,6 +70,8 @@ export function MeshCoreChannelEditor({ node, open, onOpenChange }: MeshCoreChan
   const [showNewForm, setShowNewForm] = useState(false);
   const [newType, setNewType] = useState<'PUBLIC' | 'HASHTAG'>('PUBLIC');
   const [newNameInput, setNewNameInput] = useState('');
+  const [newRegionScope, setNewRegionScope] = useState('');
+  const [newChannelError, setNewChannelError] = useState<string | null>(null);
   const [confirmApplyOpen, setConfirmApplyOpen] = useState(false);
 
   useEffect(() => {
@@ -78,6 +80,8 @@ export function MeshCoreChannelEditor({ node, open, onOpenChange }: MeshCoreChan
     setInitialOrderKey(assignedOrderKey(next));
     setShowNewForm(false);
     setNewNameInput('');
+    setNewRegionScope('');
+    setNewChannelError(null);
   }, [node]);
 
   const assignedCatalogIds = useMemo(
@@ -119,14 +123,21 @@ export function MeshCoreChannelEditor({ node, open, onOpenChange }: MeshCoreChan
   };
 
   const addDraftToAssigned = () => {
-    const draft = newDraftChannel(newType, newNameInput);
-    if (draft.mc_channel_type === 'HASHTAG' && !draft.mc_hashtag) {
-      return;
+    setNewChannelError(null);
+    try {
+      const draft = newDraftChannel(newType, newNameInput, newRegionScope);
+      if (draft.mc_channel_type === 'HASHTAG' && !draft.name) {
+        setNewChannelError('Hashtag channels require a non-empty tag.');
+        return;
+      }
+      setAssigned((prev) => [...prev, { clientId: newClientId('draft'), draft }]);
+      setShowNewForm(false);
+      setNewNameInput('');
+      setNewRegionScope('');
+      setNewType('PUBLIC');
+    } catch (err) {
+      setNewChannelError(err instanceof Error ? err.message : 'Invalid region scope.');
     }
-    setAssigned((prev) => [...prev, { clientId: newClientId('draft'), draft }]);
-    setShowNewForm(false);
-    setNewNameInput('');
-    setNewType('PUBLIC');
   };
 
   const syncedLabel = node.mc_channels_synced_at
@@ -228,6 +239,18 @@ export function MeshCoreChannelEditor({ node, open, onOpenChange }: MeshCoreChan
                           />
                         )}
                       </div>
+                      <input
+                        className="flex h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
+                        value={newRegionScope}
+                        onChange={(e) => setNewRegionScope(e.target.value)}
+                        placeholder="Region scope (optional)"
+                        aria-label="Region scope"
+                      />
+                      {newChannelError ? (
+                        <p className="text-xs text-destructive" role="alert">
+                          {newChannelError}
+                        </p>
+                      ) : null}
                       <div className="flex gap-2">
                         <Button type="button" size="sm" className="flex-1" onClick={addDraftToAssigned}>
                           Add to radio
