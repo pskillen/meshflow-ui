@@ -42,8 +42,9 @@ Likely layout: **constellation tabs** (row 1) + **channel sidebar or chip list**
 
 ### Unread model
 
-- **Bug [#279](https://github.com/pskillen/meshflow-ui/issues/279):** nav uses per-protocol helpers, but API WebSocket JSON omits `protocol` — see [docs/features/messages/unread-count.md](../features/messages/unread-count.md).
-- **Needed:** API add `protocol` to `TextMessageWSSerializer`; channel-level counts; optional constellation rollup; persist or rehydrate strategy; define whether counts increment for messages on inactive channels while user stays on messages page.
+- **Shipped ([#279](https://github.com/pskillen/meshflow-ui/issues/279)):** protocol nav badges, per-channel badges on messages page, channel button row — [docs/features/messages/unread-count.md](../features/messages/unread-count.md).
+- **Deferred ([meshflow-api#396](https://github.com/pskillen/meshflow-api/issues/396)):** constellation-level unread rollup; per-channel badges across constellations; auto-select mark-as-read nuance.
+- **Future:** persist or rehydrate unread across reload.
 
 ### Layout
 

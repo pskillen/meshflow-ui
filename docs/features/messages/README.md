@@ -8,13 +8,15 @@ Documentation for the Meshflow SPA **text message history** experience (Meshtast
 
 ## Implementation status
 
-| Area                                                      | Status          | Notes                                                                                            |
-| --------------------------------------------------------- | --------------- | ------------------------------------------------------------------------------------------------ |
-| Protocol-scoped pages (`/messages`, `/meshcore/messages`) | Shipped         | Shared `ProtocolMessageHistoryPage`                                                              |
-| REST history + pagination                                 | Shipped         | `useMessages` / `useMessagesSuspense`                                                            |
-| WS live prepend on active channel                         | Shipped         | `useMessagesWithWebSocket`                                                                       |
-| Sidebar unread badge per protocol                         | Shipped in code | **Bug [#279](https://github.com/pskillen/meshflow-ui/issues/279)** — WS payloads lack `protocol` |
-| Per-channel / persisted unread                            | Not implemented | In-memory session only                                                                           |
+| Area                                                      | Status          | Notes                                                                                               |
+| --------------------------------------------------------- | --------------- | --------------------------------------------------------------------------------------------------- |
+| Protocol-scoped pages (`/messages`, `/meshcore/messages`) | Shipped         | Shared `ProtocolMessageHistoryPage`                                                                 |
+| REST history + pagination                                 | Shipped         | `useMessages` / `useMessagesSuspense`                                                               |
+| WS live prepend on active channel                         | Shipped         | `useMessagesWithWebSocket`                                                                          |
+| Sidebar unread badge per protocol                         | Shipped         | Requires API WS `protocol` ([#279](https://github.com/pskillen/meshflow-ui/issues/279))             |
+| Per-channel unread on messages page                       | Shipped         | Active constellation only — [meshflow-api#396](https://github.com/pskillen/meshflow-api/issues/396) |
+| Channel selector button row                               | Shipped         | Interim until [#281](https://github.com/pskillen/meshflow-ui/issues/281)                            |
+| Persisted unread                                          | Not implemented | In-memory session only                                                                              |
 
 ## Documentation map
 
@@ -28,8 +30,8 @@ Documentation for the Meshflow SPA **text message history** experience (Meshtast
 ## Concepts
 
 - **Protocol slug** — `'meshtastic' | 'meshcore'` in UI; maps from API `protocol` string or legacy numeric `1`/`2`.
-- **Unread** — messages received over WS while the user is **not** on that protocol’s messages route; stored in React state, not `localStorage`.
-- **On messages page** — WS still fires, but `WebSocketProvider` does not add to unread; `useMessagesWithWebSocket` may prepend if channel + protocol match.
+- **Unread** — in-memory list in `WebSocketProvider`; nav sums per protocol; channel buttons per `channel` id.
+- **On messages page** — unread skipped only for the **active channel** (`setActiveMessagesView`); other channels still badge; toast suppressed for that protocol’s route only.
 
 ## Source map
 
