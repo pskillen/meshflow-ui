@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { MessageList } from '@/components/messages/MessageList';
 import { useConstellationsSuspense } from '@/hooks/api/useConstellations';
+import { useWebSocket } from '@/providers/WebSocketProvider';
 import type { MessageChannel } from '@/lib/models';
 import type { ProtocolPageConfig } from '@/lib/mesh-protocol';
 import { filterChannelsForProtocol, formatMessageChannelLabel } from '@/lib/message-channels';
@@ -16,7 +17,12 @@ type ProtocolMessageHistoryPageProps = {
   config: ProtocolPageConfig;
 };
 
+function channelUnreadBadgeLabel(count: number): string {
+  return count > 9 ? '9+' : String(count);
+}
+
 export function ProtocolMessageHistoryPage({ config }: ProtocolMessageHistoryPageProps) {
+  const { setActiveMessagesView, markAsReadForChannel, hasUnreadForChannel, unreadCountForChannel } = useWebSocket();
   const { constellations: allConstellations } = useConstellationsSuspense();
   const constellations = useMemo(
     () => filterConstellationsForProtocol(allConstellations, config.slug),
@@ -56,6 +62,15 @@ export function ProtocolMessageHistoryPage({ config }: ProtocolMessageHistoryPag
     }
   }, [channels, selectedChannel, activeConstellationId]);
 
+  useEffect(() => {
+    if (selectedChannel != null) {
+      setActiveMessagesView({ protocol: config.slug, channelId: selectedChannel });
+    } else {
+      setActiveMessagesView(null);
+    }
+    return () => setActiveMessagesView(null);
+  }, [selectedChannel, config.slug, setActiveMessagesView]);
+
   const selectConstellation = (id: number) => {
     setSelectedConstellation(id);
     setSelectedChannel(null);
@@ -64,8 +79,9 @@ export function ProtocolMessageHistoryPage({ config }: ProtocolMessageHistoryPag
     }
   };
 
-  const handleChannelSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setSelectedChannel(Number(e.target.value));
+  const selectChannel = (channelId: number) => {
+    setSelectedChannel(channelId);
+    markAsReadForChannel(config.slug, channelId);
   };
 
   return (
@@ -103,22 +119,32 @@ export function ProtocolMessageHistoryPage({ config }: ProtocolMessageHistoryPag
                   </div>
                 </div>
                 <div>
-                  <label htmlFor="channel-select" className="mr-2 text-sm font-medium">
-                    Channel:
-                  </label>
-                  <select
-                    id="channel-select"
-                    value={selectedChannel ?? ''}
-                    onChange={handleChannelSelect}
-                    disabled={channels.length === 0}
-                    className="border rounded px-2 py-1"
-                  >
-                    {channels.map((ch: MessageChannel) => (
-                      <option key={ch.id} value={ch.id}>
-                        {formatMessageChannelLabel(ch)}
-                      </option>
-                    ))}
-                  </select>
+                  <p className="text-sm font-medium mb-2">Channel</p>
+                  <div className="flex flex-wrap gap-2" role="group" aria-label="Channel">
+                    {channels.map((ch: MessageChannel) => {
+                      const unreadCount = unreadCountForChannel(config.slug, ch.id);
+                      return (
+                        <button
+                          key={ch.id}
+                          type="button"
+                          onClick={() => selectChannel(ch.id)}
+                          className={cn(
+                            'relative rounded-md border px-3 py-1.5 text-sm transition-colors',
+                            selectedChannel === ch.id
+                              ? 'border-primary bg-primary text-primary-foreground'
+                              : 'border-border bg-background hover:bg-muted'
+                          )}
+                        >
+                          {formatMessageChannelLabel(ch)}
+                          {hasUnreadForChannel(config.slug, ch.id) ? (
+                            <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-xs font-semibold text-white shadow-sm ring-2 ring-background">
+                              {channelUnreadBadgeLabel(unreadCount)}
+                            </span>
+                          ) : null}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
               {selectedChannel != null && activeConstellationId != null ? (
