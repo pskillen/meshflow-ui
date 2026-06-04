@@ -5,9 +5,15 @@ export type MeshCoreHeardPathsPanelProps = {
   legs: MeshCoreHeardLeg[];
   senderDisplayLabel: string;
   senderKnown: boolean;
+  hasAmbiguousHops?: boolean;
 };
 
-export function MeshCoreHeardPathsPanel({ legs, senderDisplayLabel, senderKnown }: MeshCoreHeardPathsPanelProps) {
+export function MeshCoreHeardPathsPanel({
+  legs,
+  senderDisplayLabel,
+  senderKnown,
+  hasAmbiguousHops = false,
+}: MeshCoreHeardPathsPanelProps) {
   if (legs.length === 0) {
     return (
       <p className="text-sm text-muted-foreground rounded-md border bg-muted/30 px-3 py-4">
@@ -18,6 +24,14 @@ export function MeshCoreHeardPathsPanel({ legs, senderDisplayLabel, senderKnown 
 
   return (
     <div className="space-y-3" data-testid="meshcore-heard-paths-panel">
+      {hasAmbiguousHops && (
+        <p
+          className="text-xs text-amber-800 dark:text-amber-200 rounded-md border border-amber-500/50 bg-amber-50/90 dark:bg-amber-950/50 px-3 py-2"
+          role="status"
+        >
+          Some path hops match multiple nodes. Those hops are listed below but omitted from the map.
+        </p>
+      )}
       <p className="text-xs text-muted-foreground">
         Paths are per feeder and may differ for the same message. Hop hashes are list-order evidence, not map
         coordinates.

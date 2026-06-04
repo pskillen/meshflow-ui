@@ -1,4 +1,5 @@
 import { Badge } from '@/components/ui/badge';
+import { HopPositionIcon } from './HopPositionIcon';
 import { PathHopChain } from './PathHopChain';
 import type { MeshCoreHeardLeg } from './heard-path-map-adapters';
 import { ArrowRight } from 'lucide-react';
@@ -12,18 +13,24 @@ export type MeshCoreHeardPathFlowProps = {
 
 export function MeshCoreHeardPathFlow({ leg, senderDisplayLabel, senderKnown }: MeshCoreHeardPathFlowProps) {
   const startBadge = (
-    <Badge
-      variant={senderKnown ? 'secondary' : 'outline'}
-      className={cn(!senderKnown && 'border-dashed text-muted-foreground')}
-    >
-      {senderKnown ? senderDisplayLabel : `Sender unknown${senderDisplayLabel ? ` (${senderDisplayLabel})` : ''}`}
-    </Badge>
+    <span className="inline-flex items-center gap-1">
+      <HopPositionIcon positioned={senderKnown} />
+      <Badge
+        variant={senderKnown ? 'secondary' : 'outline'}
+        className={cn(!senderKnown && 'border-dashed text-muted-foreground')}
+      >
+        {senderKnown ? senderDisplayLabel : `Sender unknown${senderDisplayLabel ? ` (${senderDisplayLabel})` : ''}`}
+      </Badge>
+    </span>
   );
 
   const endBadge = (
-    <Badge variant="secondary" className="max-w-full" style={{ borderColor: leg.lineColor }}>
-      {leg.receiverLabel}
-    </Badge>
+    <span className="inline-flex items-center gap-1">
+      <HopPositionIcon positioned={leg.receiverPosition != null} />
+      <Badge variant="secondary" className="max-w-full" style={{ borderColor: leg.lineColor }}>
+        {leg.receiverLabel}
+      </Badge>
+    </span>
   );
 
   if (leg.hops.length === 0) {

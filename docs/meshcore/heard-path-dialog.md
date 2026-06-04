@@ -4,7 +4,7 @@ Opened from **N heard** on a MeshCore text message in message history.
 
 ### Layout
 
-1. **Geo map** — [`HeardPathGeoMap`](../../src/components/messages/HeardPathGeoMap.tsx) ([docs](../../src/components/messages/HeardPathGeoMap.md)): Leaflet markers for sender (when position known) and feeders with coordinates. No hop polylines. Not the same as [`HeardPathMap`](../../src/components/messages/HeardPathMap.tsx) ([docs](../../src/components/messages/HeardPathMap.md)), which Meshtastic uses for sender→feeder path lines.
+1. **Geo map** — [`HeardPathGeoMap`](../../src/components/messages/HeardPathGeoMap.tsx) ([docs](../../src/components/messages/HeardPathGeoMap.md)): Leaflet markers for sender (when position known) and feeders with coordinates, plus optional **partial hop polylines** when API resolves hop positions. Ambiguous hops are list-only. Meshtastic uses [`HeardPathMap`](../../src/components/messages/HeardPathMap.tsx) ([docs](../../src/components/messages/HeardPathMap.md)) for full sender→feeder paths.
 2. **Paths by feeder** — One schematic row per observation: sender → hash hops → feeder. Hops use dashed monospace badges (`unknown` per API v1); they are **not** placed at geographic coordinates.
 3. **Feeder list** — Each observer with RSSI/SNR and a **Path (this feeder)** column showing that observation’s hop chain.
 

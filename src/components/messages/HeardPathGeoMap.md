@@ -19,6 +19,7 @@ These components are **not** drop-in replacements: props and rendering models di
 | ------------ | ---------------------------- | ----------------------------------------------------------------------------------- |
 | `sender`     | `HeardPathGeoAnchor \| null` | Sender marker when `position` is known                                              |
 | `feeders`    | `HeardPathGeoAnchor[]`       | One marker per feeder/feeder with a known position                                  |
+| `pathLegs`   | `HeardPathLeg[]` (optional)  | Per-feeder polylines and intermediate hop markers when positions are known          |
 | `senderName` | `string \| null`             | Label for the amber banner when sender position is missing (e.g. `mc_sender_label`) |
 
 `HeardPathGeoAnchor`: `{ label, position, color? }`. Feeder `color` defaults from `HEARD_PATH_LEG_COLORS` by index.
@@ -27,7 +28,7 @@ These components are **not** drop-in replacements: props and rendering models di
 
 1. **Sender** (green, `HEARD_PATH_SENDER_COLOR`) — if `sender` is non-null.
 2. **Feeder markers** — one per entry in `feeders`, with per-leg colour when `color` is set.
-3. **No polylines** — no use of `buildSegments` or `path_hashes` / `resolved_path`.
+3. **Optional path overlay** — when `pathLegs` is set, draws partial polylines and positioned hop markers via [`heard-path-map-layers.ts`](./heard-path-map-layers.ts). Ambiguous hops are omitted from `pathLegs`. Without `pathLegs`, no path geometry is drawn.
 
 Map bounds fit all markers (padding, max zoom 15). Default centre before fit: Glasgow area (`55.8642, -4.2518`).
 

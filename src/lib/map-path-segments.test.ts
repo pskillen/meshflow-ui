@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildSegments } from './map-path-segments';
+import { buildPartialSegments, buildSegments } from './map-path-segments';
 import type { TracerouteRouteNode } from '@/lib/models';
 
 const start: [number, number] = [55.0, -4.0];
@@ -32,5 +32,54 @@ describe('buildSegments', () => {
     ];
     const segments = buildSegments(start, nodes, end);
     expect(segments.some((s) => !s.dashed)).toBe(true);
+  });
+});
+
+describe('buildPartialSegments', () => {
+  it('starts at first positioned hop when sender is missing', () => {
+    const nodes: TracerouteRouteNode[] = [
+      {
+        meshtastic_node_id: 1,
+        node_id_str: 'hop',
+        short_name: 'H',
+        position: { latitude: 55.05, longitude: -4.05 },
+      },
+    ];
+    const segments = buildPartialSegments({
+      startPos: null,
+      waypoints: nodes,
+      endPos: end,
+    });
+    expect(segments.length).toBeGreaterThan(0);
+  });
+
+  it('omits line to feeder when unknown hops trail last positioned hop', () => {
+    const nodes: TracerouteRouteNode[] = [
+      {
+        meshtastic_node_id: 1,
+        node_id_str: 'known',
+        short_name: 'K',
+        position: { latitude: 55.05, longitude: -4.05 },
+      },
+      {
+        meshtastic_node_id: 2,
+        node_id_str: 'unknown',
+        short_name: 'unknown',
+        position: null,
+      },
+    ];
+    const segments = buildPartialSegments({
+      startPos: start,
+      waypoints: nodes,
+      endPos: end,
+      truncateAfterLastKnown: true,
+    });
+    const reachesFeeder = segments.some(
+      (s) =>
+        s.latlngs.length > 0 &&
+        s.latlngs[s.latlngs.length - 1][0] === end[0] &&
+        s.latlngs[s.latlngs.length - 1][1] === end[1]
+    );
+    expect(reachesFeeder).toBe(false);
   });
 });

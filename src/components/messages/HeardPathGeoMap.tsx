@@ -3,6 +3,8 @@ import { MAP_NODE_MARKER_CSS } from '@/lib/map-marker-styles';
 import { useMapTileUrl } from '@/hooks/useMapTileUrl';
 import { createNodeIcon } from '@/components/nodes/map-utils';
 import type { LatLng } from '@/lib/map-path-segments';
+import type { HeardPathLeg } from './HeardPathMap';
+import { drawHeardPathPolylinesOnly, hasDrawablePathOnMap, toLatLng } from './heard-path-map-layers';
 import { HEARD_PATH_LEG_COLORS, HEARD_PATH_SENDER_COLOR } from './heard-path-constants';
 import L from 'leaflet';
 import { useEffect, useRef } from 'react';
@@ -19,19 +21,19 @@ export type HeardPathGeoAnchor = {
 export type HeardPathGeoMapProps = {
   sender: HeardPathGeoAnchor | null;
   feeders: HeardPathGeoAnchor[];
+  /** Optional per-feeder path geometry (MeshCore); anchor markers remain on this map. */
+  pathLegs?: HeardPathLeg[];
   senderName?: string | null;
 };
 
-function toLatLng(pos: MapPosition): LatLng {
-  return [pos.latitude, pos.longitude];
-}
-
-export function HeardPathGeoMap({ sender, feeders, senderName }: HeardPathGeoMapProps) {
+export function HeardPathGeoMap({ sender, feeders, pathLegs = [], senderName }: HeardPathGeoMapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const tileLayerRef = useRef<L.TileLayer | null>(null);
   const layersRef = useRef<L.Layer[]>([]);
   const { url: tileUrl, attribution } = useMapTileUrl();
+
+  const senderPos = sender ? toLatLng(sender.position) : null;
 
   useEffect(() => {
     if (mapRef.current && !mapInstanceRef.current) {
@@ -95,6 +97,10 @@ export function HeardPathGeoMap({ sender, feeders, senderName }: HeardPathGeoMap
       hasMarker = true;
     });
 
+    if (pathLegs.length > 0) {
+      drawHeardPathPolylinesOnly(map, layersRef.current, bounds, senderPos, pathLegs);
+    }
+
     if (!hasMarker) return;
 
     map.invalidateSize();
@@ -109,7 +115,7 @@ export function HeardPathGeoMap({ sender, feeders, senderName }: HeardPathGeoMap
       }
     }, 150);
     return () => clearTimeout(t);
-  }, [sender, feeders]);
+  }, [sender, feeders, pathLegs, senderPos]);
 
   if (!sender && feeders.length === 0) {
     return (
@@ -123,6 +129,7 @@ export function HeardPathGeoMap({ sender, feeders, senderName }: HeardPathGeoMap
   }
 
   const showSenderWarning = !sender;
+  const hasPartialPaths = !sender && hasDrawablePathOnMap(null, pathLegs);
   const warningLabel = senderName?.trim() || sender?.label;
 
   return (
@@ -134,7 +141,10 @@ export function HeardPathGeoMap({ sender, feeders, senderName }: HeardPathGeoMap
           role="status"
         >
           Sender position unknown
-          {warningLabel ? ` (${warningLabel})` : ''} — feeders shown; hop paths are schematic below.
+          {warningLabel ? ` (${warningLabel})` : ''} —
+          {hasPartialPaths
+            ? ' paths use known hop and feeder positions only; full chain below.'
+            : ' feeders shown; hop paths are schematic below.'}
         </div>
       )}
     </div>

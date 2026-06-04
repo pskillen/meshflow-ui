@@ -416,8 +416,10 @@ export interface ResolvedHop {
   node_id_str: string | null;
   internal_id: string | null;
   long_name: string | null;
+  short_name?: string | null;
   ambiguous: boolean;
   position?: MapPosition | null;
+  candidates?: McSenderCandidate[];
 }
 
 export interface HeardObserver {

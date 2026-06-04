@@ -81,8 +81,11 @@ export function heardPathSenderDisplayLabel(
   return message.mc_sender_label?.trim() || message.sender?.short_name || message.sender?.node_id_str || 'Sender';
 }
 
-function hopToWaypoint(hop: ResolvedHop): TracerouteRouteNode {
-  const label = hop.long_name || hop.node_id_str || hop.hash;
+function hopToWaypoint(hop: ResolvedHop): TracerouteRouteNode | null {
+  if (hop.status === 'ambiguous') {
+    return null;
+  }
+  const label = hop.short_name || hop.long_name || hop.node_id_str || hop.hash;
   return {
     meshtastic_node_id: UNKNOWN_NODE_ID,
     node_id_str: hop.node_id_str || hop.hash,
@@ -149,9 +152,10 @@ export function meshCoreHeardToLegs(message: TextMessage): {
   const mapLegs: HeardPathLeg[] = [];
   for (const leg of legs) {
     if (!leg.receiverPosition) continue;
+    const waypoints = leg.hops.map(hopToWaypoint).filter((node): node is TracerouteRouteNode => node != null);
     mapLegs.push({
       receiver: { label: leg.receiverLabel, position: leg.receiverPosition },
-      waypoints: leg.hops.map(hopToWaypoint),
+      waypoints,
       pathKnown: leg.pathKnown,
       lineColor: leg.lineColor,
     });
@@ -168,6 +172,17 @@ export function messageToHeardPathLegs(message: TextMessage): {
     return meshCoreHeardToLegs(message);
   }
   return meshtasticHeardToLegs(message);
+}
+
+export function messageHasAmbiguousPathHops(message: TextMessage): boolean {
+  for (const obs of message.heard ?? []) {
+    if (!isMeshCoreHeardObservation(obs)) continue;
+    const hops = resolvedHopsFromObservation(obs);
+    if (hops.some((hop) => hop.status === 'ambiguous' || (hop.candidates?.length ?? 0) > 1)) {
+      return true;
+    }
+  }
+  return false;
 }
 
 export function isMeshCoreHeardMessage(message: TextMessage): boolean {
