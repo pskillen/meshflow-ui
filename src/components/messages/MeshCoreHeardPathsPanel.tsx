@@ -5,6 +5,8 @@ export type MeshCoreHeardPathsPanelProps = {
   legs: MeshCoreHeardLeg[];
   senderDisplayLabel: string;
   senderKnown: boolean;
+  senderHasPosition?: boolean;
+  senderDetailPath?: string | null;
   hasAmbiguousHops?: boolean;
 };
 
@@ -12,6 +14,8 @@ export function MeshCoreHeardPathsPanel({
   legs,
   senderDisplayLabel,
   senderKnown,
+  senderHasPosition = false,
+  senderDetailPath = null,
   hasAmbiguousHops = false,
 }: MeshCoreHeardPathsPanelProps) {
   if (legs.length === 0) {
@@ -43,7 +47,13 @@ export function MeshCoreHeardPathsPanel({
           style={{ borderLeftWidth: 4, borderLeftColor: leg.lineColor }}
         >
           <div className="text-xs font-medium text-muted-foreground">Heard by {leg.receiverLabel}</div>
-          <MeshCoreHeardPathFlow leg={leg} senderDisplayLabel={senderDisplayLabel} senderKnown={senderKnown} />
+          <MeshCoreHeardPathFlow
+            leg={leg}
+            senderDisplayLabel={senderDisplayLabel}
+            senderKnown={senderKnown}
+            senderHasPosition={senderHasPosition}
+            senderDetailPath={senderDetailPath}
+          />
         </div>
       ))}
     </div>

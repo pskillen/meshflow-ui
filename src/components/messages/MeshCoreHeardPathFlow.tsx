@@ -4,23 +4,46 @@ import { PathHopChain } from './PathHopChain';
 import type { MeshCoreHeardLeg } from './heard-path-map-adapters';
 import { ArrowRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Link } from 'react-router-dom';
 
 export type MeshCoreHeardPathFlowProps = {
   leg: MeshCoreHeardLeg;
   senderDisplayLabel: string;
   senderKnown: boolean;
+  senderHasPosition?: boolean;
+  senderDetailPath?: string | null;
 };
 
-export function MeshCoreHeardPathFlow({ leg, senderDisplayLabel, senderKnown }: MeshCoreHeardPathFlowProps) {
+export function MeshCoreHeardPathFlow({
+  leg,
+  senderDisplayLabel,
+  senderKnown,
+  senderHasPosition = false,
+  senderDetailPath = null,
+}: MeshCoreHeardPathFlowProps) {
+  const senderLabel = senderKnown
+    ? senderDisplayLabel
+    : `Sender unknown${senderDisplayLabel ? ` (${senderDisplayLabel})` : ''}`;
+
+  const senderBadge = (
+    <Badge
+      variant={senderKnown ? 'secondary' : 'outline'}
+      className={cn(!senderKnown && 'border-dashed text-muted-foreground')}
+    >
+      {senderLabel}
+    </Badge>
+  );
+
   const startBadge = (
     <span className="inline-flex items-center gap-1">
-      <HopPositionIcon positioned={senderKnown} />
-      <Badge
-        variant={senderKnown ? 'secondary' : 'outline'}
-        className={cn(!senderKnown && 'border-dashed text-muted-foreground')}
-      >
-        {senderKnown ? senderDisplayLabel : `Sender unknown${senderDisplayLabel ? ` (${senderDisplayLabel})` : ''}`}
-      </Badge>
+      <HopPositionIcon positioned={senderHasPosition} />
+      {senderKnown && senderDetailPath ? (
+        <Link to={senderDetailPath} className="inline-flex hover:underline">
+          {senderBadge}
+        </Link>
+      ) : (
+        senderBadge
+      )}
     </span>
   );
 

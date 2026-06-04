@@ -7,6 +7,7 @@ import type {
   TextMessage,
 } from '@/lib/models';
 import type { TracerouteRouteNode } from '@/lib/models';
+import { nodeDetailPath } from '@/lib/node-detail-routes';
 import { HEARD_PATH_LEG_COLORS } from './heard-path-constants';
 import type { HeardPathLeg } from './HeardPathMap';
 
@@ -41,42 +42,91 @@ export function resolvedHopsFromObservation(obs: MeshCoreHeardObservation): Reso
   }));
 }
 
-function senderFromMcCandidates(candidates: McSenderCandidate[] | undefined): {
+/** Sender for heard dialog: identity vs map position are separate. */
+export type HeardPathSender = {
   label: string;
-  position: MapPosition;
-} | null {
-  if (!candidates?.length) return null;
-  const positioned = candidates.filter((c) => c.position != null) as Array<
-    McSenderCandidate & { position: MapPosition }
-  >;
-  if (positioned.length !== 1) return null;
-  const node = positioned[0];
-  return {
-    label: node.short_name || node.long_name || node.node_id_str,
-    position: node.position,
-  };
+  position: MapPosition | null;
+  /** True when the sender node is identified (not ambiguous). */
+  identified: boolean;
+  detailPath: string | null;
+};
+
+function mcCandidateDetailPath(candidate: McSenderCandidate): string | null {
+  return nodeDetailPath({
+    internal_id: candidate.internal_id ?? undefined,
+    node_id_str: candidate.node_id_str,
+    protocol: 2,
+  });
+}
+
+function senderFromMcCandidates(
+  candidates: McSenderCandidate[] | undefined,
+  fallbackLabel?: string
+): HeardPathSender | null {
+  if (!candidates?.length) {
+    if (fallbackLabel) {
+      return { label: fallbackLabel, position: null, identified: false, detailPath: null };
+    }
+    return null;
+  }
+  if (candidates.length === 1) {
+    const node = candidates[0];
+    return {
+      label: node.short_name || node.long_name || node.node_id_str,
+      position: node.position ?? null,
+      identified: true,
+      detailPath: mcCandidateDetailPath(node),
+    };
+  }
+  const label =
+    fallbackLabel || candidates[0].short_name || candidates[0].long_name || candidates[0].node_id_str || 'Sender';
+  return { label, position: null, identified: false, detailPath: null };
+}
+
+export function resolveHeardPathSender(message: TextMessage): HeardPathSender | null {
+  const fallbackLabel = message.mc_sender_label?.trim();
+  const proto = message.protocol?.toString().toLowerCase();
+  const isMeshCore = proto === 'meshcore' || proto === '2';
+
+  if (message.sender?.node_id_str) {
+    return {
+      label: message.sender.short_name || message.sender.long_name || message.sender.node_id_str,
+      position: message.sender_position ?? null,
+      identified: true,
+      detailPath: nodeDetailPath({
+        node_id_str: message.sender.node_id_str,
+        protocol: isMeshCore ? 2 : 1,
+      }),
+    };
+  }
+
+  if (message.sender_position) {
+    return {
+      label: message.sender?.short_name || fallbackLabel || message.sender?.node_id_str || 'Sender',
+      position: message.sender_position,
+      identified: true,
+      detailPath: message.sender?.node_id_str
+        ? nodeDetailPath({ node_id_str: message.sender.node_id_str, protocol: isMeshCore ? 2 : 1 })
+        : null,
+    };
+  }
+
+  return senderFromMcCandidates(message.mc_sender_candidates, fallbackLabel);
+}
+
+/** Geo map anchor when sender has coordinates only. */
+export function heardPathSenderForGeoMap(
+  sender: HeardPathSender | null
+): { label: string; position: MapPosition } | null {
+  if (!sender?.position) return null;
+  return { label: sender.label, position: sender.position };
 }
 
 export function mapHeardPathSender(message: TextMessage): { label: string; position: MapPosition } | null {
-  if (message.sender && message.sender_position) {
-    return {
-      label: message.sender.short_name || message.sender.node_id_str,
-      position: message.sender_position,
-    };
-  }
-  if (message.sender_position) {
-    return {
-      label: message.sender?.short_name || message.mc_sender_label || message.sender?.node_id_str || 'Sender',
-      position: message.sender_position,
-    };
-  }
-  return senderFromMcCandidates(message.mc_sender_candidates);
+  return heardPathSenderForGeoMap(resolveHeardPathSender(message));
 }
 
-export function heardPathSenderDisplayLabel(
-  message: TextMessage,
-  sender: { label: string; position: MapPosition } | null
-): string {
+export function heardPathSenderDisplayLabel(message: TextMessage, sender: HeardPathSender | null): string {
   if (sender?.label) return sender.label;
   return message.mc_sender_label?.trim() || message.sender?.short_name || message.sender?.node_id_str || 'Sender';
 }
@@ -95,11 +145,11 @@ function hopToWaypoint(hop: ResolvedHop): TracerouteRouteNode | null {
 }
 
 export function meshCoreHeardLegs(message: TextMessage): {
-  sender: { label: string; position: MapPosition } | null;
+  sender: HeardPathSender | null;
   senderDisplayLabel: string;
   legs: MeshCoreHeardLeg[];
 } {
-  const sender = mapHeardPathSender(message);
+  const sender = resolveHeardPathSender(message);
   const senderDisplayLabel = heardPathSenderDisplayLabel(message, sender);
   const legs: MeshCoreHeardLeg[] = [];
   let colorIndex = 0;
@@ -148,7 +198,8 @@ export function meshCoreHeardToLegs(message: TextMessage): {
   sender: { label: string; position: MapPosition } | null;
   legs: HeardPathLeg[];
 } {
-  const { sender, legs } = meshCoreHeardLegs(message);
+  const { legs } = meshCoreHeardLegs(message);
+  const sender = heardPathSenderForGeoMap(resolveHeardPathSender(message));
   const mapLegs: HeardPathLeg[] = [];
   for (const leg of legs) {
     if (!leg.receiverPosition) continue;

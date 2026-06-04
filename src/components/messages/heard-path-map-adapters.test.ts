@@ -3,6 +3,7 @@ import {
   meshCoreHeardLegs,
   meshCoreHeardToLegs,
   meshtasticHeardToLegs,
+  resolveHeardPathSender,
   resolvedHopsFromObservation,
 } from './heard-path-map-adapters';
 import type { TextMessage } from '@/lib/models';
@@ -46,6 +47,39 @@ describe('heard path adapters', () => {
     expect(legs[0].waypoints).toHaveLength(0);
   });
 
+  it('resolveHeardPathSender identifies single mc_sender_candidate without position', () => {
+    const message: TextMessage = {
+      id: 'gi7',
+      packet_id: 1,
+      protocol: 'meshcore',
+      sender: null,
+      mc_sender_label: '☘️GI7ULG☘️',
+      mc_sender_candidates: [
+        {
+          internal_id: '00000000-0000-4000-8000-000000000099',
+          node_id_str: 'mc:9cce73b9b3ee',
+          long_name: '☘️GI7ULG☘️',
+          short_name: '☘️GI7',
+          position: null,
+        },
+      ],
+      recipient_meshtastic_node_id: null,
+      channel: 1,
+      sent_at: new Date().toISOString(),
+      message_text: '☘️GI7ULG☘️: Test',
+      is_emoji: false,
+      reply_to_meshtastic_packet_id: null,
+      heard: [],
+    };
+    const sender = resolveHeardPathSender(message);
+    expect(sender?.identified).toBe(true);
+    expect(sender?.label).toBe('☘️GI7');
+    expect(sender?.position).toBeNull();
+    expect(sender?.detailPath).toBe('/nodes/mc%3A9cce73b9b3ee');
+    const { sender: geoSender } = meshCoreHeardToLegs(message);
+    expect(geoSender).toBeNull();
+  });
+
   it('meshCoreHeardToLegs uses single mc_sender_candidate with position as sender', () => {
     const message: TextMessage = {
       id: '3',
@@ -76,7 +110,7 @@ describe('heard path adapters', () => {
     expect(sender?.position.latitude).toBe(55.0);
   });
 
-  it('meshCoreHeardToLegs omits sender when multiple positioned candidates', () => {
+  it('meshCoreHeardToLegs omits geo sender when multiple mc_sender_candidates', () => {
     const pos = { latitude: 55.0, longitude: -4.0 };
     const message: TextMessage = {
       id: '4',
