@@ -10,8 +10,13 @@ vi.mock('@/providers/WebSocketProvider', () => ({
     unreadMessages: [],
     markAllAsRead: vi.fn(),
     markAsReadForProtocol: vi.fn(),
+    markAsReadForChannel: vi.fn(),
+    takeUnreadForChannel: () => [],
+    setActiveMessagesView: vi.fn(),
     unreadCountForProtocol: () => 0,
     hasUnreadForProtocol: () => false,
+    unreadCountForChannel: () => 0,
+    hasUnreadForChannel: () => false,
   }),
 }));
 

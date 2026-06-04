@@ -99,21 +99,20 @@ WS handler does not check `constellation_id` on the payload (only channel id). R
 
 ## Unread / notification counts
 
+See **[docs/features/messages/unread-count.md](../features/messages/unread-count.md)**.
+
 ### Implemented today
 
-- **Protocol-scoped** unread array in `WebSocketProvider`.
-- Sidebar **Messages** link per protocol: red badge with count (max display `9+`).
-- Clearing: navigate to that protocol’s messages URL, or click nav link (explicit `markAsReadForProtocol` before navigate).
-- **Global** `hasUnreadMessages` / `markAllAsRead` exist but nav uses per-protocol helpers.
+- **Protocol-scoped** nav badges (`unreadCountForProtocol`); requires API WS `protocol` field.
+- **Per-channel** badges on channel button row; active channel suppressed via `setActiveMessagesView`.
+- Channel picker: **button row** (not dropdown).
+- Clearing: nav link → `markAsReadForProtocol`; channel click → `markAsReadForChannel`.
+- Toast: protocol-level only (not per channel).
 
-### Not implemented
+### Deferred / not implemented
 
-- Per-**channel** unread badges.
-- Per-**constellation** aggregates.
-- `localStorage` persistence of unread across reloads (unread is in-memory only).
-- Distinction between “unread since last visit” vs total — current model is “messages received while not on that protocol’s page” until cleared.
-
-User request: channel-level counts beside a future channel list, plus total on protocol nav link — aligns with extending `unreadMessages` indexing (channel + protocol keys).
+- Constellation-level unread rollup — [meshflow-api#396](https://github.com/pskillen/meshflow-api/issues/396).
+- `localStorage` persistence across reload.
 
 ## Default selection UX
 

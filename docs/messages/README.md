@@ -2,13 +2,17 @@
 
 Documentation for the Meshflow UI **text message history** experience (Meshtastic and MeshCore). Use this as the baseline before implementing navigation, channel picker, and layout upgrades ([#277](https://github.com/pskillen/meshflow-ui/issues/277), [#278](https://github.com/pskillen/meshflow-ui/issues/278), [#281](https://github.com/pskillen/meshflow-ui/issues/281); parent epic [meshflow-api#341](https://github.com/pskillen/meshflow-api/issues/341)).
 
+**Feature docs (new):** [docs/features/messages/](../features/messages/README.md) — hub including dedicated [unread-count.md](../features/messages/unread-count.md) ([#279](https://github.com/pskillen/meshflow-ui/issues/279)).
+
 ## Contents
 
-| Doc                                       | Purpose                                                                 |
-| ----------------------------------------- | ----------------------------------------------------------------------- |
-| [Architecture](./architecture.md)         | Routes, components, hooks, API/WS integration                           |
-| [Current features](./current-features.md) | Reverse-engineered behaviour today (grouping, layout, unread, realtime) |
-| [Gaps and roadmap](./gaps-and-roadmap.md) | Known gaps, issue mapping, design directions                            |
+| Doc                                                  | Purpose                                                                                     |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| [Feature hub](../features/messages/README.md)        | Unread badges, cross-links to API                                                           |
+| [Unread count](../features/messages/unread-count.md) | Nav badges, `WebSocketProvider`, [#279](https://github.com/pskillen/meshflow-ui/issues/279) |
+| [Architecture](./architecture.md)                    | Routes, components, hooks, API/WS integration                                               |
+| [Current features](./current-features.md)            | Reverse-engineered behaviour today (grouping, layout, unread, realtime)                     |
+| [Gaps and roadmap](./gaps-and-roadmap.md)            | Known gaps, issue mapping, design directions                                                |
 
 ## Product summary
 
@@ -29,6 +33,7 @@ Documentation for the Meshflow UI **text message history** experience (Meshtasti
 
 ## Related API / backend docs
 
+- [meshflow-api text-messages feature](https://github.com/pskillen/meshflow-api/blob/main/docs/features/text-messages/README.md) — REST + WS; [unread-count](https://github.com/pskillen/meshflow-api/blob/main/docs/features/text-messages/unread-count.md) (WS `protocol` gap)
 - OpenAPI: `GET /api/messages/text/` (`channel_id`, `constellation_id`, `protocol`, `sender_node_id`, pagination)
-- WebSocket: `/ws/messages/?token=…` — pushes `TextMessage` payloads
+- WebSocket: `/ws/messages/?token=…` — pushes `TextMessage` payloads (narrower than REST today)
 - Constellations/channels: `Constellation.protocol`, `MessageChannel.protocol`, `display_label`, `mc_channel_type` ([meshflow-api text-message-channels](https://github.com/pskillen/meshflow-api/blob/main/docs/features/meshcore/text-message-channels.md))

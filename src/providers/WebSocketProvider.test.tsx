@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, act } from '@testing-library/react';
+import { render, act, screen } from '@testing-library/react';
 import { MemoryRouter, Routes, Route, useNavigate } from 'react-router-dom';
-import { WebSocketProvider } from './WebSocketProvider';
+import { WebSocketProvider, useWebSocket } from './WebSocketProvider';
 import { eventService } from '@/lib/events/eventService';
 import { WebSocketEventType } from '@/lib/websocket/websocketService';
 import type { TextMessage } from '@/lib/models';
@@ -47,18 +47,61 @@ vi.mock('@/hooks/use-toast', () => ({
   useToast: () => ({ toast: toastMock }),
 }));
 
+function makeMessage(overrides: Partial<TextMessage> & { id: string; channel: number }): TextMessage {
+  return {
+    packet_id: 1,
+    protocol: 'meshtastic',
+    sender: { node_id_str: '!aabbccdd', long_name: null, short_name: 'AB' },
+    recipient_meshtastic_node_id: null,
+    sent_at: '2025-01-01T00:00:00Z',
+    message_text: 'hello',
+    is_emoji: false,
+    reply_to_meshtastic_packet_id: null,
+    heard: [],
+    ...overrides,
+  } as TextMessage;
+}
+
+function UnreadProbe() {
+  const ws = useWebSocket();
+  return (
+    <div>
+      <span data-testid="mt-count">{ws.unreadCountForProtocol('meshtastic')}</span>
+      <span data-testid="mc-count">{ws.unreadCountForProtocol('meshcore')}</span>
+      <span data-testid="ch1-count">{ws.unreadCountForChannel('meshtastic', 1)}</span>
+      <span data-testid="ch2-count">{ws.unreadCountForChannel('meshtastic', 2)}</span>
+      <button type="button" onClick={() => ws.setActiveMessagesView({ protocol: 'meshtastic', channelId: 1 })}>
+        set-active-ch1
+      </button>
+      <button type="button" onClick={() => ws.setActiveMessagesView(null)}>
+        clear-active
+      </button>
+      <button type="button" onClick={() => ws.markAsReadForChannel('meshtastic', 2)}>
+        mark-ch2-read
+      </button>
+      <button type="button" onClick={() => ws.markAsReadForProtocol('meshtastic')}>
+        mark-mt-read
+      </button>
+      <button type="button" onClick={() => ws.takeUnreadForChannel('meshtastic', 2)}>
+        take-ch2
+      </button>
+    </div>
+  );
+}
+
 function NavigationHarness({ onNavigate }: { onNavigate: (navigate: ReturnType<typeof useNavigate>) => void }) {
   const navigate = useNavigate();
   onNavigate(navigate);
   return null;
 }
 
-function renderWithRoutes(initialPath: string) {
+function renderWithRoutes(initialPath: string, withProbe = false) {
   let navigateFn: ReturnType<typeof useNavigate> | null = null;
 
   const utils = render(
     <MemoryRouter initialEntries={[initialPath]}>
       <WebSocketProvider>
+        {withProbe ? <UnreadProbe /> : null}
         <Routes>
           <Route path="/" element={<NavigationHarness onNavigate={(n) => (navigateFn = n)} />} />
           <Route path="/nodes" element={<NavigationHarness onNavigate={(n) => (navigateFn = n)} />} />
@@ -78,13 +121,7 @@ function renderWithRoutes(initialPath: string) {
   };
 }
 
-const sampleMessage = {
-  id: 1,
-  message_text: 'hello',
-  protocol: 'meshtastic',
-  channel: 1,
-  sender: { node_id_str: '!aabbccdd', short_name: 'AB' },
-} as unknown as TextMessage;
+const sampleMessage = makeMessage({ id: 'mt-1', channel: 1, protocol: 'meshtastic' });
 
 describe('WebSocketProvider', () => {
   beforeEach(() => {
@@ -127,5 +164,184 @@ describe('WebSocketProvider', () => {
     });
 
     expect(toastMock).not.toHaveBeenCalled();
+  });
+
+  it('scopes unread counts by protocol', () => {
+    renderWithRoutes('/', true);
+
+    act(() => {
+      eventService.emit(WebSocketEventType.MESSAGE_RECEIVED, sampleMessage);
+      eventService.emit(
+        WebSocketEventType.MESSAGE_RECEIVED,
+        makeMessage({ id: 'mc-1', channel: 3, protocol: 'meshcore', message_text: 'mc' })
+      );
+    });
+
+    expect(screen.getByTestId('mt-count')).toHaveTextContent('1');
+    expect(screen.getByTestId('mc-count')).toHaveTextContent('1');
+  });
+
+  it('does not count unread for the active channel on the messages page', () => {
+    renderWithRoutes('/messages', true);
+
+    act(() => {
+      screen.getByText('set-active-ch1').click();
+    });
+
+    act(() => {
+      eventService.emit(WebSocketEventType.MESSAGE_RECEIVED, sampleMessage);
+      eventService.emit(
+        WebSocketEventType.MESSAGE_RECEIVED,
+        makeMessage({ id: 'mt-2', channel: 2, protocol: 'meshtastic' })
+      );
+    });
+
+    expect(screen.getByTestId('mt-count')).toHaveTextContent('1');
+    expect(screen.getByTestId('ch1-count')).toHaveTextContent('0');
+    expect(screen.getByTestId('ch2-count')).toHaveTextContent('1');
+    expect(toastMock).not.toHaveBeenCalled();
+  });
+
+  it('markAsReadForChannel clears only that channel', () => {
+    renderWithRoutes('/', true);
+
+    act(() => {
+      eventService.emit(WebSocketEventType.MESSAGE_RECEIVED, sampleMessage);
+      eventService.emit(
+        WebSocketEventType.MESSAGE_RECEIVED,
+        makeMessage({ id: 'mt-2', channel: 2, protocol: 'meshtastic' })
+      );
+    });
+
+    act(() => {
+      screen.getByText('mark-ch2-read').click();
+    });
+
+    expect(screen.getByTestId('mt-count')).toHaveTextContent('1');
+    expect(screen.getByTestId('ch2-count')).toHaveTextContent('0');
+  });
+
+  it('does not clear unrelated protocol unread when navigating to messages', () => {
+    const { navigate } = renderWithRoutes('/', true);
+
+    act(() => {
+      eventService.emit(
+        WebSocketEventType.MESSAGE_RECEIVED,
+        makeMessage({ id: 'mc-1', channel: 5, protocol: 'meshcore' })
+      );
+    });
+
+    expect(screen.getByTestId('mc-count')).toHaveTextContent('1');
+
+    navigate('/messages');
+
+    act(() => {
+      eventService.emit(WebSocketEventType.MESSAGE_RECEIVED, sampleMessage);
+    });
+
+    expect(screen.getByTestId('mc-count')).toHaveTextContent('1');
+    expect(screen.getByTestId('mt-count')).toHaveTextContent('1');
+  });
+
+  it('resumes counting unread for active channel after clear-active', () => {
+    renderWithRoutes('/messages', true);
+
+    act(() => {
+      screen.getByText('set-active-ch1').click();
+    });
+
+    act(() => {
+      eventService.emit(WebSocketEventType.MESSAGE_RECEIVED, sampleMessage);
+    });
+
+    expect(screen.getByTestId('ch1-count')).toHaveTextContent('0');
+
+    act(() => {
+      screen.getByText('clear-active').click();
+    });
+
+    act(() => {
+      eventService.emit(
+        WebSocketEventType.MESSAGE_RECEIVED,
+        makeMessage({ id: 'mt-3', channel: 1, protocol: 'meshtastic' })
+      );
+    });
+
+    expect(screen.getByTestId('ch1-count')).toHaveTextContent('1');
+  });
+
+  it('toasts for other protocol while on messages page', () => {
+    renderWithRoutes('/messages', true);
+
+    act(() => {
+      eventService.emit(
+        WebSocketEventType.MESSAGE_RECEIVED,
+        makeMessage({ id: 'mc-1', channel: 3, protocol: 'meshcore' })
+      );
+    });
+
+    expect(toastMock).toHaveBeenCalled();
+  });
+
+  it('takeUnreadForChannel returns and removes only that channel', () => {
+    renderWithRoutes('/', true);
+
+    act(() => {
+      eventService.emit(
+        WebSocketEventType.MESSAGE_RECEIVED,
+        makeMessage({ id: 'mt-1', channel: 1, protocol: 'meshtastic' })
+      );
+      eventService.emit(
+        WebSocketEventType.MESSAGE_RECEIVED,
+        makeMessage({ id: 'mt-2', channel: 2, protocol: 'meshtastic' })
+      );
+    });
+
+    expect(screen.getByTestId('mt-count')).toHaveTextContent('2');
+
+    act(() => {
+      screen.getByText('take-ch2').click();
+    });
+
+    expect(screen.getByTestId('mt-count')).toHaveTextContent('1');
+    expect(screen.getByTestId('ch2-count')).toHaveTextContent('0');
+  });
+
+  it('classifies meshcore without protocol using mc provenance fields', () => {
+    renderWithRoutes('/', true);
+
+    act(() => {
+      eventService.emit(
+        WebSocketEventType.MESSAGE_RECEIVED,
+        makeMessage({
+          id: 'mc-infer',
+          channel: 9,
+          protocol: undefined,
+          original_mc_packet_id: 'deadbeef',
+          sender: null,
+        })
+      );
+    });
+
+    expect(screen.getByTestId('mt-count')).toHaveTextContent('0');
+    expect(screen.getByTestId('mc-count')).toHaveTextContent('1');
+  });
+
+  it('markAsReadForProtocol clears all unread for that protocol', () => {
+    renderWithRoutes('/', true);
+
+    act(() => {
+      eventService.emit(WebSocketEventType.MESSAGE_RECEIVED, sampleMessage);
+      eventService.emit(
+        WebSocketEventType.MESSAGE_RECEIVED,
+        makeMessage({ id: 'mt-2', channel: 2, protocol: 'meshtastic' })
+      );
+    });
+
+    act(() => {
+      screen.getByText('mark-mt-read').click();
+    });
+
+    expect(screen.getByTestId('mt-count')).toHaveTextContent('0');
   });
 });
