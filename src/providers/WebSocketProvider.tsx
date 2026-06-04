@@ -5,7 +5,12 @@ import { toast } from '@/hooks/use-toast';
 import { websocketService, WebSocketEventType, ConnectionState } from '@/lib/websocket/websocketService';
 import { TextMessage } from '@/lib/models';
 import { eventService } from '@/lib/events/eventService';
-import { messageProtocol, isOnMessagesPage, type MessageProtocolSlug } from '@/lib/message-protocol';
+import {
+  channelIdFromMessage,
+  messageProtocol,
+  isOnMessagesPage,
+  type MessageProtocolSlug,
+} from '@/lib/message-protocol';
 
 export type ActiveMessagesView = {
   protocol: MessageProtocolSlug;
@@ -19,6 +24,7 @@ interface WebSocketContextType {
   markAllAsRead: () => void;
   markAsReadForProtocol: (protocol: MessageProtocolSlug) => void;
   markAsReadForChannel: (protocol: MessageProtocolSlug, channelId: number) => void;
+  takeUnreadForChannel: (protocol: MessageProtocolSlug, channelId: number) => TextMessage[];
   setActiveMessagesView: (view: ActiveMessagesView | null) => void;
   hasUnreadMessages: boolean;
   unreadCountForProtocol: (protocol: MessageProtocolSlug) => number;
@@ -34,6 +40,7 @@ const WebSocketContext = createContext<WebSocketContextType>({
   markAllAsRead: () => {},
   markAsReadForProtocol: () => {},
   markAsReadForChannel: () => {},
+  takeUnreadForChannel: () => [],
   setActiveMessagesView: () => {},
   hasUnreadMessages: false,
   unreadCountForProtocol: () => 0,
@@ -47,7 +54,7 @@ export function useWebSocket() {
 }
 
 function messageMatchesChannel(message: TextMessage, channelId: number): boolean {
-  return Number(message.channel) === channelId;
+  return channelIdFromMessage(message) === channelId;
 }
 
 function isActiveChannelView(pathname: string, view: ActiveMessagesView | null, message: TextMessage): boolean {
@@ -86,6 +93,22 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
     setUnreadMessages((prev) =>
       prev.filter((m) => messageProtocol(m) !== protocol || !messageMatchesChannel(m, channelId))
     );
+  }, []);
+
+  const takeUnreadForChannel = useCallback((protocol: MessageProtocolSlug, channelId: number): TextMessage[] => {
+    const taken: TextMessage[] = [];
+    setUnreadMessages((prev) => {
+      const keep: TextMessage[] = [];
+      for (const m of prev) {
+        if (messageProtocol(m) === protocol && messageMatchesChannel(m, channelId)) {
+          taken.push(m);
+        } else {
+          keep.push(m);
+        }
+      }
+      return keep;
+    });
+    return taken;
   }, []);
 
   const markAllAsRead = useCallback(() => {
@@ -173,6 +196,7 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
       markAllAsRead,
       markAsReadForProtocol,
       markAsReadForChannel,
+      takeUnreadForChannel,
       setActiveMessagesView,
       hasUnreadMessages: unreadMessages.length > 0,
       unreadCountForProtocol,
@@ -186,6 +210,7 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
       markAllAsRead,
       markAsReadForProtocol,
       markAsReadForChannel,
+      takeUnreadForChannel,
       setActiveMessagesView,
       unreadCountForProtocol,
       hasUnreadForProtocol,

@@ -22,7 +22,7 @@ function channelUnreadBadgeLabel(count: number): string {
 }
 
 export function ProtocolMessageHistoryPage({ config }: ProtocolMessageHistoryPageProps) {
-  const { setActiveMessagesView, markAsReadForChannel, hasUnreadForChannel, unreadCountForChannel } = useWebSocket();
+  const { setActiveMessagesView, hasUnreadForChannel, unreadCountForChannel } = useWebSocket();
   const { constellations: allConstellations } = useConstellationsSuspense();
   const constellations = useMemo(
     () => filterConstellationsForProtocol(allConstellations, config.slug),
@@ -81,7 +81,6 @@ export function ProtocolMessageHistoryPage({ config }: ProtocolMessageHistoryPag
 
   const selectChannel = (channelId: number) => {
     setSelectedChannel(channelId);
-    markAsReadForChannel(config.slug, channelId);
   };
 
   return (

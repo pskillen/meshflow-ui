@@ -445,6 +445,7 @@ export interface TextMessage {
   id: string; // UUID
   packet_id: number | string;
   protocol?: MeshProtocol | 'meshtastic' | 'meshcore' | string;
+  original_mc_packet_id?: string | null;
   sender: TextMessageSender | null;
   sender_position?: MapPosition | null;
   mc_sender_label?: string | null;

@@ -82,6 +82,9 @@ function UnreadProbe() {
       <button type="button" onClick={() => ws.markAsReadForProtocol('meshtastic')}>
         mark-mt-read
       </button>
+      <button type="button" onClick={() => ws.takeUnreadForChannel('meshtastic', 2)}>
+        take-ch2
+      </button>
     </div>
   );
 }
@@ -278,6 +281,50 @@ describe('WebSocketProvider', () => {
     });
 
     expect(toastMock).toHaveBeenCalled();
+  });
+
+  it('takeUnreadForChannel returns and removes only that channel', () => {
+    renderWithRoutes('/', true);
+
+    act(() => {
+      eventService.emit(
+        WebSocketEventType.MESSAGE_RECEIVED,
+        makeMessage({ id: 'mt-1', channel: 1, protocol: 'meshtastic' })
+      );
+      eventService.emit(
+        WebSocketEventType.MESSAGE_RECEIVED,
+        makeMessage({ id: 'mt-2', channel: 2, protocol: 'meshtastic' })
+      );
+    });
+
+    expect(screen.getByTestId('mt-count')).toHaveTextContent('2');
+
+    act(() => {
+      screen.getByText('take-ch2').click();
+    });
+
+    expect(screen.getByTestId('mt-count')).toHaveTextContent('1');
+    expect(screen.getByTestId('ch2-count')).toHaveTextContent('0');
+  });
+
+  it('classifies meshcore without protocol using mc provenance fields', () => {
+    renderWithRoutes('/', true);
+
+    act(() => {
+      eventService.emit(
+        WebSocketEventType.MESSAGE_RECEIVED,
+        makeMessage({
+          id: 'mc-infer',
+          channel: 9,
+          protocol: undefined,
+          original_mc_packet_id: 'deadbeef',
+          sender: null,
+        })
+      );
+    });
+
+    expect(screen.getByTestId('mt-count')).toHaveTextContent('0');
+    expect(screen.getByTestId('mc-count')).toHaveTextContent('1');
   });
 
   it('markAsReadForProtocol clears all unread for that protocol', () => {
