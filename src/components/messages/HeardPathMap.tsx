@@ -1,13 +1,11 @@
-import { buildSegments, midpoint, type LatLng } from '@/lib/map-path-segments';
+import type { LatLng } from '@/lib/map-path-segments';
 import { MAP_NODE_MARKER_CSS } from '@/lib/map-marker-styles';
 import type { TracerouteRouteNode } from '@/lib/models';
 import { useMapTileUrl } from '@/hooks/useMapTileUrl';
-import { createNodeIcon } from '@/components/nodes/map-utils';
+import { drawHeardPathLayers, hasDrawablePathOnMap, toLatLng } from './heard-path-map-layers';
 import L from 'leaflet';
 import { useEffect, useRef } from 'react';
 import 'leaflet/dist/leaflet.css';
-
-import { HEARD_PATH_LEG_COLORS, HEARD_PATH_SENDER_COLOR } from './heard-path-constants';
 
 const DEFAULT_CENTER: LatLng = [55.8642, -4.2518];
 
@@ -26,14 +24,6 @@ export type HeardPathMapProps = {
   /** Display name when sender position is missing (e.g. parsed MC channel prefix). */
   senderName?: string | null;
 };
-
-function toLatLng(pos: MapPosition): LatLng {
-  return [pos.latitude, pos.longitude];
-}
-
-function hasPositionedWaypoints(waypoints: TracerouteRouteNode[]): boolean {
-  return waypoints.some((node) => node.position != null);
-}
 
 export function HeardPathMap({ sender, legs, senderName }: HeardPathMapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
@@ -83,63 +73,12 @@ export function HeardPathMap({ sender, legs, senderName }: HeardPathMapProps) {
     layersRef.current = [];
 
     const bounds = L.latLngBounds([]);
-
-    if (senderPos) {
-      const senderMarker = L.marker(senderPos, {
-        icon: createNodeIcon(sender?.label ?? 'S', HEARD_PATH_SENDER_COLOR, false),
-      }).addTo(map);
-      layersRef.current.push(senderMarker);
-      bounds.extend(senderPos);
-    }
-
-    legs.forEach((leg, index) => {
-      const receiverPos = toLatLng(leg.receiver.position);
-      const color = leg.lineColor ?? HEARD_PATH_LEG_COLORS[index % HEARD_PATH_LEG_COLORS.length];
-      const receiverMarker = L.marker(receiverPos, {
-        icon: createNodeIcon(leg.receiver.label, color, false),
-      }).addTo(map);
-      layersRef.current.push(receiverMarker);
-      bounds.extend(receiverPos);
-
-      if (!senderPos) {
-        return;
-      }
-
-      const segments =
-        leg.pathKnown && hasPositionedWaypoints(leg.waypoints)
-          ? buildSegments(senderPos, leg.waypoints, receiverPos)
-          : [
-              {
-                latlngs: [senderPos, receiverPos] as LatLng[],
-                dashed: true,
-                unknownLabels: leg.waypoints.map((node) => ({ node_id_str: node.node_id_str })),
-              },
-            ];
-
-      segments.forEach((seg) => {
-        const poly = L.polyline(seg.latlngs, {
-          color,
-          weight: 4,
-          dashArray: seg.dashed ? '10, 10' : undefined,
-        }).addTo(map);
-        layersRef.current.push(poly);
-        seg.latlngs.forEach((p) => bounds.extend(p));
-
-        if (seg.dashed && seg.unknownLabels.length > 0 && seg.latlngs.length >= 2) {
-          const mid = midpoint(seg.latlngs[0], seg.latlngs[seg.latlngs.length - 1]);
-          seg.unknownLabels.forEach((label) => {
-            const tooltip = L.tooltip({
-              permanent: true,
-              direction: 'center',
-              className: 'traceroute-unknown-label',
-            })
-              .setContent(label.node_id_str)
-              .setLatLng(mid);
-            tooltip.addTo(map);
-            layersRef.current.push(tooltip);
-          });
-        }
-      });
+    drawHeardPathLayers({
+      map,
+      layers: layersRef.current,
+      bounds,
+      sender,
+      legs,
     });
 
     if (bounds.isValid()) {
@@ -168,6 +107,7 @@ export function HeardPathMap({ sender, legs, senderName }: HeardPathMapProps) {
   }
 
   const showSenderWarning = !senderPos;
+  const hasPartialPaths = !senderPos && hasDrawablePathOnMap(null, legs);
   const warningLabel = senderName?.trim() || sender?.label;
 
   return (
@@ -183,7 +123,8 @@ export function HeardPathMap({ sender, legs, senderName }: HeardPathMapProps) {
           role="status"
         >
           Sender position unknown
-          {warningLabel ? ` (${warningLabel})` : ''} — feeders shown; path lines omitted.
+          {warningLabel ? ` (${warningLabel})` : ''} —
+          {hasPartialPaths ? ' paths use known hop and feeder positions only.' : ' feeders shown; path lines omitted.'}
         </div>
       )}
     </div>

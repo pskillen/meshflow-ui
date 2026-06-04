@@ -61,10 +61,20 @@ const baseLeg: MeshCoreHeardLeg = {
   lineColor: '#2563eb',
 };
 
-function renderFlow(leg: MeshCoreHeardLeg, senderKnown: boolean) {
+function renderFlow(
+  leg: MeshCoreHeardLeg,
+  senderKnown: boolean,
+  opts?: { senderHasPosition?: boolean; senderDetailPath?: string | null }
+) {
   return render(
     <MemoryRouter>
-      <MeshCoreHeardPathFlow leg={leg} senderDisplayLabel="Sender" senderKnown={senderKnown} />
+      <MeshCoreHeardPathFlow
+        leg={leg}
+        senderDisplayLabel="☘️GI7"
+        senderKnown={senderKnown}
+        senderHasPosition={opts?.senderHasPosition ?? senderKnown}
+        senderDetailPath={opts?.senderDetailPath ?? null}
+      />
     </MemoryRouter>
   );
 }
@@ -84,7 +94,16 @@ describe('MeshCoreHeardPathFlow', () => {
   });
 
   it('shows sender unknown label when sender not known', () => {
-    renderFlow(baseLeg, false);
+    renderFlow(baseLeg, false, { senderHasPosition: false });
     expect(screen.getByText(/Sender unknown/i)).toBeInTheDocument();
+  });
+
+  it('links identified sender without position', () => {
+    renderFlow(baseLeg, true, {
+      senderHasPosition: false,
+      senderDetailPath: '/nodes/mc%3A9cce73b9b3ee',
+    });
+    expect(screen.getByRole('link', { name: '☘️GI7' })).toHaveAttribute('href', '/nodes/mc%3A9cce73b9b3ee');
+    expect(screen.queryByText(/Sender unknown/i)).not.toBeInTheDocument();
   });
 });

@@ -7,10 +7,14 @@ import { PathHopChain } from '@/components/messages/PathHopChain';
 import {
   isMeshCoreHeardMessage,
   isMeshCoreHeardObservation,
+  heardPathSenderForGeoMap,
   meshCoreHeardLegs,
+  meshCoreHeardToLegs,
+  messageHasAmbiguousPathHops,
   messageToHeardPathLegs,
   resolvedHopsFromObservation,
 } from '@/components/messages/heard-path-map-adapters';
+import { HopPositionIcon } from '@/components/messages/HopPositionIcon';
 import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -25,7 +29,8 @@ import { nodeDetailPath } from '@/lib/node-detail-routes';
 
 function MeshCoreHeardDialogBody({ message }: { message: TextMessage }) {
   const { sender, senderDisplayLabel, legs } = useMemo(() => meshCoreHeardLegs(message), [message]);
-  const senderKnown = sender != null;
+  const senderKnown = sender?.identified ?? false;
+  const senderHasPosition = sender?.position != null;
 
   const geoFeeders = useMemo(
     () =>
@@ -39,13 +44,16 @@ function MeshCoreHeardDialogBody({ message }: { message: TextMessage }) {
     [legs]
   );
 
-  const geoSender = sender ? { label: sender.label, position: sender.position } : null;
+  const geoSender = heardPathSenderForGeoMap(sender);
+  const { legs: pathLegs } = useMemo(() => meshCoreHeardToLegs(message), [message]);
+  const hasAmbiguousHops = useMemo(() => messageHasAmbiguousPathHops(message), [message]);
 
   return (
     <>
       <HeardPathGeoMap
         sender={geoSender}
         feeders={geoFeeders}
+        pathLegs={pathLegs}
         senderName={message.mc_sender_label || message.sender?.short_name || message.sender?.long_name || null}
       />
       {message.mc_sender_candidates && message.mc_sender_candidates.length > 1 && (
@@ -53,7 +61,14 @@ function MeshCoreHeardDialogBody({ message }: { message: TextMessage }) {
           Multiple nodes match sender &quot;{message.mc_sender_label}&quot; — map uses feeder positions only.
         </p>
       )}
-      <MeshCoreHeardPathsPanel legs={legs} senderDisplayLabel={senderDisplayLabel} senderKnown={senderKnown} />
+      <MeshCoreHeardPathsPanel
+        legs={legs}
+        senderDisplayLabel={senderDisplayLabel}
+        senderKnown={senderKnown}
+        senderHasPosition={senderHasPosition}
+        senderDetailPath={sender?.detailPath ?? null}
+        hasAmbiguousHops={hasAmbiguousHops}
+      />
       <div className="space-y-4 mt-4">
         {legs.map((leg, index) => {
           const mc = leg.observation;
@@ -70,7 +85,8 @@ function MeshCoreHeardDialogBody({ message }: { message: TextMessage }) {
               style={{ borderLeftWidth: 4, borderLeftColor: leg.lineColor }}
             >
               <div className="min-w-0">
-                <div className="font-semibold">
+                <div className="font-semibold flex items-center gap-1.5">
+                  <HopPositionIcon positioned={mc.observer.position != null} />
                   {observerLink ? (
                     <Link to={observerLink} className="hover:underline">
                       {leg.receiverLabel}

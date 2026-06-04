@@ -3,6 +3,7 @@ import {
   meshCoreHeardLegs,
   meshCoreHeardToLegs,
   meshtasticHeardToLegs,
+  resolveHeardPathSender,
   resolvedHopsFromObservation,
 } from './heard-path-map-adapters';
 import type { TextMessage } from '@/lib/models';
@@ -46,6 +47,39 @@ describe('heard path adapters', () => {
     expect(legs[0].waypoints).toHaveLength(0);
   });
 
+  it('resolveHeardPathSender identifies single mc_sender_candidate without position', () => {
+    const message: TextMessage = {
+      id: 'gi7',
+      packet_id: 1,
+      protocol: 'meshcore',
+      sender: null,
+      mc_sender_label: '☘️GI7ULG☘️',
+      mc_sender_candidates: [
+        {
+          internal_id: '00000000-0000-4000-8000-000000000099',
+          node_id_str: 'mc:9cce73b9b3ee',
+          long_name: '☘️GI7ULG☘️',
+          short_name: '☘️GI7',
+          position: null,
+        },
+      ],
+      recipient_meshtastic_node_id: null,
+      channel: 1,
+      sent_at: new Date().toISOString(),
+      message_text: '☘️GI7ULG☘️: Test',
+      is_emoji: false,
+      reply_to_meshtastic_packet_id: null,
+      heard: [],
+    };
+    const sender = resolveHeardPathSender(message);
+    expect(sender?.identified).toBe(true);
+    expect(sender?.label).toBe('☘️GI7');
+    expect(sender?.position).toBeNull();
+    expect(sender?.detailPath).toBe('/nodes/mc%3A9cce73b9b3ee');
+    const { sender: geoSender } = meshCoreHeardToLegs(message);
+    expect(geoSender).toBeNull();
+  });
+
   it('meshCoreHeardToLegs uses single mc_sender_candidate with position as sender', () => {
     const message: TextMessage = {
       id: '3',
@@ -76,7 +110,7 @@ describe('heard path adapters', () => {
     expect(sender?.position.latitude).toBe(55.0);
   });
 
-  it('meshCoreHeardToLegs omits sender when multiple positioned candidates', () => {
+  it('meshCoreHeardToLegs omits geo sender when multiple mc_sender_candidates', () => {
     const pos = { latitude: 55.0, longitude: -4.0 };
     const message: TextMessage = {
       id: '4',
@@ -345,6 +379,71 @@ describe('heard path adapters', () => {
     expect(legs[0].waypoints).toHaveLength(2);
     expect(legs[0].waypoints[0].position).toEqual({ latitude: 55.05, longitude: -4.05 });
     expect(legs[0].waypoints[0].short_name).toBe('Hop1');
+  });
+
+  it('meshCoreHeardToLegs omits ambiguous hops from map waypoints', () => {
+    const message: TextMessage = {
+      id: '8',
+      packet_id: 8,
+      protocol: 'meshcore',
+      sender: { node_id_str: 'mc:abc', long_name: 'X', short_name: 'X' },
+      sender_position: { latitude: 55.0, longitude: -4.0 },
+      recipient_meshtastic_node_id: null,
+      channel: 1,
+      sent_at: new Date().toISOString(),
+      message_text: 'mc',
+      is_emoji: false,
+      reply_to_meshtastic_packet_id: null,
+      heard: [
+        {
+          observer: {
+            node_id_str: 'mc:feed',
+            internal_id: null,
+            long_name: 'Feeder',
+            short_name: 'F',
+            position: { latitude: 55.2, longitude: -4.2 },
+          },
+          rx_time: new Date().toISOString(),
+          rx_rssi: -90,
+          rx_snr: 2,
+          path_hashes: ['aa', 'bb'],
+          resolved_path: [
+            {
+              hash: 'aa',
+              status: 'resolved',
+              node_id_str: 'mc:hop',
+              internal_id: '1',
+              long_name: 'Hop',
+              short_name: 'H',
+              ambiguous: false,
+              position: { latitude: 55.1, longitude: -4.1 },
+            },
+            {
+              hash: 'bb',
+              status: 'ambiguous',
+              node_id_str: null,
+              internal_id: null,
+              long_name: null,
+              short_name: null,
+              ambiguous: true,
+              candidates: [
+                {
+                  internal_id: '2',
+                  node_id_str: 'mc:x',
+                  long_name: 'X1',
+                  short_name: 'X1',
+                  position: null,
+                },
+              ],
+            },
+          ],
+          path_known: false,
+        },
+      ],
+    };
+    const { legs } = meshCoreHeardToLegs(message);
+    expect(legs[0].waypoints).toHaveLength(1);
+    expect(legs[0].waypoints[0].node_id_str).toBe('mc:hop');
   });
 
   it('resolvedHopsFromObservation falls back to path_hashes', () => {

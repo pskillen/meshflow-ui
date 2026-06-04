@@ -70,6 +70,22 @@ npm test             # Vitest
 - Pages under `src/pages/`; shared components under `src/components/`.
 - API config: `config.ts` + remote `config.json`; `MESHFLOW_API_URL` for backend base URL.
 
+### Component and screen documentation
+
+When you **create** a non-trivial component or page screen, or **meaningfully change** one you touch, add or update a sibling markdown file next to the main `.tsx` (same basename, e.g. `HeardPathMap.tsx` → `HeardPathMap.md`).
+
+Do **not** backfill docs for the whole codebase in one go; only document what you are working on so behaviour stays accurate.
+
+Each doc should explain, in plain language:
+
+- **Purpose** — what the UI is for and when to use it vs similar components (e.g. `HeardPathMap` vs `HeardPathGeoMap`).
+- **Props / inputs** — main types and what drives rendering.
+- **Behaviour** — what is drawn or shown, empty states, warnings, and non-obvious rules (maps, dialogs, protocol splits).
+- **Wiring** — where it is used in the app and which adapters/hooks feed it.
+- **Related** — links to paired components, feature docs under `docs/`, or API contracts when relevant.
+
+Examples: [`src/components/messages/HeardPathMap.md`](src/components/messages/HeardPathMap.md), [`src/components/messages/HeardPathGeoMap.md`](src/components/messages/HeardPathGeoMap.md).
+
 ## Configuration
 
 - Default config in `config.ts`
