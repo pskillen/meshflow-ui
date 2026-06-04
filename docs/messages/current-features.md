@@ -99,9 +99,11 @@ WS handler does not check `constellation_id` on the payload (only channel id). R
 
 ## Unread / notification counts
 
+See **[docs/features/messages/unread-count.md](../features/messages/unread-count.md)** ([#279](https://github.com/pskillen/meshflow-ui/issues/279): WS payloads omit `protocol`, so `messageProtocol()` defaults live traffic to Meshtastic).
+
 ### Implemented today
 
-- **Protocol-scoped** unread array in `WebSocketProvider`.
+- **Protocol-scoped** unread array in `WebSocketProvider` (intended; classification broken until API sends `protocol` on WS).
 - Sidebar **Messages** link per protocol: red badge with count (max display `9+`).
 - Clearing: navigate to that protocol’s messages URL, or click nav link (explicit `markAsReadForProtocol` before navigate).
 - **Global** `hasUnreadMessages` / `markAllAsRead` exist but nav uses per-protocol helpers.

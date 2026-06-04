@@ -79,6 +79,8 @@ Query keys include `protocol`, `channelId`, `constellationId`, `nodeId`, `pageSi
 
 ## WebSocket and unread
 
+Canonical detail: [docs/features/messages/unread-count.md](../features/messages/unread-count.md) and [meshflow-api text-messages/unread-count.md](https://github.com/pskillen/meshflow-api/blob/main/docs/features/text-messages/unread-count.md).
+
 ### Connection
 
 - `websocketService` → `ws…/ws/messages/?token=…` (from `config.apis.meshBot.baseUrl`).
