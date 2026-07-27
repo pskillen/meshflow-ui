@@ -1,12 +1,11 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
-import { ApiAuthConfig, ApiConfig, ApiError, NotFoundError, ServerError } from '@/lib/types';
+import { ApiConfig, ApiError, NotFoundError, ServerError } from '@/lib/types';
 import { authService } from '@/lib/auth/authService';
 import { eventService } from '@/lib/events/eventService';
 import { AuthEventType } from '@/lib/auth/authService';
 
 export abstract class BaseApi {
   protected readonly axios: AxiosInstance;
-  private readonly authConfig?: ApiAuthConfig;
   private readonly baseUrl: string;
 
   constructor(config: ApiConfig) {
@@ -26,45 +25,12 @@ export abstract class BaseApi {
       },
     });
 
-    // Store auth config if provided
-    if (config.auth) {
-      this.authConfig = config.auth;
-    }
-
     // Add request interceptor for auth
     this.axios.interceptors.request.use(
       (config) => {
-        // Always check for JWT token first
         const accessToken = authService.getAccessToken();
         if (accessToken) {
           config.headers.Authorization = `Bearer ${accessToken}`;
-          return config;
-        }
-
-        // Fall back to other auth methods if no JWT token
-        if (this.authConfig) {
-          switch (this.authConfig.type) {
-            case 'token':
-              if (this.authConfig.token) {
-                // Updated to use Bearer token for JWT authentication
-                config.headers.Authorization = `Bearer ${this.authConfig.token}`;
-              }
-              break;
-            case 'basic':
-              if (this.authConfig.username && this.authConfig.password) {
-                const credentials = btoa(`${this.authConfig.username}:${this.authConfig.password}`);
-                config.headers.Authorization = `Basic ${credentials}`;
-              }
-              break;
-            case 'apiKey':
-              if (this.authConfig.apiKey && this.authConfig.apiKeyHeader) {
-                config.headers[this.authConfig.apiKeyHeader] = this.authConfig.apiKey;
-              }
-              break;
-            case 'oauth':
-              // OAuth implementation would go here
-              break;
-          }
         }
         return config;
       },

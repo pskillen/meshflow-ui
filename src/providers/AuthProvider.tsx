@@ -112,6 +112,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   // Register session-expired callback (called by axios interceptor via authService)
   useEffect(() => {
     const unsubscribe = authService.onSessionExpired((params) => {
+      queryClient.clear();
       setIsAuthenticated(false);
       setAuthProvider(null);
       setError(params.message || 'Authentication failed. Please log in again.');
@@ -120,7 +121,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       });
     });
     return unsubscribe;
-  }, [navigate]);
+  }, [navigate, queryClient]);
 
   // Handle OAuth callback
   useEffect(() => {
