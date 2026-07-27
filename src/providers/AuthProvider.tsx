@@ -59,7 +59,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       const expiresInSec = exp - nowSec;
       const expiresInMs = expiresInSec * 1000;
 
-      if (expiresInMs <= REFRESH_BEFORE_EXPIRY_MS && expiresInMs > 0) {
+      if (expiresInMs <= REFRESH_BEFORE_EXPIRY_MS) {
         try {
           await authService.refreshToken(config.apis.meshBot.baseUrl);
           eventService.emit(AuthEventType.AUTH_TOKEN_REFRESHED);
@@ -79,12 +79,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
   // Sync auth state from authService on mount
   useEffect(() => {
     const checkAuth = async () => {
-      const isAuth = authService.isAuthenticated();
-      setIsAuthenticated(isAuth);
-      setAuthProvider(isAuth ? authService.getAuthProvider() : null);
+      try {
+        const isAuth = authService.isAuthenticated();
+        setIsAuthenticated(isAuth);
+        setAuthProvider(isAuth ? authService.getAuthProvider() : null);
 
-      if (isAuth) {
-        try {
+        if (isAuth) {
           const user = await authService.initializeUser(config.apis.meshBot.baseUrl);
           if (!user) {
             authService.clearTokens();
@@ -93,21 +93,20 @@ export function AuthProvider({ children }: AuthProviderProps) {
             navigate('/login', { state: { reason: 'session_expired' } });
             return;
           }
-        } catch (error) {
-          console.error('Failed to initialize user details:', error);
-          authService.clearTokens();
-          setIsAuthenticated(false);
-          setAuthProvider(null);
-          navigate('/login', { state: { reason: 'session_expired' } });
-          return;
         }
+      } catch (error) {
+        console.error('Failed to initialize user details:', error);
+        authService.clearTokens();
+        setIsAuthenticated(false);
+        setAuthProvider(null);
+        navigate('/login', { state: { reason: 'session_expired' } });
+      } finally {
+        setIsLoading(false);
       }
-
-      setIsLoading(false);
     };
 
     checkAuth();
-  }, [config.apis.meshBot.baseUrl]);
+  }, [config.apis.meshBot.baseUrl, navigate]);
 
   // Register session-expired callback (called by axios interceptor via authService)
   useEffect(() => {
@@ -308,6 +307,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   // Logout function
   const logout = () => {
     authService.logout();
+    queryClient.clear();
     setIsAuthenticated(false);
     navigate('/login'); // Redirect to login page after logout
   };

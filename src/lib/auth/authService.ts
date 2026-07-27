@@ -293,13 +293,6 @@ export const authService = {
       return null;
     }
 
-    // If we already have user details, return them
-    const storedUser = this.getUserDetails();
-    if (storedUser) {
-      return storedUser;
-    }
-
-    // Otherwise fetch user details from the server
     try {
       return await this.fetchUserDetails(baseUrl);
     } catch (error) {
