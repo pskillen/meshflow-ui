@@ -26,6 +26,7 @@ import { LoginPage } from '@/pages/auth/LoginPage';
 import { OAuthCallback } from '@/pages/auth/OAuthCallback';
 import { UserPage } from '@/pages/user/UserPage';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
+import { AuthErrorBoundaryWithReset } from '@/components/auth/AuthErrorBoundary';
 import { AppLayout } from '@/components/layouts/AppLayout';
 import MonitorNodes from '@/pages/nodes/monitor';
 import DxMonitoringPage from '@/pages/nodes/DxMonitoringPage';
@@ -50,92 +51,95 @@ function App() {
         <Router>
           <AuthProvider>
             <WebSocketProvider>
-              <Routes>
-                <Route path="/login" element={<LoginPage />} />
-                <Route path="/auth/callback" element={<OAuthCallback />} />
+              <AuthErrorBoundaryWithReset>
+                <Routes>
+                  <Route path="/login" element={<LoginPage />} />
+                  <Route path="/auth/callback" element={<OAuthCallback />} />
+                  <Route path="/oauth/callback" element={<OAuthCallback />} />
 
-                {/* Public observatory (guest or authenticated) — meshflow-ui #298 */}
-                <Route element={<AppLayout />}>
-                  <Route path="/" element={<Dashboard />} />
-                  <Route path="/nodes" element={<NodesList />} />
-                  <Route path="/nodes/:id" element={<NodeDetails />} />
-                  <Route path="/map" element={<Navigate to="/nodes" replace />} />
-                  <Route path="/messages" element={<MessageHistory />} />
-                  <Route path="/meshtastic/dashboard" element={<MeshtasticDashboard />} />
-                  <Route path="/meshcore/dashboard" element={<MeshCoreDashboard />} />
-                  <Route path="/meshcore/path-tracing" element={<MeshCorePassivePath />} />
-                  <Route path="/meshcore/nodes" element={<MeshCoreNodesList />} />
-                  <Route path="/meshcore/messages" element={<MeshCoreMessages />} />
-                  <Route path="/meshcore/map" element={<Navigate to="/meshcore/nodes" replace />} />
-                  <Route path="/traceroutes/history" element={<TracerouteHistory />} />
-                  <Route path="/traceroutes" element={<TraceroutesLanding />} />
-                  <Route path="/traceroutes/heatmap" element={<Navigate to="/traceroutes/map/heat" replace />} />
-                  <Route
-                    path="/traceroutes/topology"
-                    element={<Navigate to="/traceroutes/map/topology/heat" replace />}
-                  />
-                  <Route path="/traceroutes/map/heat" element={<TracerouteHeatmapPage edgeMetric="packets" />} />
-                  <Route path="/traceroutes/map/snr" element={<TracerouteHeatmapPage edgeMetric="snr" />} />
-                  <Route
-                    path="/traceroutes/map/topology/heat"
-                    element={<TracerouteTopologyPage edgeMetric="packets" />}
-                  />
-                  <Route path="/traceroutes/map/topology/snr" element={<TracerouteTopologyPage edgeMetric="snr" />} />
-                  <Route path="/traceroutes/map/coverage" element={<FeederCoveragePage />} />
-                  <Route
-                    path="/traceroutes/map/coverage/constellation/:constellationId"
-                    element={<ConstellationCoveragePage />}
-                  />
-                  <Route path="/traceroutes/map/coverage/constellation" element={<ConstellationCoveragePage />} />
-                  <Route path="/weather" element={<Weather />} />
-                </Route>
+                  {/* Public observatory (guest or authenticated) — meshflow-ui #298 */}
+                  <Route element={<AppLayout />}>
+                    <Route path="/" element={<Dashboard />} />
+                    <Route path="/nodes" element={<NodesList />} />
+                    <Route path="/nodes/:id" element={<NodeDetails />} />
+                    <Route path="/map" element={<Navigate to="/nodes" replace />} />
+                    <Route path="/messages" element={<MessageHistory />} />
+                    <Route path="/meshtastic/dashboard" element={<MeshtasticDashboard />} />
+                    <Route path="/meshcore/dashboard" element={<MeshCoreDashboard />} />
+                    <Route path="/meshcore/path-tracing" element={<MeshCorePassivePath />} />
+                    <Route path="/meshcore/nodes" element={<MeshCoreNodesList />} />
+                    <Route path="/meshcore/messages" element={<MeshCoreMessages />} />
+                    <Route path="/meshcore/map" element={<Navigate to="/meshcore/nodes" replace />} />
+                    <Route path="/traceroutes/history" element={<TracerouteHistory />} />
+                    <Route path="/traceroutes" element={<TraceroutesLanding />} />
+                    <Route path="/traceroutes/heatmap" element={<Navigate to="/traceroutes/map/heat" replace />} />
+                    <Route
+                      path="/traceroutes/topology"
+                      element={<Navigate to="/traceroutes/map/topology/heat" replace />}
+                    />
+                    <Route path="/traceroutes/map/heat" element={<TracerouteHeatmapPage edgeMetric="packets" />} />
+                    <Route path="/traceroutes/map/snr" element={<TracerouteHeatmapPage edgeMetric="snr" />} />
+                    <Route
+                      path="/traceroutes/map/topology/heat"
+                      element={<TracerouteTopologyPage edgeMetric="packets" />}
+                    />
+                    <Route path="/traceroutes/map/topology/snr" element={<TracerouteTopologyPage edgeMetric="snr" />} />
+                    <Route path="/traceroutes/map/coverage" element={<FeederCoveragePage />} />
+                    <Route
+                      path="/traceroutes/map/coverage/constellation/:constellationId"
+                      element={<ConstellationCoveragePage />}
+                    />
+                    <Route path="/traceroutes/map/coverage/constellation" element={<ConstellationCoveragePage />} />
+                    <Route path="/weather" element={<Weather />} />
+                  </Route>
 
-                {/* Authenticated-only */}
-                <Route
-                  element={
-                    <ProtectedRoute>
-                      <AppLayout />
-                    </ProtectedRoute>
-                  }
-                >
-                  <Route path="/nodes/infrastructure" element={<MeshInfrastructure protocol="meshtastic" />} />
-                  <Route path="/meshcore/infrastructure" element={<MeshInfrastructure protocol="meshcore" />} />
+                  {/* Authenticated-only */}
                   <Route
-                    path="/nodes/infrastructure/export"
                     element={
-                      <Suspense fallback={<div>Loading...</div>}>
-                        <InfrastructureExport />
-                      </Suspense>
+                      <ProtectedRoute>
+                        <AppLayout />
+                      </ProtectedRoute>
                     }
-                  />
-                  <Route
-                    path="/nodes/managed-nodes"
-                    element={
-                      <Suspense fallback={<div>Loading managed nodes...</div>}>
-                        <ManagedNodesStatus />
-                      </Suspense>
-                    }
-                  />
-                  <Route path="/nodes/my-nodes" element={<MyNodes />} />
-                  <Route path="/nodes/monitor" element={<MonitorNodes />} />
-                  <Route path="/nodes/dx-monitoring" element={<DxMonitoringPage />} />
-                  <Route path="/nodes/:id/claim" element={<ClaimNode />} />
-                  <Route
-                    path="/meshcore/managed-nodes"
-                    element={
-                      <Suspense fallback={<div>Loading managed nodes...</div>}>
-                        <MeshCoreManagedNodesStatus />
-                      </Suspense>
-                    }
-                  />
-                  <Route path="/user/nodes" element={<NodeSettings />} />
-                  <Route path="/user/settings" element={<SettingsPage />} />
-                  <Route path="/user/api-keys" element={<ApiKeysPage />} />
-                  <Route path="/user" element={<UserPage />} />
-                </Route>
+                  >
+                    <Route path="/nodes/infrastructure" element={<MeshInfrastructure protocol="meshtastic" />} />
+                    <Route path="/meshcore/infrastructure" element={<MeshInfrastructure protocol="meshcore" />} />
+                    <Route
+                      path="/nodes/infrastructure/export"
+                      element={
+                        <Suspense fallback={<div>Loading...</div>}>
+                          <InfrastructureExport />
+                        </Suspense>
+                      }
+                    />
+                    <Route
+                      path="/nodes/managed-nodes"
+                      element={
+                        <Suspense fallback={<div>Loading managed nodes...</div>}>
+                          <ManagedNodesStatus />
+                        </Suspense>
+                      }
+                    />
+                    <Route path="/nodes/my-nodes" element={<MyNodes />} />
+                    <Route path="/nodes/monitor" element={<MonitorNodes />} />
+                    <Route path="/nodes/dx-monitoring" element={<DxMonitoringPage />} />
+                    <Route path="/nodes/:id/claim" element={<ClaimNode />} />
+                    <Route
+                      path="/meshcore/managed-nodes"
+                      element={
+                        <Suspense fallback={<div>Loading managed nodes...</div>}>
+                          <MeshCoreManagedNodesStatus />
+                        </Suspense>
+                      }
+                    />
+                    <Route path="/user/nodes" element={<NodeSettings />} />
+                    <Route path="/user/settings" element={<SettingsPage />} />
+                    <Route path="/user/api-keys" element={<ApiKeysPage />} />
+                    <Route path="/user" element={<UserPage />} />
+                  </Route>
 
-                <Route path="*" element={<Navigate to="/" replace />} />
-              </Routes>
+                  <Route path="*" element={<Navigate to="/" replace />} />
+                </Routes>
+              </AuthErrorBoundaryWithReset>
             </WebSocketProvider>
           </AuthProvider>
         </Router>
