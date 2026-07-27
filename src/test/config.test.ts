@@ -19,8 +19,7 @@ describe('Config', () => {
         basePath: '/api/ui',
         timeout: 10000,
         auth: {
-          type: 'token',
-          token: 'd9891a1ed5541ae02392b9829cb68267bf68e06c',
+          type: 'none',
         },
         headers: {
           Accept: 'application/json',
@@ -44,8 +43,7 @@ describe('Config', () => {
         baseUrl: 'https://api.example.com',
         timeout: 5000,
         auth: {
-          type: 'token',
-          token: 'new-token',
+          type: 'none',
         },
       },
     },
@@ -131,7 +129,7 @@ describe('Config', () => {
     expect(config.apis.meshBot.baseUrl).toBe('https://api.example.com');
     expect(config.apis.meshBot.basePath).toBe('/api/ui'); // From default
     expect(config.apis.meshBot.timeout).toBe(5000);
-    expect(config.apis.meshBot.auth.token).toBe('new-token');
+    expect(config.apis.meshBot.auth.type).toBe('none');
     expect(config.map.defaultCenter).toEqual([0, 0]); // From default
     expect(config.map.defaultZoom).toBe(5);
     expect(config.refresh.nodesList).toBe(60000);
@@ -158,7 +156,7 @@ describe('Config', () => {
     expect(config.apis.meshBot.baseUrl).toBe('https://api.example.com');
     expect(config.apis.meshBot.basePath).toBe('/api/ui'); // From default
     expect(config.apis.meshBot.timeout).toBe(10000); // From default
-    expect(config.apis.meshBot.auth.token).toBe('d9891a1ed5541ae02392b9829cb68267bf68e06c'); // From default
+    expect(config.apis.meshBot.auth.type).toBe('none'); // From default
     expect(config.map.defaultCenter).toEqual([0, 0]); // From default
     expect(config.map.defaultZoom).toBe(2); // From default
     expect(config.refresh.nodesList).toBe(30000); // From default

@@ -14,7 +14,8 @@ const queryClient = new QueryClient({
       staleTime: 5 * 60 * 1000, // 5 minutes
       refetchOnWindowFocus: false,
       retry: (failureCount, error) => {
-        const status = (error as { response?: { status?: number } })?.response?.status;
+        const status =
+          (error as { status?: number })?.status ?? (error as { response?: { status?: number } })?.response?.status;
 
         // Do not retry on 401 - auth failures should not trigger retries
         if (status === 401) return false;

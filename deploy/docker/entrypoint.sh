@@ -10,8 +10,7 @@ cat > /usr/share/nginx/html/config.json << EOF
       "basePath": "${MESHBOT_API_BASE_PATH:-/api/ui}",
       "timeout": ${MESHBOT_API_TIMEOUT:-10000},
       "auth": {
-        "type": "token",
-        "token": "${MESHBOT_API_TOKEN:-d9891a1ed5541ae02392b9829cb68267bf68e06c}"
+        "type": "none"
       },
       "headers": {
         "Accept": "application/json"

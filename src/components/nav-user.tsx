@@ -1,4 +1,4 @@
-import { LogOutIcon, MoreVerticalIcon, UserCircleIcon, RadioIcon, Settings, Key } from 'lucide-react';
+import { LogOutIcon, MoreVerticalIcon, UserCircleIcon, RadioIcon, Settings, Key, LogInIcon } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -17,7 +17,22 @@ import { User } from '@/lib/auth/authService';
 
 export function NavUser({ user }: { user: User | null }) {
   const { isMobile } = useSidebar();
-  const { logout } = useAuth();
+  const { logout, isAuthenticated } = useAuth();
+
+  if (!isAuthenticated) {
+    return (
+      <SidebarMenu>
+        <SidebarMenuItem>
+          <SidebarMenuButton asChild size="lg">
+            <Link to="/login">
+              <LogInIcon className="size-4" />
+              <span>Sign in</span>
+            </Link>
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+      </SidebarMenu>
+    );
+  }
 
   return (
     <SidebarMenu>
