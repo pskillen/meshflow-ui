@@ -11,11 +11,10 @@ const defaultConfig: AppConfig = {
   apis: {
     meshBot: {
       baseUrl: 'http://localhost:8000',
-      basePath: '/api', // Updated to use the new API base path
+      basePath: '/api/ui',
       timeout: 10000,
       auth: {
-        type: 'token',
-        token: 'd9891a1ed5541ae02392b9829cb68267bf68e06c', // This token should be replaced with a valid JWT token
+        type: 'none',
       },
       headers: {
         Accept: 'application/json',

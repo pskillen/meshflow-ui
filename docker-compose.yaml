@@ -23,7 +23,6 @@ services:
       - MESHBOT_API_URL=http://meshtastic-bot-manager:8000
       - MESHBOT_API_BASE_PATH=/api/ui
       - MESHBOT_API_TIMEOUT=10000
-      - MESHBOT_API_TOKEN=d9891a1ed5541ae02392b9829cb68267bf68e06c
       - MAP_DEFAULT_CENTER_LAT=0
       - MAP_DEFAULT_CENTER_LNG=0
       - MAP_DEFAULT_ZOOM=2
