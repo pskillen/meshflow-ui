@@ -1,4 +1,4 @@
-import { LogOutIcon, MoreVerticalIcon, UserCircleIcon, RadioIcon, Settings, Key, LogInIcon } from 'lucide-react';
+import { LogOutIcon, MoreVerticalIcon, UserCircleIcon, RadioIcon, Settings, Key, Code2, LogInIcon } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -84,6 +84,12 @@ export function NavUser({ user }: { user: User | null }) {
                 <Link to="/user/api-keys">
                   <Key className="mr-2 h-4 w-4" />
                   API Keys
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link to="/user/api-access">
+                  <Code2 className="mr-2 h-4 w-4" />
+                  Developer API
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>

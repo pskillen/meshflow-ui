@@ -21,6 +21,7 @@ import { ClaimNode } from '@/pages/nodes/ClaimNode';
 import { NodeSettings } from '@/pages/user/NodeSettings';
 import { SettingsPage } from '@/pages/user/SettingsPage';
 import { ApiKeysPage } from '@/pages/user/ApiKeysPage';
+import { ApiAccessPage } from '@/pages/user/ApiAccessPage';
 import { MyNodes } from '@/pages/nodes/MyNodes';
 import { LoginPage } from '@/pages/auth/LoginPage';
 import { OAuthCallback } from '@/pages/auth/OAuthCallback';
@@ -134,6 +135,7 @@ function App() {
                     <Route path="/user/nodes" element={<NodeSettings />} />
                     <Route path="/user/settings" element={<SettingsPage />} />
                     <Route path="/user/api-keys" element={<ApiKeysPage />} />
+                    <Route path="/user/api-access" element={<ApiAccessPage />} />
                     <Route path="/user" element={<UserPage />} />
                   </Route>
 
