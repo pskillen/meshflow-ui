@@ -22,6 +22,7 @@ import { authService } from '@/lib/auth/authService';
 import { getRoleLabel, INFRASTRUCTURE_ROLE_IDS } from '@/lib/meshtastic';
 import type { EnvironmentExposureSlug, LatestEnvironmentMetrics, ObservedNode, WeatherUseSlug } from '@/lib/models';
 import { NodeEnvironmentSettingsDialog } from '@/components/nodes/NodeEnvironmentSettingsDialog';
+import { M2mOptOutToggle } from '@/components/nodes/M2mOptOutToggle';
 import { NodeMeshMonitoringSection } from '@/components/nodes/NodeMeshMonitoringSection';
 import { NodeTracerouteHistorySection } from '@/components/nodes/NodeTracerouteHistorySection';
 import { NodeOutgoingTraceroutesSection } from '@/components/nodes/NodeOutgoingTraceroutesSection';
@@ -465,6 +466,10 @@ export function NodeDetailContent({ internalId, compact = false, activeTab, onTa
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {node.m2m_opt_out_editable && (
+        <M2mOptOutToggle internalId={internalId} optedOut={Boolean(node.m2m_opt_out)} editable />
       )}
 
       {hasEnvironmentSensorMetrics(node.latest_environment_metrics) && (

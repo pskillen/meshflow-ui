@@ -21,6 +21,9 @@ import {
   CreateMeshtasticManagedNode,
   CreateMeshCoreManagedNode,
   NodeApiKey,
+  M2MTerms,
+  M2MKey,
+  M2MKeyCreated,
   CreateNodeApiKey,
   AutoTraceRoute,
   DiscordNotificationPrefs,
@@ -700,6 +703,33 @@ export class MeshflowApi extends BaseApi {
   async getApiKeys(): Promise<NodeApiKey[]> {
     const response = await this.get<PaginatedResponse<NodeApiKey>>('/nodes/api-keys/');
     return response.results;
+  }
+
+  async getM2MTerms(): Promise<M2MTerms> {
+    return this.get<M2MTerms>('/m2m/terms/');
+  }
+
+  async getM2MKeys(): Promise<M2MKey[]> {
+    return this.get<M2MKey[]>('/m2m/keys/');
+  }
+
+  async createM2MKey(body: { name: string; intended_use: string; accept_terms: boolean }): Promise<M2MKeyCreated> {
+    return this.post<M2MKeyCreated>('/m2m/keys/', body);
+  }
+
+  async revokeM2MKey(id: string): Promise<M2MKey> {
+    return this.post<M2MKey>(`/m2m/keys/${id}/revoke/`, {});
+  }
+
+  async acceptM2MTerms(id: string): Promise<M2MKey> {
+    return this.post<M2MKey>(`/m2m/keys/${id}/accept-terms/`, {});
+  }
+
+  async patchM2mOptOut(internalId: string, m2m_opt_out: boolean): Promise<ObservedNode> {
+    const node = await this.patch<ObservedNode>(`/nodes/observed-nodes/${internalId}/environment-settings/`, {
+      m2m_opt_out,
+    });
+    return parseObservedNodeFromAPI(node);
   }
 
   /**

@@ -115,6 +115,9 @@ export interface ObservedNode {
   weather_use?: WeatherUseSlug;
   /** True when the current user may PATCH environment-settings (staff or claim owner). */
   environment_settings_editable?: boolean;
+  /** Omitted unless the current user may change it. */
+  m2m_opt_out?: boolean;
+  m2m_opt_out_editable?: boolean;
   /** True when the current user may PATCH rf-profile (staff or claim owner). */
   rf_profile_editable?: boolean;
   has_rf_profile?: boolean;
@@ -714,6 +717,31 @@ export interface NodeApiKey {
 export interface CreateNodeApiKey {
   name: string;
   constellation: number;
+}
+
+export interface M2MTerms {
+  version: string;
+  grace_days: number;
+  licence: string;
+  text: string;
+}
+
+export interface M2MKey {
+  id: string;
+  name: string;
+  prefix: string;
+  intended_use: string;
+  created_at: string;
+  last_used_at: string | null;
+  revoked_at: string | null;
+  terms_version: string;
+  terms_action_required: boolean;
+  requests_today: number;
+  requests_30d: number;
+}
+
+export interface M2MKeyCreated extends M2MKey {
+  key: string;
 }
 
 /** GET/PATCH `/api/auth/discord/notifications/` (Mesh Monitoring phase 02) */
