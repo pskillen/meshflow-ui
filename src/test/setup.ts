@@ -1,7 +1,6 @@
-import '@testing-library/jest-dom';
-import { expect, afterEach, vi } from 'vitest';
+import '@testing-library/jest-dom/vitest';
+import { afterEach, vi } from 'vitest';
 import { cleanup } from '@testing-library/react';
-import * as matchers from '@testing-library/jest-dom/matchers';
 
 // Node 26+ may expose window in jsdom without localStorage unless --localstorage-file is set.
 if (typeof globalThis.localStorage === 'undefined') {
@@ -70,9 +69,6 @@ Object.defineProperty(window, 'matchMedia', {
     dispatchEvent: vi.fn(),
   })),
 });
-
-// extends Vitest's expect method with methods from react-testing-library
-expect.extend(matchers as unknown as Parameters<typeof expect.extend>[0]);
 
 // runs a cleanup after each test case (e.g. clearing jsdom)
 afterEach(() => {
