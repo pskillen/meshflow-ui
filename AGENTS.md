@@ -60,7 +60,7 @@ npm test             # Vitest
 - React Router 7
 - TanStack Query (React Query)
 - Tailwind CSS, shadcn/ui (Radix)
-- Leaflet (maps), Recharts/ApexCharts (charts)
+- Leaflet (maps), Recharts (charts)
 - date-fns
 
 ## Conventions

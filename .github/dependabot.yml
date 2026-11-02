@@ -25,8 +25,6 @@ updates:
         versions: ['>=7']
       - dependency-name: '@tanstack/react-table'
         versions: ['>=9']
-      - dependency-name: apexcharts
-        versions: ['>=8']
 
   - package-ecosystem: github-actions
     directory: /
