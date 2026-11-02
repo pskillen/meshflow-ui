@@ -23,8 +23,6 @@ updates:
     ignore:
       - dependency-name: typescript
         versions: ['>=7']
-      - dependency-name: '@tanstack/react-table'
-        versions: ['>=9']
 
   - package-ecosystem: github-actions
     directory: /
