@@ -18,6 +18,15 @@ updates:
       npm-dependencies:
         patterns:
           - '*'
+    # Held-back majors: https://github.com/pskillen/meshflow-ui/issues/387
+    # Remove each rule in the PR that takes the bump.
+    ignore:
+      - dependency-name: typescript
+        versions: ['>=7']
+      - dependency-name: '@tanstack/react-table'
+        versions: ['>=9']
+      - dependency-name: apexcharts
+        versions: ['>=8']
 
   - package-ecosystem: github-actions
     directory: /
