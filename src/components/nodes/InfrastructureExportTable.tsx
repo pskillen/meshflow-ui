@@ -1,16 +1,25 @@
 import * as React from 'react';
 import { Link } from 'react-router-dom';
 import {
-  ColumnDef,
-  ColumnFiltersState,
+  columnFilteringFeature,
+  columnVisibilityFeature,
+  createFilteredRowModel,
+  createPaginatedRowModel,
+  createSortedRowModel,
+  filterFn_includesString,
   flexRender,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  SortingState,
-  useReactTable,
+  rowPaginationFeature,
+  rowSortingFeature,
+  sortFn_alphanumeric,
+  sortFn_basic,
+  sortFn_datetime,
+  sortFn_text,
+  tableFeatures,
+  useTable,
+  type ColumnDef,
+  type ColumnFiltersState,
   type FilterFn,
+  type SortingState,
 } from '@tanstack/react-table';
 import { format } from 'date-fns';
 import { enGB } from 'date-fns/locale';
@@ -39,9 +48,29 @@ export const INFRA_EXPORT_ROLE_OPTIONS = ['ROUTER', 'ROUTER_CLIENT', 'REPEATER',
 /** Default role filter: standard infrastructure roles, excluding CLIENT_BASE. */
 export const DEFAULT_INCLUDED_INFRA_ROLES: readonly string[] = ['ROUTER', 'ROUTER_CLIENT', 'REPEATER', 'ROUTER_LATE'];
 
+const features = tableFeatures({
+  columnFilteringFeature,
+  columnVisibilityFeature,
+  rowSortingFeature,
+  rowPaginationFeature,
+  filteredRowModel: createFilteredRowModel(),
+  sortedRowModel: createSortedRowModel(),
+  paginatedRowModel: createPaginatedRowModel(),
+  filterFns: { includesString: filterFn_includesString },
+  // 'auto' sorting picks one of these by column data type (as in v8).
+  sortFns: {
+    alphanumeric: sortFn_alphanumeric,
+    text: sortFn_text,
+    datetime: sortFn_datetime,
+    basic: sortFn_basic,
+  },
+});
+
+type InfraFeatures = typeof features;
+
 type TriState = 'all' | 'yes' | 'no';
 
-const triStateFilter: FilterFn<InfrastructureExportRow> = (row, columnId, filterValue) => {
+const triStateFilter: FilterFn<InfraFeatures, InfrastructureExportRow> = (row, columnId, filterValue) => {
   const v = filterValue as TriState;
   if (!v || v === 'all') return true;
   const cell = row.getValue(columnId) as boolean | null;
@@ -49,7 +78,7 @@ const triStateFilter: FilterFn<InfrastructureExportRow> = (row, columnId, filter
   return cell !== true;
 };
 
-const roleFilter: FilterFn<InfrastructureExportRow> = (row, columnId, filterValue) => {
+const roleFilter: FilterFn<InfraFeatures, InfrastructureExportRow> = (row, columnId, filterValue) => {
   const allowed = filterValue as string[] | undefined;
   if (!allowed || allowed.length === 0) return true;
   return allowed.includes(String(row.getValue(columnId)));
@@ -109,7 +138,7 @@ function boolCell(value: boolean | null): string {
   return value ? 'Yes' : 'No';
 }
 
-const columns: ColumnDef<InfrastructureExportRow>[] = [
+const columns: ColumnDef<InfraFeatures, InfrastructureExportRow>[] = [
   {
     accessorKey: 'node_id_str',
     header: 'Node ID',
@@ -293,17 +322,14 @@ export function InfrastructureExportTable({ rows }: InfrastructureExportTablePro
     });
   }, [routersOnly]);
 
-  const table = useReactTable({
+  const table = useTable({
+    features,
     data: rows,
     columns,
     state: { sorting, columnFilters },
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
-    getCoreRowModel: getCoreRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    initialState: { pagination: { pageSize: 50 } },
+    initialState: { pagination: { pageIndex: 0, pageSize: 50 } },
   });
 
   const filteredRows = table.getFilteredRowModel().rows.map((r) => r.original);
@@ -636,7 +662,7 @@ export function InfrastructureExportTable({ rows }: InfrastructureExportTablePro
           Previous
         </Button>
         <span className="text-sm text-muted-foreground">
-          Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}
+          Page {table.state.pagination.pageIndex + 1} of {table.getPageCount()}
         </span>
         <Button variant="outline" size="sm" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}>
           Next

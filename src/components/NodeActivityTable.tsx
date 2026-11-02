@@ -1,13 +1,21 @@
 import * as React from 'react';
 import { Link } from 'react-router-dom';
 import {
-  ColumnDef,
+  createPaginatedRowModel,
+  createSortedRowModel,
   flexRender,
-  getCoreRowModel,
-  useReactTable,
-  getPaginationRowModel,
-  SortingState,
-  getSortedRowModel,
+  rowPaginationFeature,
+  columnVisibilityFeature,
+  rowSelectionFeature,
+  rowSortingFeature,
+  sortFn_alphanumeric,
+  sortFn_basic,
+  sortFn_datetime,
+  sortFn_text,
+  tableFeatures,
+  useTable,
+  type ColumnDef,
+  type SortingState,
 } from '@tanstack/react-table';
 import { BatteryIcon, SignalIcon } from 'lucide-react';
 import { StaleReportedTime } from '@/components/nodes/StaleReportedTime';
@@ -19,7 +27,23 @@ import { ObservedNode } from '@/lib/models';
 import { meshtasticIdToHex } from '@/lib/utils';
 import { observedNodeDetailPath } from '@/lib/node-detail-routes';
 
-const columns: ColumnDef<ObservedNode>[] = [
+const features = tableFeatures({
+  columnVisibilityFeature,
+  rowSelectionFeature,
+  rowSortingFeature,
+  rowPaginationFeature,
+  sortedRowModel: createSortedRowModel(),
+  paginatedRowModel: createPaginatedRowModel(),
+  // 'auto' sorting picks one of these by column data type (as in v8).
+  sortFns: {
+    alphanumeric: sortFn_alphanumeric,
+    text: sortFn_text,
+    datetime: sortFn_datetime,
+    basic: sortFn_basic,
+  },
+});
+
+const columns: ColumnDef<typeof features, ObservedNode>[] = [
   {
     accessorKey: 'short_name',
     header: 'Node Name',
@@ -92,13 +116,11 @@ interface NodeActivityTableProps {
 export function NodeActivityTable({ nodes, isLoading = false, isLoadingMore = false }: NodeActivityTableProps) {
   const [sorting, setSorting] = React.useState<SortingState>([{ id: 'last_heard', desc: true }]);
 
-  const table = useReactTable({
+  const table = useTable({
+    features,
     data: nodes,
     columns,
-    getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
     onSortingChange: setSorting,
-    getSortedRowModel: getSortedRowModel(),
     state: {
       sorting,
     },
