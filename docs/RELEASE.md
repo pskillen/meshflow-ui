@@ -49,7 +49,7 @@ Use this to build and push from the current `main` branch without merging new co
 
 **Workflow:** [release.yaml](../.github/workflows/release.yaml)
 
-**Trigger:** Publish a GitHub Release (not a pre-release) with a semver tag (e.g. `1.2.3`)
+**Trigger:** Publish a GitHub Release (not a pre-release) with a semver tag (e.g. `1.2.3`). The workflow runs on the `released` event, so publishing a pre-release builds `latest-rc` only and never moves `latest`.
 
 **Tags pushed:**
 
