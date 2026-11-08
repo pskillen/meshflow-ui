@@ -1,0 +1,78 @@
+import { describe, expect, it } from 'vitest';
+import type { StatsSnapshot } from '@/lib/models';
+import { buildFirmwareAdoption } from './firmware-adoption';
+
+function row(day: number, by_type?: Record<string, number>): StatsSnapshot {
+  return {
+    id: day,
+    recorded_at: `2026-11-${String(day).padStart(2, '0')}T00:00:00Z`,
+    stat_type: 'node_firmware',
+    constellation_id: null,
+    value: { count: 0, window_hours: 168, ...(by_type ? { by_type } : {}) },
+  };
+}
+
+const labels = (rows: StatsSnapshot[]) => buildFirmwareAdoption(rows).series.map((s) => s.label);
+
+describe('buildFirmwareAdoption', () => {
+  it('orders numerically with 2.10 after 2.8 and unknown last', () => {
+    const r = buildFirmwareAdoption([row(2, { unknown: 1, '2.10': 1, '3.0': 1, '2.8': 1, '2.7': 1 })]);
+    expect(r.series.map((s) => s.key)).toEqual(['2.7', '2.8', '2.10', '3.0', 'unknown']);
+  });
+
+  it('labels lowest, middle and highest', () => {
+    expect(labels([row(1, { '2.7': 1, '2.8': 1, '2.9': 1 })])).toEqual(['2.7 or earlier', '2.8', '2.9+']);
+  });
+
+  it('treats a single numeric key as lowest', () => {
+    expect(labels([row(1, { '2.7': 1 })])).toEqual(['2.7 or earlier']);
+  });
+
+  it('an unseen 2.9 changes labels with no code change', () => {
+    const old = row(1, { '2.7': 1, '2.8': 1, unknown: 1 });
+    const next = row(2, { '2.7': 1, '2.8': 1, '2.9': 1, unknown: 1 });
+    expect(labels([old])).toEqual(['2.7 or earlier', '2.8+', 'Unknown']);
+    expect(labels([next, old])).toEqual(['2.7 or earlier', '2.8', '2.9+', 'Unknown']);
+  });
+
+  it('labels unknown exactly "Unknown", last, with non-numeric keys verbatim before it', () => {
+    const r = buildFirmwareAdoption([row(1, { unknown: 1, beta: 2, '2.7': 3 })]);
+    expect(r.series.map((s) => s.label)).toEqual(['2.7 or earlier', 'beta', 'Unknown']);
+    expect(r.series[2].color).toBe('hsl(var(--muted-foreground))');
+  });
+
+  it('fills missing keys with 0 in line and omits zero pie slices', () => {
+    const r = buildFirmwareAdoption([row(2, { '2.7': 5 }), row(1, { '2.7': 3, '2.8': 2 })]);
+    const id28 = r.series.find((s) => s.key === '2.8')!.id;
+    expect(r.line[1][id28]).toBe(0);
+    expect(r.pie.map((p) => p.key)).toEqual(['2.7']);
+  });
+
+  it('returns line oldest first from newest-first input and pie from newest', () => {
+    const r = buildFirmwareAdoption([row(3, { '2.7': 30 }), row(2, { '2.7': 20 }), row(1, { '2.7': 10 })]);
+    expect(r.line.map((p) => p[r.series[0].id])).toEqual([10, 20, 30]);
+    expect(r.pie[0].count).toBe(30);
+    expect(r.total).toBe(30);
+    expect(r.windowHours).toBe(168);
+  });
+
+  it('ignores rows with no by_type', () => {
+    const r = buildFirmwareAdoption([row(2), row(1, { '2.7': 4 })]);
+    expect(r.line).toHaveLength(1);
+    expect(r.pie[0].count).toBe(4);
+  });
+
+  it('handles empty input', () => {
+    expect(buildFirmwareAdoption([])).toEqual({ series: [], pie: [], line: [], windowHours: null, total: 0 });
+  });
+
+  it('uses dot-free series ids', () => {
+    const r = buildFirmwareAdoption([row(1, { '2.7': 1, '2.8': 1, unknown: 1 })]);
+    for (const s of r.series) expect(s.id).toMatch(/^series\d+$/);
+  });
+
+  it('computes percentages', () => {
+    const r = buildFirmwareAdoption([row(1, { '2.7': 3, unknown: 1 })]);
+    expect(r.pie.map((p) => p.percent)).toEqual([75, 25]);
+  });
+});
