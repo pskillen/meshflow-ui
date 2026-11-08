@@ -1,3 +1,4 @@
+import { FirmwareAdoptionCard } from '@/components/FirmwareAdoptionCard';
 import { MeshStatsSection } from '@/components/MeshStatsSection';
 import { useRecentNodeCountsSuspense } from '@/hooks/api/useNodes';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -45,6 +46,7 @@ function MeshtasticDashboardContent() {
           </Table>
         </CardContent>
       </Card>
+      <FirmwareAdoptionCard />
       <MeshStatsSection protocolScope="meshtastic" />
     </div>
   );

@@ -54,7 +54,8 @@ const DEFAULT_HANDLERS: Array<{ pattern: string | RegExp; handler: RouteHandler 
     (route: Route) => {
       const url = route.request().url();
       let fixture = 'stats-snapshots.json';
-      if (url.includes('mc_packet_volume')) fixture = 'stats-snapshots-mc-packet-volume.json';
+      if (url.includes('node_firmware')) fixture = 'stats-snapshots-node-firmware.json';
+      else if (url.includes('mc_packet_volume')) fixture = 'stats-snapshots-mc-packet-volume.json';
       else if (url.includes('packet_volume')) fixture = 'stats-snapshots-packet-volume.json';
       else if (url.includes('mc_online_nodes') || url.includes('mc_new_nodes'))
         fixture = 'stats-snapshots-mc-nodes.json';
