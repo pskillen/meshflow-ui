@@ -111,6 +111,13 @@ export interface ObservedNode {
   meshtastic_is_unmessagable?: boolean | null;
   /** Meshtastic-only: inferred max hops from hop_start; null for MeshCore. */
   meshtastic_inferred_max_hops?: number | null;
+  /**
+   * Inferred firmware generation ("2.7" means 2.7 or earlier, "2.8", later generations).
+   * null when there is no evidence, and always for MeshCore; undefined on an older API.
+   */
+  inferred_firmware?: string | null;
+  /** Why `inferred_firmware` was chosen ("key_identity", "predicted_id", "feeder_report", ...); null when it is null. */
+  inferred_firmware_basis?: string | null;
   environment_exposure?: EnvironmentExposureSlug;
   weather_use?: WeatherUseSlug;
   /** True when the current user may PATCH environment-settings (staff or claim owner). */
@@ -251,6 +258,9 @@ export interface ManagedNode {
   /** Last meshflow-bot version reported on connect (null if never reported). */
   bot_version?: string | null;
   bot_version_reported_at?: Date | string | null;
+  /** Firmware version the feeder radio reported (e.g. "2.8.2.d5f1619"); null if never reported. */
+  reported_firmware_version?: string | null;
+  firmware_reported_at?: Date | string | null;
   /** MeshCore: hours between flood-routed adverts sent by the bot (API default 6). */
   mc_flood_advert_interval_hours?: number;
   position: {
