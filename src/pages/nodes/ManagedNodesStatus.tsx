@@ -2,6 +2,7 @@ import { Suspense, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { format } from 'date-fns';
 import { enGB } from 'date-fns/locale';
+import { FeederFirmware } from '@/components/nodes/FirmwareBadge';
 import { StaleReportedTime } from '@/components/nodes/StaleReportedTime';
 import { ChevronDown, Loader2 } from 'lucide-react';
 
@@ -432,6 +433,7 @@ function ProtocolManagedNodesPageContent({
                     <TableHead>Radio last heard</TableHead>
                     <TableHead>Owner</TableHead>
                     <TableHead>Bot version</TableHead>
+                    {config.slug !== 'meshcore' ? <TableHead>Firmware</TableHead> : null}
                     {config.slug === 'meshcore' ? <TableHead>Announce period</TableHead> : null}
                     {config.features.autoTracerouteFilters ? <TableHead>Auto-TR</TableHead> : null}
                   </TableRow>
@@ -480,6 +482,11 @@ function ProtocolManagedNodesPageContent({
                         <TableCell>{renderTimestampCell(node.radio_last_heard)}</TableCell>
                         <TableCell>{node.owner.username}</TableCell>
                         <TableCell>{renderBotVersionCell(node)}</TableCell>
+                        {config.slug !== 'meshcore' ? (
+                          <TableCell>
+                            <FeederFirmware node={node} />
+                          </TableCell>
+                        ) : null}
                         {config.slug === 'meshcore' ? <TableCell>{renderAnnouncePeriodCell(node)}</TableCell> : null}
                         {config.features.autoTracerouteFilters ? (
                           <TableCell>{autoTracerouteBadge(node)}</TableCell>
