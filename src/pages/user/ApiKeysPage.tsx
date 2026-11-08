@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Loader2, AlertCircle, Copy, Plus, Key } from 'lucide-react';
+import axios from 'axios';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMeshtasticApi } from '@/hooks/api/useApi';
 import { useConstellationsSuspense } from '@/hooks/api/useConstellations';
@@ -12,6 +13,16 @@ import { useMyManagedNodesSuspense } from '@/hooks/api/useNodes';
 import type { NodeApiKey } from '@/lib/models';
 import type { OwnedManagedNode } from '@/lib/models';
 import { apiKeyLinkedInternalIds, managedNodeStableKey } from '@/lib/managed-node-enrollment';
+
+/** Prefer the API's own `error` text (e.g. code `api_key_already_linked`) over a generic message. */
+function apiErrorMessage(err: unknown, fallback: string): string {
+  if (axios.isAxiosError(err) && err.response?.data && typeof err.response.data === 'object') {
+    const data = err.response.data as Record<string, unknown>;
+    if (typeof data.error === 'string' && data.error) return data.error;
+    if (typeof data.detail === 'string' && data.detail) return data.detail;
+  }
+  return fallback;
+}
 
 function ApiKeysContent() {
   const api = useMeshtasticApi();
@@ -25,7 +36,9 @@ function ApiKeysContent() {
   const [apiKeyError, setApiKeyError] = useState<string | null>(null);
   const [assignKeyId, setAssignKeyId] = useState<string | null>(null);
   const [assignModalOpen, setAssignModalOpen] = useState(false);
-  const [selectedAssignInternalIds, setSelectedAssignInternalIds] = useState<string[]>([]);
+  const [selectedAssignInternalId, setSelectedAssignInternalId] = useState<string | null>(null);
+  const [assignError, setAssignError] = useState<string | null>(null);
+  const [removingInternalId, setRemovingInternalId] = useState<string | null>(null);
   const [isAssigning, setIsAssigning] = useState(false);
   const [deleteKeyId, setDeleteKeyId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -54,7 +67,7 @@ function ApiKeysContent() {
       setSelectedConstellation(null);
       await queryClient.invalidateQueries({ queryKey: ['api-keys'] });
     } catch (error) {
-      setApiKeyError('Failed to create API key. Please try again.');
+      setApiKeyError(apiErrorMessage(error, 'Failed to create API key. Please try again.'));
       console.error('Error creating API key:', error);
     } finally {
       setIsCreatingApiKey(false);
@@ -63,14 +76,16 @@ function ApiKeysContent() {
 
   const openAssignModal = (keyId: string, currentInternalIds: string[]) => {
     setAssignKeyId(keyId);
-    setSelectedAssignInternalIds(currentInternalIds);
+    setSelectedAssignInternalId(currentInternalIds.length === 1 ? currentInternalIds[0] : null);
+    setAssignError(null);
     setAssignModalOpen(true);
   };
 
   const closeAssignModal = () => {
     setAssignModalOpen(false);
     setAssignKeyId(null);
-    setSelectedAssignInternalIds([]);
+    setSelectedAssignInternalId(null);
+    setAssignError(null);
   };
 
   const handleAssignNodes = async () => {
@@ -78,22 +93,48 @@ function ApiKeysContent() {
     const apiKey = apiKeys?.find((k) => k.id === assignKeyId);
     if (!apiKey) return;
     setIsAssigning(true);
+    setAssignError(null);
     try {
       const currentlyLinked = apiKeyLinkedInternalIds(apiKey, myManagedNodes);
-      for (const internalId of selectedAssignInternalIds) {
-        if (!currentlyLinked.includes(internalId)) {
-          await api.addNodeToApiKey(assignKeyId, { managedNodeInternalId: internalId });
+      // A shared (legacy) key is thinned down with the per-node Remove buttons, never saved from the picker.
+      if (currentlyLinked.length > 1) return;
+      const current = currentlyLinked[0] ?? null;
+      if (current !== selectedAssignInternalId) {
+        // Remove first: the API allows one feeder per key, so a swap fails if the old link is still there.
+        if (current) {
+          await api.removeNodeFromApiKey(assignKeyId, { managedNodeInternalId: current });
         }
-      }
-      for (const internalId of currentlyLinked) {
-        if (!selectedAssignInternalIds.includes(internalId)) {
-          await api.removeNodeFromApiKey(assignKeyId, { managedNodeInternalId: internalId });
+        if (selectedAssignInternalId) {
+          try {
+            await api.addNodeToApiKey(assignKeyId, { managedNodeInternalId: selectedAssignInternalId });
+          } catch (error) {
+            // The old link is already gone; refresh so the page matches the server.
+            await queryClient.invalidateQueries({ queryKey: ['api-keys'] });
+            setAssignError(apiErrorMessage(error, 'Failed to assign the node to this key.'));
+            return;
+          }
         }
       }
       await queryClient.invalidateQueries({ queryKey: ['api-keys'] });
       closeAssignModal();
+    } catch (error) {
+      setAssignError(apiErrorMessage(error, 'Failed to update this key.'));
     } finally {
       setIsAssigning(false);
+    }
+  };
+
+  const handleRemoveLinkedNode = async (internalId: string) => {
+    if (!assignKeyId) return;
+    setRemovingInternalId(internalId);
+    setAssignError(null);
+    try {
+      await api.removeNodeFromApiKey(assignKeyId, { managedNodeInternalId: internalId });
+      await queryClient.invalidateQueries({ queryKey: ['api-keys'] });
+    } catch (error) {
+      setAssignError(apiErrorMessage(error, 'Failed to remove the node from this key.'));
+    } finally {
+      setRemovingInternalId(null);
     }
   };
 
@@ -132,6 +173,8 @@ function ApiKeysContent() {
       : assignKey && typeof assignKey.constellation === 'object' && assignKey.constellation
         ? (assignKey.constellation as { id: number }).id
         : null;
+  const assignLinkedInternalIds = assignKey ? apiKeyLinkedInternalIds(assignKey, myManagedNodes) : [];
+  const assignKeyIsShared = assignLinkedInternalIds.length > 1;
   const nodesForAssignModal =
     assignKeyConstellationId != null
       ? myManagedNodes.filter((n) => n.constellation?.id === assignKeyConstellationId)
@@ -274,55 +317,98 @@ function ApiKeysContent() {
       {assignModalOpen && assignKey && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
           <div className="bg-background rounded-lg shadow-lg p-6 w-full max-w-md border">
-            <h3 className="text-lg font-medium mb-2">Assign/Remove Nodes</h3>
+            <h3 className="text-lg font-medium mb-2">Assign Feeder</h3>
             <p className="text-sm text-muted-foreground mb-4">
               Key: {assignKey.name} — {getConstellationName(assignKeyConstellationId ?? 0)}
             </p>
-            <p className="text-sm text-muted-foreground mb-2">
-              Select managed nodes to assign to this key (same constellation only):
-            </p>
-            <div className="max-h-48 overflow-y-auto border rounded p-2 mb-4">
-              {nodesForAssignModal.length > 0 ? (
-                nodesForAssignModal.map((node) => {
-                  const stableKey = managedNodeStableKey(node);
-                  if (!node.internal_id) return null;
-                  return (
-                    <div key={stableKey} className="flex items-center gap-2 mb-1">
-                      <input
-                        type="checkbox"
-                        id={`assign-node-${stableKey}`}
-                        checked={selectedAssignInternalIds.includes(node.internal_id)}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setSelectedAssignInternalIds((prev) => [...prev, node.internal_id!]);
-                          } else {
-                            setSelectedAssignInternalIds((prev) => prev.filter((id) => id !== node.internal_id));
-                          }
-                        }}
-                      />
-                      <label htmlFor={`assign-node-${stableKey}`} className="text-sm cursor-pointer">
-                        {node.short_name || node.node_id_str}
-                      </label>
-                    </div>
-                  );
-                })
-              ) : (
-                <span className="text-sm text-muted-foreground">
-                  No managed nodes in this constellation. Add nodes from{' '}
-                  <Link to="/user/nodes" className="text-primary hover:underline">
-                    My Nodes
-                  </Link>
-                  .
-                </span>
-              )}
-            </div>
+            {assignError && (
+              <Alert variant="destructive" className="mb-4" role="alert">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{assignError}</AlertDescription>
+              </Alert>
+            )}
+            {assignKeyIsShared ? (
+              <>
+                <p className="text-sm text-muted-foreground mb-2">
+                  This key is shared by several feeders (legacy). Works on older bots only. Remove feeders until one is
+                  left, then you can pick a different one. To feed from another radio, create another key.
+                </p>
+                <ul className="border rounded p-2 mb-4 space-y-1" aria-label="Linked feeders">
+                  {assignLinkedInternalIds.map((internalId) => {
+                    const n = myManagedNodes.find((m) => m.internal_id === internalId);
+                    return (
+                      <li key={internalId} className="flex items-center justify-between gap-2 text-sm">
+                        <span>{n?.short_name || n?.node_id_str || internalId}</span>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleRemoveLinkedNode(internalId)}
+                          disabled={removingInternalId !== null}
+                        >
+                          Remove
+                        </Button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </>
+            ) : (
+              <>
+                <p className="text-sm text-muted-foreground mb-2">
+                  One feeder per key. To feed from another radio, create another key.
+                </p>
+                <div className="max-h-48 overflow-y-auto border rounded p-2 mb-4" role="radiogroup" aria-label="Feeder">
+                  <div className="flex items-center gap-2 mb-1">
+                    <input
+                      type="radio"
+                      name="assign-node"
+                      id="assign-node-none"
+                      checked={selectedAssignInternalId === null}
+                      onChange={() => setSelectedAssignInternalId(null)}
+                    />
+                    <label htmlFor="assign-node-none" className="text-sm cursor-pointer">
+                      None
+                    </label>
+                  </div>
+                  {nodesForAssignModal.map((node) => {
+                    const stableKey = managedNodeStableKey(node);
+                    if (!node.internal_id) return null;
+                    return (
+                      <div key={stableKey} className="flex items-center gap-2 mb-1">
+                        <input
+                          type="radio"
+                          name="assign-node"
+                          id={`assign-node-${stableKey}`}
+                          checked={selectedAssignInternalId === node.internal_id}
+                          onChange={() => setSelectedAssignInternalId(node.internal_id!)}
+                        />
+                        <label htmlFor={`assign-node-${stableKey}`} className="text-sm cursor-pointer">
+                          {node.short_name || node.node_id_str}
+                        </label>
+                      </div>
+                    );
+                  })}
+                  {nodesForAssignModal.length === 0 && (
+                    <span className="text-sm text-muted-foreground">
+                      No managed nodes in this constellation. Add nodes from{' '}
+                      <Link to="/user/nodes" className="text-primary hover:underline">
+                        My Nodes
+                      </Link>
+                      .
+                    </span>
+                  )}
+                </div>
+              </>
+            )}
             <div className="flex gap-2 justify-end">
               <Button variant="outline" size="sm" onClick={closeAssignModal} disabled={isAssigning}>
-                Cancel
+                {assignKeyIsShared ? 'Close' : 'Cancel'}
               </Button>
-              <Button size="sm" onClick={handleAssignNodes} disabled={isAssigning}>
-                {isAssigning ? 'Saving...' : 'Save'}
-              </Button>
+              {!assignKeyIsShared && (
+                <Button size="sm" onClick={handleAssignNodes} disabled={isAssigning}>
+                  {isAssigning ? 'Saving...' : 'Save'}
+                </Button>
+              )}
             </div>
           </div>
         </div>
@@ -359,7 +445,9 @@ function ApiKeyCard({
       ? apiKey.constellation
       : ((apiKey.constellation as { id: number })?.id ?? 0);
   const constellationName = getConstellationName(constellationId);
-  const assignedNodeNames = apiKeyLinkedInternalIds(apiKey, myManagedNodes)
+  const linkedInternalIds = apiKeyLinkedInternalIds(apiKey, myManagedNodes);
+  const isShared = linkedInternalIds.length > 1;
+  const assignedNodeNames = linkedInternalIds
     .map((internalId) => {
       const n = myManagedNodes.find((m) => m.internal_id === internalId);
       return n?.short_name || n?.node_id_str || internalId;
@@ -381,7 +469,15 @@ function ApiKeyCard({
             <Badge variant={apiKey.is_active ? 'default' : 'destructive'} className="text-xs">
               {apiKey.is_active ? 'Active' : 'Inactive'}
             </Badge>
+            {isShared && (
+              <Badge variant="outline" className="text-xs" title="Works on older bots only. Create one key per feeder.">
+                Shared (legacy)
+              </Badge>
+            )}
           </div>
+          {isShared && (
+            <p className="text-xs text-muted-foreground mt-1">Works on older bots only. Create one key per feeder.</p>
+          )}
           <p className="text-xs text-muted-foreground mt-1">
             {apiKey.last_used
               ? `Last used: ${new Date(apiKey.last_used).toLocaleString()}`
@@ -401,12 +497,8 @@ function ApiKeyCard({
           >
             {apiKey.is_active ? 'Deactivate' : 'Activate'}
           </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => onAssignNodes(apiKey.id, apiKeyLinkedInternalIds(apiKey, myManagedNodes))}
-          >
-            Assign/Remove Nodes
+          <Button size="sm" variant="outline" onClick={() => onAssignNodes(apiKey.id, linkedInternalIds)}>
+            Assign Feeder
           </Button>
           <Button
             size="sm"
