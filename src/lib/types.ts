@@ -14,7 +14,14 @@ export interface StatsQueryParams extends DateRangeIntervalParams {
 }
 
 export interface StatsSnapshotsParams {
-  statType?: 'online_nodes' | 'new_nodes' | 'packet_volume' | 'mc_online_nodes' | 'mc_new_nodes' | 'mc_packet_volume';
+  statType?:
+    | 'online_nodes'
+    | 'new_nodes'
+    | 'packet_volume'
+    | 'mc_online_nodes'
+    | 'mc_new_nodes'
+    | 'mc_packet_volume'
+    | 'node_firmware';
   constellationId?: number;
   recordedAtAfter?: Date;
   recordedAtBefore?: Date;

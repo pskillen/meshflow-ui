@@ -649,12 +649,21 @@ export interface NeighbourStats {
 export interface StatsSnapshot {
   id: number;
   recorded_at: string;
-  stat_type: 'online_nodes' | 'new_nodes' | 'packet_volume' | 'mc_online_nodes' | 'mc_new_nodes' | 'mc_packet_volume';
+  stat_type:
+    | 'online_nodes'
+    | 'new_nodes'
+    | 'packet_volume'
+    | 'mc_online_nodes'
+    | 'mc_new_nodes'
+    | 'mc_packet_volume'
+    | 'node_firmware';
   constellation_id: number | null;
   value: {
     count: number;
     window_hours?: number;
     by_type?: Record<string, number>;
+    /** node_firmware only: how each node's firmware was inferred. */
+    by_basis?: Record<string, number>;
   };
 }
 

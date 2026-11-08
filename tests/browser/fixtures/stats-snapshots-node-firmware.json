@@ -1,0 +1,33 @@
+{
+  "count": 3,
+  "next": null,
+  "previous": null,
+  "results": [
+    {
+      "id": 3,
+      "recorded_at": "2026-11-08T00:00:00Z",
+      "stat_type": "node_firmware",
+      "constellation_id": null,
+      "value": {
+        "count": 412,
+        "window_hours": 168,
+        "by_type": { "2.7": 300, "2.8": 40, "unknown": 72 },
+        "by_basis": { "key_identity": 320, "predicted_id": 6, "reported": 14, "none": 72 }
+      }
+    },
+    {
+      "id": 2,
+      "recorded_at": "2026-11-07T00:00:00Z",
+      "stat_type": "node_firmware",
+      "constellation_id": null,
+      "value": { "count": 405, "window_hours": 168, "by_type": { "2.7": 310, "2.8": 30, "unknown": 65 } }
+    },
+    {
+      "id": 1,
+      "recorded_at": "2026-11-06T00:00:00Z",
+      "stat_type": "node_firmware",
+      "constellation_id": null,
+      "value": { "count": 398, "window_hours": 168, "by_type": { "2.7": 318, "2.8": 20, "unknown": 60 } }
+    }
+  ]
+}
