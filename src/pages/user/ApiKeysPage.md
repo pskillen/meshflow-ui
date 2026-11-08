@@ -25,7 +25,7 @@ Keys created before the rule can still be linked to several feeders and keep wor
 **Shared (legacy)** badge with the note "Works on older bots only. Create one key per feeder."
 
 For a shared key the modal lists its linked feeders read-only, each with a **Remove** button, and shows no picker and no
-Save button. Once one feeder is left the normal picker appears. Owners can thin a shared key down but never grow it.
+Save button. Once one feeder is left the normal picker appears with that feeder selected, so Save changes nothing unless you pick another. A single linked feeder outside your own list is shown as "Currently linked feeder (not in your list)". Owners can thin a shared key down but never grow it.
 
 ## Data
 

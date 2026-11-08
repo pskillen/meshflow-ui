@@ -130,4 +130,71 @@ describe('ApiKeysPage assign feeder modal', () => {
     await waitFor(() => expect(api.removeNodeFromApiKey).toHaveBeenCalledWith('k1', { managedNodeInternalId: 'a' }));
     expect(api.addNodeToApiKey).not.toHaveBeenCalled();
   });
+
+  it('selects the surviving feeder after thinning a shared key to one, so Save changes nothing', async () => {
+    api.getApiKeys.mockResolvedValueOnce([key(['a', 'b'])]).mockResolvedValue([key(['b'])]);
+    await renderAndOpenModal();
+
+    const list = screen.getByRole('list', { name: 'Linked feeders' });
+    await userEvent.click(within(list).getAllByRole('button', { name: 'Remove' })[0]);
+
+    expect(await screen.findByRole('radio', { name: 'BBB' })).toBeChecked();
+    expect(screen.getByRole('radio', { name: 'None' })).not.toBeChecked();
+    api.removeNodeFromApiKey.mockClear();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Save' })).not.toBeInTheDocument());
+    expect(api.removeNodeFromApiKey).not.toHaveBeenCalled();
+    expect(api.addNodeToApiKey).not.toHaveBeenCalled();
+  });
+
+  it('shows a single linked feeder that is outside the node list as selected', async () => {
+    api.getApiKeys.mockResolvedValue([key(['zzz'])]);
+    await renderAndOpenModal();
+
+    expect(screen.getByRole('radio', { name: /Currently linked feeder/ })).toBeChecked();
+    expect(screen.getByRole('radio', { name: 'None' })).not.toBeChecked();
+  });
+
+  it('shows the API error in the modal and adds nothing when removing the old link fails', async () => {
+    api.getApiKeys.mockResolvedValue([key(['a'])]);
+    api.removeNodeFromApiKey.mockRejectedValue(apiError({ error: 'Remove failed upstream' }));
+    await renderAndOpenModal();
+
+    await userEvent.click(screen.getByRole('radio', { name: 'BBB' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Remove failed upstream');
+    expect(api.addNodeToApiKey).not.toHaveBeenCalled();
+  });
+
+  it('refreshes the key list when the add fails after the old link was removed', async () => {
+    api.getApiKeys.mockResolvedValue([key(['a'])]);
+    api.addNodeToApiKey.mockRejectedValue(apiError({ error: 'Add failed upstream' }));
+    await renderAndOpenModal();
+    expect(api.getApiKeys).toHaveBeenCalledTimes(1);
+
+    await userEvent.click(screen.getByRole('radio', { name: 'BBB' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Add failed upstream');
+    await waitFor(() => expect(api.getApiKeys).toHaveBeenCalledTimes(2));
+  });
+
+  it('shows the API error text when creating a key fails', async () => {
+    api.getApiKeys.mockResolvedValue([]);
+    api.createApiKey.mockRejectedValue(apiError({ error: 'Create failed upstream' }));
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <MemoryRouter>
+          <ApiKeysPage />
+        </MemoryRouter>
+      </QueryClientProvider>
+    );
+    await userEvent.type(await screen.findByLabelText('Name'), 'New key');
+    await userEvent.selectOptions(screen.getByLabelText('Constellation'), 'North');
+    await userEvent.click(screen.getByRole('button', { name: /Create Key/ }));
+    expect(await screen.findByText('Create failed upstream')).toBeInTheDocument();
+  });
 });

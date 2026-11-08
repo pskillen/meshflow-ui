@@ -130,6 +130,9 @@ function ApiKeysContent() {
     setAssignError(null);
     try {
       await api.removeNodeFromApiKey(assignKeyId, { managedNodeInternalId: internalId });
+      // Once a single feeder is left the picker appears; select it so Save does not unlink it.
+      const remaining = assignLinkedInternalIds.filter((id) => id !== internalId);
+      if (remaining.length === 1) setSelectedAssignInternalId(remaining[0]);
       await queryClient.invalidateQueries({ queryKey: ['api-keys'] });
     } catch (error) {
       setAssignError(apiErrorMessage(error, 'Failed to remove the node from this key.'));
@@ -370,6 +373,21 @@ function ApiKeysContent() {
                       None
                     </label>
                   </div>
+                  {assignLinkedInternalIds.length === 1 &&
+                    !nodesForAssignModal.some((n) => n.internal_id === assignLinkedInternalIds[0]) && (
+                      <div className="flex items-center gap-2 mb-1">
+                        <input
+                          type="radio"
+                          name="assign-node"
+                          id="assign-node-current"
+                          checked={selectedAssignInternalId === assignLinkedInternalIds[0]}
+                          onChange={() => setSelectedAssignInternalId(assignLinkedInternalIds[0])}
+                        />
+                        <label htmlFor="assign-node-current" className="text-sm cursor-pointer">
+                          Currently linked feeder (not in your list)
+                        </label>
+                      </div>
+                    )}
                   {nodesForAssignModal.map((node) => {
                     const stableKey = managedNodeStableKey(node);
                     if (!node.internal_id) return null;
