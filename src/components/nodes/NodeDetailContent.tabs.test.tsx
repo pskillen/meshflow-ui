@@ -162,4 +162,50 @@ describe('NodeDetailContent tabbed layout', () => {
     expect(screen.getByTestId('node-detail-panel-overview')).toBeInTheDocument();
     expect(screen.getByTestId('url-search')).toHaveTextContent('');
   });
+
+  describe('Firmware row', () => {
+    const renderOverview = () =>
+      render(
+        <MemoryRouter initialEntries={[`/nodes/${TEST_OBSERVED_INTERNAL_ID}`]}>
+          <Routes>
+            <Route path="/nodes/:id" element={<PageWithSearchEcho />} />
+          </Routes>
+        </MemoryRouter>
+      );
+
+    it('shows the chip for a Meshtastic node with an inferred generation', () => {
+      mockedUseNodeSuspense.mockReturnValue({
+        ...minimalNode,
+        inferred_firmware: '2.8',
+        inferred_firmware_basis: 'key_identity',
+      });
+      renderOverview();
+      expect(screen.getByText('Firmware:')).toBeInTheDocument();
+      expect(screen.getByText('2.8+ (inferred)')).toBeInTheDocument();
+    });
+
+    it('shows Unknown when the API returns null', () => {
+      mockedUseNodeSuspense.mockReturnValue({ ...minimalNode, inferred_firmware: null, inferred_firmware_basis: null });
+      renderOverview();
+      expect(screen.getByText('Firmware:')).toBeInTheDocument();
+      expect(screen.getByText('Unknown')).toBeInTheDocument();
+    });
+
+    it('hides the whole row when the API omits the field', () => {
+      renderOverview();
+      expect(screen.queryByText('Firmware:')).not.toBeInTheDocument();
+    });
+
+    it('hides the whole row for MeshCore', () => {
+      mockedUseNodeSuspense.mockReturnValue({
+        ...minimalNode,
+        protocol: 2,
+        meshtastic_node_id: 0,
+        node_id_str: 'mc:abc',
+        inferred_firmware: '2.8',
+      });
+      renderOverview();
+      expect(screen.queryByText('Firmware:')).not.toBeInTheDocument();
+    });
+  });
 });
