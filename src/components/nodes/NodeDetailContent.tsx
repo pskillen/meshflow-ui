@@ -11,6 +11,8 @@ import { LinkSNRCharts } from '@/components/nodes/LinkSNRCharts';
 import { BatteryGauge } from '@/components/nodes/BatteryGauge';
 import { MetricsCard } from '@/components/nodes/MetricsCard';
 import { PercentGauge } from '@/components/nodes/PercentGauge';
+import { FirmwareBadge } from '@/components/nodes/FirmwareBadge';
+import { hasFirmwareBadge } from '@/lib/firmware';
 import { StaleReportedTime } from '@/components/nodes/StaleReportedTime';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Suspense, useEffect, useMemo, useState } from 'react';
@@ -379,6 +381,11 @@ export function NodeDetailContent({ internalId, compact = false, activeTab, onTa
             <p>
               <span className="font-medium">Hardware Model:</span> {node.meshtastic_hw_model ?? '—'}
             </p>
+            {hasFirmwareBadge(node) && (
+              <div className="flex items-center gap-2">
+                <span className="font-medium">Firmware:</span> <FirmwareBadge node={node} />
+              </div>
+            )}
             {roleLabel && (
               <p>
                 <span className="font-medium">Role:</span> {roleLabel}
