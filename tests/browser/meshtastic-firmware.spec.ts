@@ -42,8 +42,11 @@ test.describe('Meshtastic dashboard firmware adoption', () => {
     await expect(card).toBeVisible();
     await expect(card.locator('.recharts-pie-sector').first()).toBeVisible();
     await expect(card.locator('.recharts-line-curve').first()).toBeVisible();
-    await expect(card.getByText('2.7 or earlier')).toBeVisible();
-    await expect(card.getByText('Unknown', { exact: true })).toBeVisible();
+    const breakdown = card.getByRole('list', { name: 'Firmware breakdown' });
+    await expect(breakdown.getByText('2.7 or earlier')).toBeVisible();
+    await expect(breakdown.getByText('Unknown', { exact: true })).toBeVisible();
+    // Line chart legend repeats the labels, so series are identifiable without colour.
+    await expect(card.getByText('Unknown', { exact: true })).toHaveCount(2);
 
     await page.evaluate(() => document.documentElement.classList.add('dark'));
     await expect(card.locator('.recharts-pie-sector').first()).toBeVisible();

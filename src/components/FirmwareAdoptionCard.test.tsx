@@ -18,6 +18,10 @@ function row(day: number, by_type?: Record<string, number>): StatsSnapshot {
   };
 }
 
+function globalRow(id: number, day: number, by_type: Record<string, number>, constellation_id: number | null) {
+  return { ...row(day, by_type), id, constellation_id };
+}
+
 function withRows(rows: StatsSnapshot[]) {
   useStatsSnapshots.mockReturnValue({
     data: { count: rows.length, next: null, previous: null, results: rows },
@@ -65,6 +69,33 @@ describe('FirmwareAdoptionCard', () => {
     render(<FirmwareAdoptionCard />);
     expect(screen.getByText('2.9+')).toBeInTheDocument();
     expect(screen.queryByText('2.8+')).not.toBeInTheDocument();
+  });
+
+  it('ignores per-constellation rows and uses only the global snapshot', () => {
+    withRows([globalRow(1, 1, { '2.7': 10, '2.8': 10 }, null), globalRow(2, 2, { '2.7': 500, '2.9': 500 }, 3)]);
+    render(<FirmwareAdoptionCard />);
+    expect(screen.getAllByText('10 (50%)')).toHaveLength(2);
+    expect(screen.queryByText(/500/)).not.toBeInTheDocument();
+    expect(screen.queryByText('2.9+')).not.toBeInTheDocument();
+  });
+
+  it('shows the empty state when the newest row is all zeros', () => {
+    withRows([row(1, { '2.7': 0, '2.8': 0, unknown: 0 })]);
+    render(<FirmwareAdoptionCard />);
+    expect(screen.getByText('No firmware data yet')).toBeInTheDocument();
+  });
+
+  it('shows <1% for tiny slices', () => {
+    withRows([row(1, { '2.7': 1000, '2.8': 1 })]);
+    render(<FirmwareAdoptionCard />);
+    expect(screen.getByText('1 (<1%)')).toBeInTheDocument();
+  });
+
+  it('makes the note follow the highest generation', () => {
+    withRows([row(1, { '2.7': 1, '2.8': 1, '2.9': 1 })]);
+    render(<FirmwareAdoptionCard />);
+    expect(screen.getByText(/^2\.9\+ means that generation or later was identified/)).toBeInTheDocument();
+    expect(screen.queryByText(/2\.8\+ means/)).not.toBeInTheDocument();
   });
 
   it('shows loading', () => {

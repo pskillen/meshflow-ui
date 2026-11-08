@@ -13,6 +13,8 @@ export interface FirmwareSeries {
   id: string;
   label: string;
   color: string;
+  /** Drawn dashed so it is distinguishable without relying on hue. */
+  dashed: boolean;
 }
 
 export interface FirmwarePieSlice {
@@ -62,8 +64,8 @@ export function buildFirmwareAdoption(rows: StatsSnapshot[]): FirmwareAdoption {
   const series: FirmwareSeries[] = [];
   let colorIndex = 0;
   const nextColor = () => `hsl(var(--chart-${(colorIndex++ % PALETTE_SIZE) + 1}))`;
-  const push = (key: string, label: string, color: string) =>
-    series.push({ key, id: `series${series.length}`, label, color });
+  const push = (key: string, label: string, color: string, dashed = false) =>
+    series.push({ key, id: `series${series.length}`, label, color, dashed });
 
   numeric.forEach((key, i) => {
     let label = key;
@@ -72,7 +74,7 @@ export function buildFirmwareAdoption(rows: StatsSnapshot[]): FirmwareAdoption {
     push(key, label, nextColor());
   });
   other.forEach((key) => push(key, key, nextColor()));
-  if (hasUnknown) push(UNKNOWN_KEY, UNKNOWN_LABEL, 'hsl(var(--muted-foreground))');
+  if (hasUnknown) push(UNKNOWN_KEY, UNKNOWN_LABEL, 'hsl(var(--muted-foreground))', true);
 
   const newestFirst = [...withType].sort((a, b) => Date.parse(b.recorded_at) - Date.parse(a.recorded_at));
   const newest = newestFirst[0];

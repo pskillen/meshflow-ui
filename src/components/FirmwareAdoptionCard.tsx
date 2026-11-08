@@ -3,13 +3,22 @@ import { Cell, Line, LineChart, Pie, PieChart, CartesianGrid, XAxis, YAxis } fro
 import { format, subDays } from 'date-fns';
 import { useStatsSnapshots } from '@/hooks/api/useStatsSnapshots';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
+import { ChartConfig, ChartContainer, ChartLegend, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { ADOPTION_HISTORY_DAYS, buildFirmwareAdoption } from '@/lib/firmware-adoption';
 import { globalSnapshotRows } from '@/lib/stats-aggregation';
 
 const TITLE = 'Firmware adoption';
-const NOTE =
-  "2.8+ means a 2.8 identity was seen. Unknown means we have no evidence, for example we haven't heard the node's key.";
+const UNKNOWN_NOTE = "Unknown means we have no evidence, for example we haven't heard the node's key.";
+
+/** The note follows the labels on screen: the "+" label (if any) is whichever generation is currently highest. */
+function buildNote(labels: string[]): string {
+  const plus = labels.find((l) => l.endsWith('+'));
+  return plus ? `${plus} means that generation or later was identified. ${UNKNOWN_NOTE}` : UNKNOWN_NOTE;
+}
+
+function formatPercent(percent: number): string {
+  return percent > 0 && percent < 1 ? '<1%' : `${percent.toFixed(0)}%`;
+}
 
 function describeWindow(windowHours: number | null): string {
   if (!windowHours) return 'Nodes heard recently';
@@ -71,7 +80,7 @@ export function FirmwareAdoptionCard() {
     );
   }
 
-  if (adoption.series.length === 0) {
+  if (adoption.series.length === 0 || adoption.total === 0) {
     return (
       <Card data-testid="firmware-adoption-card">
         <CardHeader>
@@ -136,6 +145,29 @@ export function FirmwareAdoptionCard() {
                   <ChartTooltipContent labelFormatter={(_, p) => format(new Date(p?.[0]?.payload?.timestamp), 'PP')} />
                 }
               />
+              <ChartLegend
+                verticalAlign="bottom"
+                content={() => (
+                  <ul className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 pt-2 text-xs">
+                    {adoption.series.map((s) => (
+                      <li key={s.id} className="flex items-center gap-1.5">
+                        <svg width="20" height="8" aria-hidden>
+                          <line
+                            x1="0"
+                            y1="4"
+                            x2="20"
+                            y2="4"
+                            stroke={s.color}
+                            strokeWidth="2"
+                            strokeDasharray={s.dashed ? '4 3' : undefined}
+                          />
+                        </svg>
+                        <span>{s.label}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              />
               {adoption.series.map((s) => (
                 <Line
                   key={s.id}
@@ -144,6 +176,7 @@ export function FirmwareAdoptionCard() {
                   name={s.label}
                   stroke={s.color}
                   strokeWidth={2}
+                  strokeDasharray={s.dashed ? '6 4' : undefined}
                   dot={{ r: 3, fill: s.color, stroke: 'hsl(var(--card))', strokeWidth: 2 }}
                   activeDot={{ r: 5 }}
                   isAnimationActive={false}
@@ -161,13 +194,13 @@ export function FirmwareAdoptionCard() {
                 <span className="font-medium">{slice.label}</span>
               </span>
               <span className="text-muted-foreground tabular-nums">
-                {slice.count} ({slice.percent.toFixed(0)}%)
+                {slice.count} ({formatPercent(slice.percent)})
               </span>
             </li>
           ))}
         </ul>
 
-        <p className="text-xs text-muted-foreground">{NOTE}</p>
+        <p className="text-xs text-muted-foreground">{buildNote(adoption.series.map((s) => s.label))}</p>
       </CardContent>
     </Card>
   );
