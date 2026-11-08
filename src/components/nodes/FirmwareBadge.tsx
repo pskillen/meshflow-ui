@@ -10,11 +10,12 @@ type FirmwareNode = Pick<ObservedNode, 'protocol' | 'inferred_firmware' | 'infer
 
 function firmwareLabel(node: FirmwareNode): string {
   const generation = node.inferred_firmware;
-  if (generation == null) return 'Unknown';
-  if (generation === LOWEST_GENERATION) return `${generation} or earlier (inferred)`;
+  if (!generation) return 'Unknown';
   // Only a feeder report reads "reported"; every other basis is an inference.
-  const how = node.inferred_firmware_basis === 'feeder_report' ? 'reported' : 'inferred';
-  return `${generation}+ (${how})`;
+  const reported = node.inferred_firmware_basis === 'feeder_report';
+  if (generation === LOWEST_GENERATION)
+    return reported ? `${generation} (reported)` : `${generation} or earlier (inferred)`;
+  return `${generation}+ (${reported ? 'reported' : 'inferred'})`;
 }
 
 export function FirmwareBadge({ node }: { node: FirmwareNode }) {

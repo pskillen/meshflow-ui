@@ -20,9 +20,11 @@
 | `"2.7"`                                        | `2.7 or earlier (inferred)` |
 | `"2.8"`, basis `key_identity` / `predicted_id` | `2.8+ (inferred)`           |
 | basis `feeder_report`                          | `2.8+ (reported)`           |
+| `"2.7"`, basis `feeder_report`                 | `2.7 (reported)`            |
+| empty string                                   | `Unknown`                   |
 | later generation or unrecognised basis         | `<gen>+ (inferred)`         |
 
-Why: `2.7` is the lowest generation the API reports and means "2.7 or earlier", so it is the only value without `+`. `2.8+` means a 2.8 identity was seen, so the node is at least that new. `Unknown` means there is no evidence, not that the node is old. Only a feeder report reads "reported"; everything else is an inference. The UI never says "assumed".
+Why: `2.7` is the lowest generation the API reports and means "2.7 or earlier", so it is the only inferred value without `+`; a feeder-reported 2.7 reads `2.7 (reported)` because a feeder named the version. `2.8+` means a 2.8 identity was seen, so the node is at least that new. `Unknown` means there is no evidence, not that the node is old. Only a feeder report reads "reported"; everything else is an inference. The UI never says "assumed".
 
 `FeederFirmware` shows `—` when nothing was reported, otherwise the version with a `StaleReportedTime` line, like the Bot version cell.
 

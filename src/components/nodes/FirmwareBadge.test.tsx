@@ -35,6 +35,17 @@ describe('FirmwareBadge', () => {
     expect(screen.getByText('2.8+ (reported)')).toBeInTheDocument();
   });
 
+  it('shows 2.7 (reported) for feeder_report', () => {
+    render(<FirmwareBadge node={{ protocol: 1, inferred_firmware: '2.7', inferred_firmware_basis: 'feeder_report' }} />);
+    expect(screen.getByText('2.7 (reported)')).toBeInTheDocument();
+    expect(screen.queryByText(/earlier/i)).not.toBeInTheDocument();
+  });
+
+  it('shows Unknown for an empty string', () => {
+    render(<FirmwareBadge node={{ protocol: 1, inferred_firmware: '', inferred_firmware_basis: null }} />);
+    expect(screen.getByText('Unknown')).toBeInTheDocument();
+  });
+
   it('shows a later generation as inferred', () => {
     render(<FirmwareBadge node={{ protocol: 1, inferred_firmware: '2.9', inferred_firmware_basis: 'key_identity' }} />);
     expect(screen.getByText('2.9+ (inferred)')).toBeInTheDocument();
