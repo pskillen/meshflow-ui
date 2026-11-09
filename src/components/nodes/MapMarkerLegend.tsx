@@ -1,3 +1,4 @@
+import { useId, useState } from 'react';
 import { cn } from '@/lib/utils';
 import type { RoleLegendSwatch } from './map-role-legend';
 
@@ -41,65 +42,85 @@ export function MapMarkerLegend({
 }: MapMarkerLegendProps) {
   const hasConstellation = constellationItems.length > 0;
   const hasStatus = Boolean(statusSwatches?.length);
+  // Phones only (below sm): the key is a button that opens the panel. From sm up the panel is always shown.
+  const [open, setOpen] = useState(false);
+  const panelId = useId();
   if (!hasConstellation && !showRoleSwatches && !hasStatus) return null;
 
   return (
     <div
       className={cn(
         // Below sheet/dialog overlays (z-50); above Leaflet panes inside the map container.
-        'absolute top-2 right-2 z-10 max-h-[40%] overflow-y-auto max-w-[min(100%,20rem)] rounded-md border bg-background/95 p-2 text-xs shadow-sm backdrop-blur-sm',
+        'absolute top-2 right-2 z-10 flex max-h-[85%] max-w-[min(100%,20rem)] flex-col items-end gap-1 sm:max-h-[40%]',
         className
       )}
-      role="region"
-      aria-label="Map marker colours"
     >
-      <div className="flex flex-wrap gap-x-3 gap-y-2 flex-col sm:flex-row sm:items-start">
-        {hasConstellation ? (
-          <div className="min-w-0 flex-1 space-y-1">
-            <div className="font-medium text-[0.7rem] uppercase tracking-wide text-muted-foreground">
-              {constellationTitle}
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-controls={panelId}
+        onClick={() => setOpen((v) => !v)}
+        className="rounded-md border bg-background/95 px-2.5 py-1 text-xs shadow-sm backdrop-blur-sm sm:hidden"
+      >
+        {open ? 'Hide key' : 'Map key'}
+      </button>
+      <div
+        id={panelId}
+        className={cn(
+          'min-h-0 overflow-y-auto rounded-md border bg-background/95 p-2 text-xs shadow-sm backdrop-blur-sm',
+          open ? 'block' : 'hidden sm:block'
+        )}
+        role="region"
+        aria-label="Map marker colours"
+      >
+        <div className="flex flex-wrap gap-x-3 gap-y-2 flex-col sm:flex-row sm:items-start">
+          {hasConstellation ? (
+            <div className="min-w-0 flex-1 space-y-1">
+              <div className="font-medium text-[0.7rem] uppercase tracking-wide text-muted-foreground">
+                {constellationTitle}
+              </div>
+              <div className="flex flex-wrap gap-x-3 gap-y-1">
+                {constellationItems.map((c) => (
+                  <SwatchRow key={c.id} label={c.name} color={c.color} />
+                ))}
+              </div>
             </div>
-            <div className="flex flex-wrap gap-x-3 gap-y-1">
-              {constellationItems.map((c) => (
-                <SwatchRow key={c.id} label={c.name} color={c.color} />
-              ))}
+          ) : null}
+          {hasStatus ? (
+            <div
+              className={cn(
+                'min-w-0 flex-1 space-y-1',
+                hasConstellation && 'border-t border-border/60 pt-2 sm:border-t-0 sm:pt-0 sm:border-l sm:pl-3'
+              )}
+            >
+              <div className="font-medium text-[0.7rem] uppercase tracking-wide text-muted-foreground">
+                {statusSectionTitle}
+              </div>
+              <div className="flex flex-wrap gap-x-3 gap-y-1">
+                {statusSwatches!.map((s) => (
+                  <SwatchRow key={s.key} label={s.label} color={s.color} />
+                ))}
+              </div>
             </div>
-          </div>
-        ) : null}
-        {hasStatus ? (
-          <div
-            className={cn(
-              'min-w-0 flex-1 space-y-1',
-              hasConstellation && 'border-t border-border/60 pt-2 sm:border-t-0 sm:pt-0 sm:border-l sm:pl-3'
-            )}
-          >
-            <div className="font-medium text-[0.7rem] uppercase tracking-wide text-muted-foreground">
-              {statusSectionTitle}
+          ) : null}
+          {showRoleSwatches ? (
+            <div
+              className={cn(
+                'min-w-0 flex-1 space-y-1 border-t border-border/60 pt-2 sm:border-t-0 sm:pt-0 sm:border-l sm:pl-3 sm:pt-0',
+                (hasConstellation || hasStatus) && 'sm:pt-0'
+              )}
+            >
+              <div className="font-medium text-[0.7rem] uppercase tracking-wide text-muted-foreground">
+                {roleSectionTitle}
+              </div>
+              <div className="flex flex-wrap gap-x-3 gap-y-1">
+                {roleSwatches.map((r) => (
+                  <SwatchRow key={r.key} label={r.label} color={r.color} />
+                ))}
+              </div>
             </div>
-            <div className="flex flex-wrap gap-x-3 gap-y-1">
-              {statusSwatches!.map((s) => (
-                <SwatchRow key={s.key} label={s.label} color={s.color} />
-              ))}
-            </div>
-          </div>
-        ) : null}
-        {showRoleSwatches ? (
-          <div
-            className={cn(
-              'min-w-0 flex-1 space-y-1 border-t border-border/60 pt-2 sm:border-t-0 sm:pt-0 sm:border-l sm:pl-3 sm:pt-0',
-              (hasConstellation || hasStatus) && 'sm:pt-0'
-            )}
-          >
-            <div className="font-medium text-[0.7rem] uppercase tracking-wide text-muted-foreground">
-              {roleSectionTitle}
-            </div>
-            <div className="flex flex-wrap gap-x-3 gap-y-1">
-              {roleSwatches.map((r) => (
-                <SwatchRow key={r.key} label={r.label} color={r.color} />
-              ))}
-            </div>
-          </div>
-        ) : null}
+          ) : null}
+        </div>
       </div>
     </div>
   );
