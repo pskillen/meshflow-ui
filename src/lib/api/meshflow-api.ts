@@ -4,6 +4,7 @@ import {
   ObservedNode,
   ManagedNode,
   OwnedManagedNode,
+  FeederIdentityEvent,
   DeviceMetrics,
   EnvironmentMetrics,
   PowerMetrics,
@@ -573,6 +574,25 @@ export class MeshflowApi extends BaseApi {
     if (params?.page) searchParams.append('page', params.page.toString());
     if (params?.page_size) searchParams.append('page_size', params.page_size.toString());
     return this.get<PaginatedResponse<OwnedManagedNode>>('/nodes/managed-nodes/mine/', searchParams);
+  }
+
+  /** Unacknowledged feeder number-change events for the current user's feeders. */
+  async getFeederIdentityEvents(): Promise<PaginatedResponse<FeederIdentityEvent>> {
+    const searchParams = new URLSearchParams();
+    searchParams.append('unacknowledged', 'true');
+    return this.get<PaginatedResponse<FeederIdentityEvent>>('/nodes/managed-node-identity-events/', searchParams);
+  }
+
+  async acknowledgeFeederIdentityEvent(id: number): Promise<FeederIdentityEvent> {
+    return this.post<FeederIdentityEvent>(`/nodes/managed-node-identity-events/${id}/acknowledge/`);
+  }
+
+  /** Point a feeder at the number it now reports (or an explicit one). 400 `{code}`, 409 `number_collision`. */
+  async repointManagedNode(internalId: string, meshtasticNodeId?: number): Promise<FeederIdentityEvent> {
+    return this.post<FeederIdentityEvent>(
+      `/nodes/managed-nodes/${internalId}/repoint-meshtastic-id/`,
+      meshtasticNodeId == null ? {} : { meshtastic_node_id: meshtasticNodeId }
+    );
   }
 
   /**

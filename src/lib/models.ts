@@ -226,6 +226,27 @@ export interface MeshCorePacketListItem {
   text: string | null;
 }
 
+/** Why a feeder's Meshtastic number change was flagged for review rather than applied. */
+export type FeederIdentityReason =
+  'key_not_reported' | 'crc_mismatch' | 'key_mismatch' | 'shared_key' | 'number_collision' | 'auto_rekey_disabled';
+
+/** A feeder's Meshtastic node number changed (`/nodes/managed-node-identity-events/`). */
+export interface FeederIdentityEvent {
+  id: number;
+  managed_node: string;
+  managed_node_name: string;
+  old_meshtastic_node_id: number;
+  old_node_id_str: string;
+  new_meshtastic_node_id: number;
+  new_node_id_str: string;
+  outcome: 'auto_updated' | 'flagged' | 'manual';
+  reason: FeederIdentityReason | null;
+  needs_action: boolean;
+  created_at: string;
+  resolved_at: string | null;
+  acknowledged_at: string | null;
+}
+
 // ManagedNode from Meshflow API v2
 export interface ManagedNode {
   protocol?: MeshProtocol;
