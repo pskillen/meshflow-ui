@@ -207,7 +207,7 @@ function ProtocolNodesPageContent({
           <Input
             type="text"
             aria-label="Search nodes"
-            placeholder="Search nodes by name or ID (filters map and list)"
+            placeholder="Search nodes by name or ID"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-10"
