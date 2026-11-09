@@ -913,6 +913,7 @@ export class MeshflowApi extends BaseApi {
     if (params?.constellationId != null) searchParams.append('constellation_id', params.constellationId.toString());
     if (params?.recordedAtAfter) searchParams.append('recorded_at_after', params.recordedAtAfter.toISOString());
     if (params?.recordedAtBefore) searchParams.append('recorded_at_before', params.recordedAtBefore.toISOString());
+    if (params?.bucket) searchParams.append('bucket', params.bucket);
     if (params?.page) searchParams.append('page', params.page.toString());
     if (params?.page_size) searchParams.append('page_size', params.page_size.toString());
 

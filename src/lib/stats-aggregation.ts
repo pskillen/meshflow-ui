@@ -78,6 +78,8 @@ export function aggregateStats(
 export interface ByTypeDataPoint {
   timestamp: number;
   byType: Record<string, number>;
+  /** Hourly samples covered, as on `RawDataPoint`. */
+  samples?: number;
 }
 
 /**
@@ -87,18 +89,19 @@ export function aggregateStatsByType(points: ByTypeDataPoint[], window: Aggregat
   if (window === 'hourly' || points.length === 0) return points;
 
   const bucketKey = bucketKeyFor(window);
-  const buckets = new Map<number, Record<string, number>>();
+  const buckets = new Map<number, { byType: Record<string, number>; samples: number }>();
   for (const p of points) {
     const key = bucketKey(p.timestamp);
-    const existing = buckets.get(key) ?? {};
+    const existing = buckets.get(key) ?? { byType: {}, samples: 0 };
     for (const [k, v] of Object.entries(p.byType)) {
-      existing[k] = (existing[k] ?? 0) + v;
+      existing.byType[k] = (existing.byType[k] ?? 0) + v;
     }
+    existing.samples += p.samples ?? 1;
     buckets.set(key, existing);
   }
 
   return Array.from(buckets.entries())
-    .map(([ts, byType]) => ({ timestamp: ts, byType }))
+    .map(([ts, { byType, samples }]) => ({ timestamp: ts, byType, samples }))
     .sort((a, b) => a.timestamp - b.timestamp);
 }
 
