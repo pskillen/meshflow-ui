@@ -1,6 +1,5 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { subHours, subDays } from 'date-fns';
 import {
   Bar,
   BarChart,
@@ -16,7 +15,6 @@ import {
   Tooltip as RechartsTooltip,
 } from 'recharts';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ChartConfig, ChartContainer, ChartTooltipContent } from '@/components/ui/chart';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -27,29 +25,6 @@ import {
   buildStrategySuccessBarChartData,
   type StrategySuccessBarChartRow,
 } from '@/lib/traceroute-strategy-success-chart';
-
-const TR_STATS_TIMEFRAME_OPTIONS = [
-  { key: '24h', label: '24 hours' },
-  { key: '48h', label: '48 hours' },
-  { key: '7d', label: '7 days' },
-  { key: '14d', label: '14 days' },
-  { key: '30d', label: '30 days' },
-  { key: '60d', label: '60 days' },
-  { key: '90d', label: '90 days' },
-] as const;
-
-type TimeframeKey = (typeof TR_STATS_TIMEFRAME_OPTIONS)[number]['key'];
-
-function getTriggeredAtAfter(timeframe: TimeframeKey): Date {
-  if (timeframe === '24h') return subHours(new Date(), 24);
-  if (timeframe === '48h') return subHours(new Date(), 48);
-  if (timeframe === '7d') return subDays(new Date(), 7);
-  if (timeframe === '14d') return subDays(new Date(), 14);
-  if (timeframe === '30d') return subDays(new Date(), 30);
-  if (timeframe === '60d') return subDays(new Date(), 60);
-  if (timeframe === '90d') return subDays(new Date(), 90);
-  return subDays(new Date(), 14);
-}
 
 /** Muted overlay colour for failed segment on stacked bars (same hue family, translucent). */
 function withChartFillAlpha(hex: string, alpha: number): string {
@@ -88,12 +63,17 @@ const PIE_TOP_N = 7;
 export type TracerouteStatsSectionProps = {
   /** When set, stats (including this chart) are limited to traceroutes from this source mesh node id. */
   sourceNodeId?: number | null;
+  /** Start of the range window (from `useStatsRange().window.start`). */
+  triggeredAtAfter: Date;
+  /** Wording for the range in chart titles (from `useStatsRange().longLabel`), e.g. "last 7 days". */
+  rangeLabel: string;
 };
 
-export function TracerouteStatsSection({ sourceNodeId = null }: TracerouteStatsSectionProps) {
-  const [timeframe, setTimeframe] = useState<TimeframeKey>('14d');
-  const triggeredAtAfter = useMemo(() => getTriggeredAtAfter(timeframe), [timeframe]);
-
+export function TracerouteStatsSection({
+  sourceNodeId = null,
+  triggeredAtAfter,
+  rangeLabel,
+}: TracerouteStatsSectionProps) {
   const { data, isLoading, error } = useTracerouteStats({ triggeredAtAfter, sourceNodeId });
 
   const sourcesChartData = useMemo(() => {
@@ -132,8 +112,6 @@ export function TracerouteStatsSection({ sourceNodeId = null }: TracerouteStatsS
       }),
     [data?.by_strategy_excluding_external, data?.by_strategy]
   );
-
-  const timeframeLabel = TR_STATS_TIMEFRAME_OPTIONS.find((o) => o.key === timeframe)?.label ?? timeframe;
 
   const sourceScopeHint = useMemo(() => {
     if (sourceNodeId == null || !data?.by_source?.length) return null;
@@ -220,21 +198,7 @@ export function TracerouteStatsSection({ sourceNodeId = null }: TracerouteStatsS
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <h2 className="text-lg font-semibold">Traceroute Statistics</h2>
-        <Select value={timeframe} onValueChange={(v) => setTimeframe(v as TimeframeKey)}>
-          <SelectTrigger className="w-[160px]">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {TR_STATS_TIMEFRAME_OPTIONS.map((opt) => (
-              <SelectItem key={opt.key} value={opt.key}>
-                {opt.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      <h2 className="text-lg font-semibold">Traceroute Statistics</h2>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {/* TR sources pie */}
@@ -348,10 +312,10 @@ export function TracerouteStatsSection({ sourceNodeId = null }: TracerouteStatsS
         {/* Success over time (window matches selector + source scope) */}
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Success over time ({timeframeLabel})</CardTitle>
+            <CardTitle className="text-sm">Success over time ({rangeLabel})</CardTitle>
             <CardDescription className="text-xs text-muted-foreground">
               Daily completed / failed counts (left axis) and success rate (right axis, dashed). Uses the same time
-              window and source scope as the selector above.
+              window and source scope as the bar above.
             </CardDescription>
           </CardHeader>
           <CardContent>
