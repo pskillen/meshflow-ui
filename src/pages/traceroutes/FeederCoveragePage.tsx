@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { useNodes } from '@/hooks/api/useNodes';
+import { useManagedNodes } from '@/hooks/api/useNodes';
 import { useFeederReach } from '@/hooks/api/useFeederReach';
 import { useObservedNodesHeard } from '@/hooks/api/useObservedNodesHeard';
 import { observedNodesToCoverageGhosts } from '@/lib/coverageHeardGhosts';
@@ -119,7 +119,7 @@ export function FeederCoveragePage() {
   });
   const [strategies, setStrategies] = useState(() => createCoverageStrategiesAllSelected());
 
-  const { managedNodes, isLoadingManagedNodes: feedersLoading } = useNodes({ pageSize: 500 });
+  const { managedNodes, isLoadingManagedNodes: feedersLoading } = useManagedNodes({ pageSize: 500 });
 
   const feederOptions = useMemo(
     () =>
