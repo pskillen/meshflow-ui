@@ -5,7 +5,9 @@ import { useMemo, useState } from 'react';
 import { NodeCard } from '@/components/nodes/NodeCard';
 import { NodesAndConstellationsMap } from '@/components/nodes/NodesAndConstellationsMap';
 import { NodesMap } from '@/components/nodes/NodesMap';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { StatsRangeBar } from '@/components/stats/StatsRangeBar';
+import { useStatsRange } from '@/hooks/useStatsRange';
+import { STATS_ONLINE_KEY, STATS_PRESET_KEYS } from '@/lib/stats-range';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Input } from '@/components/ui/input';
 import { Search } from 'lucide-react';
@@ -17,10 +19,12 @@ import { Link } from 'react-router-dom';
 import { filterManagedNodesForMapDisplay } from '@/lib/managed-node-status';
 import { buildMeshCoreMapNodes } from '@/lib/meshcore-map-nodes';
 import type { ProtocolPageConfig } from '@/lib/mesh-protocol';
-import { NODE_TIME_RANGE_OPTIONS, getLastHeardAfterForRange, type NodeTimeRangeOption } from '@/lib/node-time-range';
 import { formatDistanceToNow } from 'date-fns';
 
 type SortOption = 'last_heard' | 'name';
+
+/** Node lists offer Online (2h) on top of the shared presets. Module-level so the hook sees a stable array. */
+const NODE_LIST_RANGE_OPTIONS = [STATS_ONLINE_KEY, ...STATS_PRESET_KEYS] as const;
 
 function IdentityOnlyTable({ nodes, config }: { nodes: ObservedNode[]; config: ProtocolPageConfig }) {
   return (
@@ -78,11 +82,11 @@ function ProtocolNodesPageContent({
   config,
   managedNodesForMap,
 }: ProtocolNodesPageProps & { managedNodesForMap: ReturnType<typeof filterManagedNodesForMapDisplay> }) {
-  const [timeRange, setTimeRange] = useState<NodeTimeRangeOption>('7d');
+  const range = useStatsRange({ area: 'node-lists', options: NODE_LIST_RANGE_OPTIONS });
   const [sortBy, setSortBy] = useState<SortOption>('last_heard');
   const [searchQuery, setSearchQuery] = useState('');
 
-  const lastHeardAfter = useMemo(() => getLastHeardAfterForRange(timeRange), [timeRange]);
+  const lastHeardAfter = range.window.start;
 
   const {
     nodes: mainListNodes,
@@ -150,61 +154,16 @@ function ProtocolNodesPageContent({
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
-        <div>
-          <h1 className="text-3xl font-bold">{config.labels.nodesTitle}</h1>
-          {config.slug === 'meshcore' && (
-            <p className="text-sm text-muted-foreground mt-1">
-              Observed MeshCore nodes (separate from the Meshtastic node list).
-            </p>
-          )}
-        </div>
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-          <div className="flex items-center gap-2">
-            <label htmlFor="time-range" className="text-sm text-muted-foreground">
-              Time range:
-            </label>
-            <Select value={timeRange} onValueChange={(v) => setTimeRange(v as NodeTimeRangeOption)}>
-              <SelectTrigger className="w-[180px]" id="time-range" aria-label="Select time range">
-                <SelectValue placeholder="Select time range" />
-              </SelectTrigger>
-              <SelectContent>
-                {NODE_TIME_RANGE_OPTIONS.map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="flex items-center gap-2">
-            <label className="text-sm text-muted-foreground">Sort by:</label>
-            <ToggleGroup
-              type="single"
-              value={sortBy}
-              onValueChange={(value) => value && setSortBy(value as SortOption)}
-            >
-              <ToggleGroupItem value="last_heard" aria-label="Sort by last heard">
-                Last Heard
-              </ToggleGroupItem>
-              <ToggleGroupItem value="name" aria-label="Sort by name">
-                Name
-              </ToggleGroupItem>
-            </ToggleGroup>
-          </div>
-        </div>
+      <div className="mb-4">
+        <h1 className="text-3xl font-bold">{config.labels.nodesTitle}</h1>
+        {config.slug === 'meshcore' && (
+          <p className="text-sm text-muted-foreground mt-1">
+            Observed MeshCore nodes (separate from the Meshtastic node list).
+          </p>
+        )}
       </div>
 
-      <div className="relative mb-6">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-        <Input
-          type="text"
-          placeholder="Search nodes by name or ID..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-10"
-        />
-      </div>
+      <StatsRangeBar value={range.key} options={range.options} onChange={range.setRange} className="mb-4" />
 
       <Card className="mb-8">
         <CardHeader>
@@ -231,6 +190,31 @@ function ProtocolNodesPageContent({
           </div>
         </CardContent>
       </Card>
+
+      <div className="sticky top-[3.4rem] z-20 -mx-1 mb-6 flex flex-wrap items-center gap-x-3 gap-y-2 bg-background/95 px-1 py-2 backdrop-blur">
+        <div className="relative min-w-[12rem] flex-1">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+          <Input
+            type="text"
+            aria-label="Search nodes"
+            placeholder="Search nodes by name or ID (filters map and list)"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+        <span className="hidden text-sm tabular-nums text-muted-foreground md:inline" data-testid="nodes-count">
+          {displayedNodes.length} of {totalNodes} heard in {range.longLabel}
+        </span>
+        <ToggleGroup type="single" value={sortBy} onValueChange={(value) => value && setSortBy(value as SortOption)}>
+          <ToggleGroupItem value="last_heard" aria-label="Sort by last heard">
+            Last Heard
+          </ToggleGroupItem>
+          <ToggleGroupItem value="name" aria-label="Sort by name">
+            Name
+          </ToggleGroupItem>
+        </ToggleGroup>
+      </div>
 
       {config.slug === 'meshtastic' ? (
         <div className="space-y-4">
