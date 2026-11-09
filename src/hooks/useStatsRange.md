@@ -24,7 +24,8 @@ useStatsRange({ area?, options?, local?, now? }): StatsRange
 - Resolution order: valid `?range=` in the URL, then the last range remembered for `area` this session, then `7d` (or the first allowed option if `7d` is not allowed). A value that is not in `options` is ignored.
 - `setRange` writes `?range=` with `replace: true`, keeps every other param (`tab`, `source_node`, `feeder`), and remembers the choice for the area. A range that arrives by URL is remembered too.
 - Memory is `sessionStorage`, key `meshflow.statsRange.<area>`, every access in try/catch. If storage is blocked the range just is not remembered.
-- `window` is stable across renders: it only changes with the key, once an hour for presets (they end at the top of the hour) and every five minutes for Online (2h, which ends at now). That keeps query keys stable so Suspense queries do not remount.
+- `window` is stable across renders: it only changes with the key, once an hour for presets (they end at the top of the UTC hour) and every five minutes for Online (2h, which ends at now floored to the 5-minute tick, so every component gets the same value). That keeps query keys stable so Suspense queries do not remount.
+- **UTC buckets; the last bucket is in progress.** Windows are computed in UTC, matching the API's rollups (UTC hour, 6h at 00/06/12/18 UTC, UTC day), whatever the browser's time zone. `start` is floored to the UTC boundary of the range's bucket so the first bucket is whole; `end` is the current UTC hour, so with 6h (7d) or daily (30d, 90d) buckets the last bucket is still filling. `window.partialEnd` says so and `window.lastBucketStart` is where that bucket begins, so charts can mark it rather than show a dip. Chart code that buckets with the local-time `getBucketStart` in `stats-aggregation.ts` will not line up with these windows outside UTC.
 
 ## Areas rule
 
