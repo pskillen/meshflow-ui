@@ -16,8 +16,7 @@ interface TimeRangeSelectProps {
 
 export function TimeRangeSelect({ options, value, onChange, className }: TimeRangeSelectProps) {
   const handleTimeRangeChange = (newValue: string) => {
-    const { startDate, endDate } = windowForTimeRangeKey(newValue, new Date());
-    onChange(newValue, { startDate, endDate });
+    onChange(newValue, windowForTimeRangeKey(newValue));
   };
 
   return (
