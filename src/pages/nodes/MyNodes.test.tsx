@@ -27,6 +27,12 @@ vi.mock('@/hooks/api/useNodes', () => ({
   useMyManagedNodesSuspense: () => useMyManagedNodesSuspense(),
 }));
 
+vi.mock('@/hooks/api/useFeederIdentityEvents', () => ({
+  useFeederIdentityEvents: () => ({ data: { results: [] }, isError: false }),
+  useAcknowledgeFeederIdentityEvent: () => ({ mutate: vi.fn(), isPending: false }),
+  useRepointManagedNode: () => ({ mutate: vi.fn(), isPending: false }),
+}));
+
 vi.mock('@/hooks/api/useNodeWatches', () => ({
   useNodeWatches: () => ({
     data: { results: [] },
