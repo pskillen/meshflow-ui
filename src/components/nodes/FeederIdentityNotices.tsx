@@ -59,7 +59,7 @@ const REPOINT_CODE_MESSAGES: Record<string, string> = {
  * The API client's interceptor turns failures into `{ message, status, data }` (or `NotFoundError` with `data`),
  * so the response body is read from `data`, not from an axios `response`.
  */
-export function apiErrorMessage(err: unknown): string {
+function apiErrorMessage(err: unknown): string {
   const body = typeof err === 'object' && err !== null ? (err as { data?: unknown }).data : undefined;
   if (body && typeof body === 'object') {
     const data = body as Record<string, unknown>;
