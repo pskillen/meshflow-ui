@@ -5,7 +5,6 @@ import {
   UseQueryResult,
   UseQueryOptions,
   useInfiniteQuery,
-  InfiniteData,
   useSuspenseInfiniteQuery,
   useSuspenseQuery,
 } from '@tanstack/react-query';
@@ -21,7 +20,6 @@ import {
 } from '@/lib/models';
 import { DateRangeParams } from '@/lib/types';
 import { PaginatedResponse } from '@/lib/models';
-import React from 'react';
 import { getKeyValue, roundDateParams } from './hooks-utils';
 
 export interface UseNodesOptions {
@@ -30,140 +28,29 @@ export interface UseNodesOptions {
   lastHeardAfter?: Date;
 }
 
+export interface UseManagedNodesOptions {
+  pageSize?: number;
+  enabled?: boolean;
+}
+
 /**
- * Hook to fetch and manage nodes data
+ * Managed nodes (feeders) only, first page, for pickers and lookups outside Suspense boundaries.
+ * Does not fetch observed nodes and does not walk further pages.
  */
-export function useNodes(options?: UseNodesOptions) {
+export function useManagedNodes(options?: UseManagedNodesOptions) {
   const api = useMeshflowApi();
-  const queryClient = useQueryClient();
-  const pageSize = options?.pageSize || 100;
-
-  // Query for observed nodes with automatic pagination
-  const lastHeardAfterKey = options?.lastHeardAfter
-    ? Math.floor(options.lastHeardAfter.getTime() / (5 * 60 * 1000)).toString()
-    : null;
-  const nodesQuery = useInfiniteQuery<
-    PaginatedResponse<ObservedNode>,
-    Error,
-    InfiniteData<PaginatedResponse<ObservedNode>>,
-    [string, number, string | null],
-    number
-  >({
+  const pageSize = options?.pageSize ?? 500;
+  const query = useQuery<PaginatedResponse<ManagedNode>, Error>({
     refetchInterval: 1000 * 60, // 1 minute
-    queryKey: ['nodes', pageSize, lastHeardAfterKey],
-    queryFn: async ({ pageParam = 1 }) => {
-      return api.getNodes({
-        page: pageParam,
-        page_size: pageSize,
-        last_heard_after: options?.lastHeardAfter,
-      });
-    },
-    initialPageParam: 1,
-    getNextPageParam: (lastPage, allPages) => {
-      if (!lastPage.next) return undefined;
-      return allPages.length + 1;
-    },
+    queryKey: ['managed-nodes', 'first-page', pageSize],
+    queryFn: () => api.getManagedNodes({ page: 1, page_size: pageSize }),
     enabled: options?.enabled !== false,
   });
-
-  // Automatically fetch next pages if available
-  React.useEffect(() => {
-    if (nodesQuery.hasNextPage && !nodesQuery.isFetchingNextPage && !nodesQuery.isError) {
-      nodesQuery.fetchNextPage();
-    }
-  }, [nodesQuery.hasNextPage, nodesQuery.isFetchingNextPage, nodesQuery.isError]);
-
-  // Combine all pages of nodes into a single array
-  const allNodes = React.useMemo(() => {
-    return nodesQuery.data?.pages.flatMap((page) => page.results) || [];
-  }, [nodesQuery.data?.pages]);
-
-  // Query for managed nodes with pagination
-  const managedNodesQuery = useInfiniteQuery<PaginatedResponse<ManagedNode>, Error>({
-    refetchInterval: 1000 * 60, // 1 minute
-    queryKey: ['managed-nodes', 0],
-    queryFn: async ({ pageParam = 1 }) => api.getManagedNodes({ page: pageParam as number, page_size: pageSize }),
-    initialPageParam: 1,
-    getNextPageParam: (lastPage, allPages) => (lastPage.next ? allPages.length + 1 : undefined),
-    enabled: options?.enabled !== false,
-  });
-
-  const allManagedNodes = React.useMemo(
-    () => managedNodesQuery.data?.pages.flatMap((page) => page.results) || [],
-    [managedNodesQuery.data?.pages]
-  );
-
-  // Query for user's managed nodes with pagination
-  const myManagedNodesQuery = useInfiniteQuery<PaginatedResponse<OwnedManagedNode>, Error>({
-    refetchInterval: 1000 * 60, // 1 minute
-    queryKey: ['managed-nodes', 'mine', pageSize],
-    queryFn: async ({ pageParam = 1 }) => api.getMyManagedNodes({ page: pageParam as number, page_size: pageSize }),
-    initialPageParam: 1,
-    getNextPageParam: (lastPage, allPages) => (lastPage.next ? allPages.length + 1 : undefined),
-    enabled: options?.enabled !== false,
-  });
-
-  const allMyManagedNodes = React.useMemo(
-    () => myManagedNodesQuery.data?.pages.flatMap((page) => page.results) || [],
-    [myManagedNodesQuery.data?.pages]
-  );
-
-  // Query for user's claimed nodes with pagination
-  const myClaimedNodesQuery = useInfiniteQuery<PaginatedResponse<ObservedNode>, Error>({
-    refetchInterval: 1000 * 60, // 1 minute
-    queryKey: ['observed-nodes', 'mine', 0],
-    queryFn: async ({ pageParam = 1 }) => api.getMyClaimedNodes({ page: pageParam as number, page_size: pageSize }),
-    initialPageParam: 1,
-    getNextPageParam: (lastPage, allPages) => (lastPage.next ? allPages.length + 1 : undefined),
-    enabled: options?.enabled !== false,
-  });
-
-  const allMyClaimedNodes = React.useMemo(
-    () => myClaimedNodesQuery.data?.pages.flatMap((page) => page.results) || [],
-    [myClaimedNodesQuery.data?.pages]
-  );
-
-  // Mutation for searching nodes
-  const searchNodesMutation = useMutation({
-    mutationFn: (query: string) => api.searchNodes(query),
-    onSuccess: (data) => {
-      queryClient.setQueryData(['nodes', 'search'], data);
-    },
-  });
-
   return {
-    nodes: allNodes,
-    totalNodes: nodesQuery.data?.pages[0]?.count || 0,
-    isLoading: nodesQuery.isLoading,
-    isLoadingInitialNodes: nodesQuery.isLoading,
-    isLoadingMoreNodes: nodesQuery.isFetchingNextPage,
-    isLoadingAnyNodes: nodesQuery.isLoading || nodesQuery.isFetchingNextPage,
-    hasPartialData: !nodesQuery.isLoading && nodesQuery.isFetchingNextPage,
-    nodesError: nodesQuery.error,
-    managedNodes: allManagedNodes,
-    totalManagedNodes: managedNodesQuery.data?.pages[0]?.count || 0,
-    isLoadingManagedNodes: managedNodesQuery.isLoading,
-    isLoadingMoreManagedNodes: managedNodesQuery.isFetchingNextPage,
-    hasNextPageManagedNodes: managedNodesQuery.hasNextPage,
-    fetchNextPageManagedNodes: managedNodesQuery.fetchNextPage,
-    managedNodesError: managedNodesQuery.error,
-    myManagedNodes: allMyManagedNodes,
-    totalMyManagedNodes: myManagedNodesQuery.data?.pages[0]?.count || 0,
-    isLoadingMyManagedNodes: myManagedNodesQuery.isLoading,
-    isLoadingMoreMyManagedNodes: myManagedNodesQuery.isFetchingNextPage,
-    hasNextPageMyManagedNodes: myManagedNodesQuery.hasNextPage,
-    fetchNextPageMyManagedNodes: myManagedNodesQuery.fetchNextPage,
-    myManagedNodesError: myManagedNodesQuery.error,
-    myClaimedNodes: allMyClaimedNodes,
-    totalMyClaimedNodes: myClaimedNodesQuery.data?.pages[0]?.count || 0,
-    isLoadingMyClaimedNodes: myClaimedNodesQuery.isLoading,
-    isLoadingMoreMyClaimedNodes: myClaimedNodesQuery.isFetchingNextPage,
-    hasNextPageMyClaimedNodes: myClaimedNodesQuery.hasNextPage,
-    fetchNextPageMyClaimedNodes: myClaimedNodesQuery.fetchNextPage,
-    myClaimedNodesError: myClaimedNodesQuery.error,
-    searchNodes: searchNodesMutation.mutate,
-    searchResults: searchNodesMutation.data,
-    isSearching: searchNodesMutation.isPending,
+    managedNodes: query.data?.results ?? [],
+    totalManagedNodes: query.data?.count ?? 0,
+    isLoadingManagedNodes: query.isLoading,
+    managedNodesError: query.error,
   };
 }
 
