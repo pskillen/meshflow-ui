@@ -8,7 +8,7 @@ import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from '
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { TimeRangeSelect, TimeRangeOption } from '@/components/TimeRangeSelect';
 import { useStatsSnapshotsForTypesSuspense } from '@/hooks/api/useStatsSnapshots';
-import { subDays } from 'date-fns';
+import { windowForTimeRangeKey } from '@/lib/time-range';
 import { Payload, ValueType, NameType } from 'recharts/types/component/DefaultTooltipContent';
 import {
   getAggregationWindow,
@@ -59,10 +59,9 @@ export function PacketStatsChartFromSnapshots({
 }: PacketStatsChartFromSnapshotsProps) {
   const [timeRangeLabel, setTimeRangeLabel] = React.useState(defaultTimeRange);
   const [viewMode, setViewMode] = React.useState<'total' | 'byType'>('total');
-  const [internalDateRange, setInternalDateRange] = React.useState<{ startDate: Date; endDate: Date }>({
-    startDate: subDays(new Date(), 2),
-    endDate: new Date(),
-  });
+  const [internalDateRange, setInternalDateRange] = React.useState<{ startDate: Date; endDate: Date }>(() =>
+    windowForTimeRangeKey(defaultTimeRange)
+  );
 
   const dateRange = embedded && controlledDateRange ? controlledDateRange : internalDateRange;
 

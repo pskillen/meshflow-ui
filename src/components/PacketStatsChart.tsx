@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { TimeRangeSelect, TimeRangeOption } from '@/components/TimeRangeSelect';
 import { usePacketStatsSuspense } from '@/hooks/api/usePacketStats';
-import { subDays } from 'date-fns';
+import { windowForTimeRangeKey } from '@/lib/time-range';
 import { Payload, ValueType, NameType } from 'recharts/types/component/DefaultTooltipContent';
 
 interface PacketStatsChartProps {
@@ -34,10 +34,9 @@ export function PacketStatsChart({
   defaultTimeRange = '2d',
 }: PacketStatsChartProps) {
   const [timeRangeLabel, setTimeRangeLabel] = React.useState(defaultTimeRange);
-  const [dateRange, setDateRange] = React.useState<{ startDate: Date; endDate: Date }>({
-    startDate: subDays(new Date(), 2), // Default to 2 days ago
-    endDate: new Date(),
-  });
+  const [dateRange, setDateRange] = React.useState<{ startDate: Date; endDate: Date }>(() =>
+    windowForTimeRangeKey(defaultTimeRange)
+  );
 
   const statsParams = React.useMemo(
     () => ({

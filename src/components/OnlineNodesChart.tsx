@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { TimeRangeSelect, TimeRangeOption } from '@/components/TimeRangeSelect';
 import { useStatsSnapshotsForTypesSuspense } from '@/hooks/api/useStatsSnapshots';
-import { subDays } from 'date-fns';
+import { windowForTimeRangeKey } from '@/lib/time-range';
 import { Payload, ValueType, NameType } from 'recharts/types/component/DefaultTooltipContent';
 import {
   aggregateStats,
@@ -56,10 +56,9 @@ export function OnlineNodesChart({
   movingAverage = true,
 }: OnlineNodesChartProps) {
   const [timeRangeLabel, setTimeRangeLabel] = React.useState(defaultTimeRange);
-  const [internalDateRange, setInternalDateRange] = React.useState<{ startDate: Date; endDate: Date }>({
-    startDate: subDays(new Date(), 2),
-    endDate: new Date(),
-  });
+  const [internalDateRange, setInternalDateRange] = React.useState<{ startDate: Date; endDate: Date }>(() =>
+    windowForTimeRangeKey(defaultTimeRange)
+  );
 
   const dateRange = embedded && controlledDateRange ? controlledDateRange : internalDateRange;
 

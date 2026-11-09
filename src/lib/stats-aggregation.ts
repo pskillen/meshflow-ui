@@ -5,13 +5,13 @@ export type AggregationWindow = 'hourly' | '6h' | 'daily';
 /**
  * Determine aggregation window based on time range span.
  * - <= 2 days: hourly (no aggregation)
- * - > 2 days and <= 8 days: 6-hour windows (covers "7 days" which can span up to ~8 days)
+ * - > 2 days and <= 8 days: 6-hour windows ("7 days" is exactly 168h; the margin tolerates custom ranges)
  * - > 8 days: daily (local midnight)
  */
 export function getAggregationWindow(startDate: Date, endDate: Date): AggregationWindow {
   const spanHours = (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60);
   if (spanHours <= 48) return 'hourly';
-  if (spanHours <= 192) return '6h'; // 8 days = 192h; ensures "7 days" uses 6h bins
+  if (spanHours <= 192) return '6h'; // 8 days = 192h
   return 'daily';
 }
 
