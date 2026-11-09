@@ -13,7 +13,7 @@ export interface UseObservedNodesHeardOptions {
 
 /**
  * Paginated observed nodes with `last_heard` in range (same clock as coverage window).
- * Fetches all pages like `useNodes` observed slice — use sparingly (e.g. map overlays).
+ * Fetches every page of observed nodes — use sparingly (e.g. map overlays).
  */
 export function useObservedNodesHeard(options: UseObservedNodesHeardOptions) {
   const api = useMeshtasticApi();

@@ -20,7 +20,7 @@ src/
 │   ├── nodes/                 # NodeCard, NodesMap, ConstellationsMap, etc.
 │   └── messages/              # MessageList, MessageItem
 ├── hooks/                     # React hooks
-│   └── api/                   # useNodes, useNodesSuspense, useRecentNodeCountsSuspense, etc.
+│   └── api/                   # useManagedNodes, useNodeSearch, useNodesSuspense, useRecentNodeCountsSuspense, etc.
 ├── lib/                       # Core utilities
 │   ├── api/                   # MeshtasticApi, base, api-utils
 │   ├── auth/                  # authService
@@ -40,7 +40,7 @@ src/
 
 - **Base**: `src/lib/api/base.ts` – axios instance, auth interceptors
 - **API class**: `src/lib/api/meshtastic-api.ts` – `getNodes`, `getRecentNodeCounts`, `getNode`, `searchNodes`, etc.
-- **Hooks**: `src/hooks/api/useNodes.ts` – `useNodesSuspense`, `useRecentNodeCountsSuspense`, `useNodes`
+- **Hooks**: `src/hooks/api/useNodes.ts` – `useNodesSuspense`, `useRecentNodeCountsSuspense`, `useManagedNodes`, `useNodeSearch`
 - **Query keys**: Include `lastHeardAfter` rounded to 5 minutes for stable cache keys (avoids Suspense remount loops)
 
 ## Development
