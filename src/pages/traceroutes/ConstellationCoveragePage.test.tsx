@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 
 vi.mock('@/hooks/api/useConstellations', () => ({
@@ -142,5 +142,22 @@ describe('ConstellationCoveragePage', () => {
     renderAt('/traceroutes/map/coverage/constellation/1');
     expect(screen.getByText(/loading coverage/i)).toBeInTheDocument();
     expect(screen.queryByTestId('constellation-coverage-map-mock')).not.toBeInTheDocument();
+  });
+
+  it('uses the shared range bar (default 7d, 90d offered) and a fixed window start', () => {
+    setupHooks({ data: { hexes: [] } as unknown as ReturnType<typeof useConstellationCoverage>['data'] });
+    renderAt('/traceroutes/map/coverage/constellation/1?range=90d');
+    expect(screen.getByRole('radio', { name: '90d' })).toHaveAttribute('aria-checked', 'true');
+    const after = mockedUseCoverage.mock.calls.at(-1)![0].triggeredAtAfter!;
+    expect(after.getTime() % 3600000).toBe(0);
+    expect((Date.now() - after.getTime()) / 3600000).toBeGreaterThanOrEqual(2160);
+  });
+
+  it('puts the description behind the info button', () => {
+    setupHooks({ data: { hexes: [] } as unknown as ReturnType<typeof useConstellationCoverage>['data'] });
+    renderAt('/traceroutes/map/coverage/constellation/1');
+    expect(screen.queryByText(/Combines traceroute attempts/)).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'About this map' }));
+    expect(screen.getByText(/Combines traceroute attempts/)).toBeInTheDocument();
   });
 });
