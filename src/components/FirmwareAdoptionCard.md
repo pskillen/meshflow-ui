@@ -21,7 +21,7 @@ No props. One `useStatsSnapshots` request (`stat_type=node_firmware`, `constella
 
 ## Wiring
 
-Rendered in `MeshtasticDashboardContent` (`src/pages/meshtastic/MeshtasticDashboard.tsx`) between the recent-counts card and `MeshStatsSection`. Uses the non-Suspense `useStatsSnapshots` so a failing stat cannot take the dashboard down.
+Rendered in `MeshtasticDashboardContent` (`src/pages/meshtastic/MeshtasticDashboard.tsx`) between the "Right now" band and `MeshStatsSection`. Uses the non-Suspense `useStatsSnapshots` so a failing stat cannot take the dashboard down.
 
 ## Related
 
