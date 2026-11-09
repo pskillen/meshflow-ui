@@ -8,7 +8,7 @@ const HOUR = 3600_000;
 describe('windowForTimeRangeKey', () => {
   const now = new Date(2026, 5, 15, 14, 30);
 
-  it('gives the same window and bucket on load and on re-select for 2d', () => {
+  it('is deterministic for a fixed now and lands 2d in the hourly bucket', () => {
     const load = windowForTimeRangeKey('2d', now);
     const reselect = windowForTimeRangeKey('2d', now);
     expect(load).toEqual(reselect);
