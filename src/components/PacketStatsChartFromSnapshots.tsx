@@ -8,7 +8,7 @@ import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from '
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { TimeRangeSelect, TimeRangeOption } from '@/components/TimeRangeSelect';
 import { useStatsSnapshotsForTypesSuspense } from '@/hooks/api/useStatsSnapshots';
-import { niceAxisMax } from '@/lib/axis-ticks';
+import { maxStackTotal, niceAxisMax } from '@/lib/axis-ticks';
 import { windowForTimeRangeKey } from '@/lib/time-range';
 import { Payload, ValueType, NameType } from 'recharts/types/component/DefaultTooltipContent';
 import {
@@ -144,11 +144,7 @@ export function PacketStatsChartFromSnapshots({
               item.meshcore,
             ])
           : (chartData as { value: number }[]).map((item) => item.value)
-        : (chartData as Record<string, number>[]).flatMap((item) =>
-            Object.entries(item)
-              .filter(([k]) => k !== 'timestamp')
-              .map(([, v]) => v)
-          );
+        : [maxStackTotal(chartData as Record<string, number>[])];
     if (values.length === 0) return null;
     return niceAxisMax(Math.max(...values, 0));
   }, [chartData, viewMode, overlayMode]);
