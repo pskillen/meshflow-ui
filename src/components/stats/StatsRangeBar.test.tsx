@@ -68,6 +68,19 @@ describe('StatsRangeBar', () => {
       expect(onChange).toHaveBeenLastCalledWith('24h');
     });
 
+    it('with no selection (custom range active) the first radio is the tab stop and arrows select from the start', () => {
+      const onChange = vi.fn();
+      render(<StatsRangeBar value={null} options={STATS_PRESET_KEYS} onChange={onChange} />);
+      const radio = (name: string) => screen.getByRole('radio', { name });
+      expect(radio('24h').tabIndex).toBe(0);
+      for (const name of ['7d', '30d', '90d']) expect(radio(name).tabIndex).toBe(-1);
+      for (const name of ['24h', '7d', '30d', '90d']) expect(radio(name).getAttribute('aria-checked')).toBe('false');
+      fireEvent.keyDown(radio('24h'), { key: 'ArrowRight' });
+      expect(onChange).toHaveBeenLastCalledWith('24h');
+      fireEvent.keyDown(radio('24h'), { key: 'ArrowLeft' });
+      expect(onChange).toHaveBeenLastCalledWith('90d');
+    });
+
     it('ignores other keys', () => {
       const { onChange, radio } = setup('7d');
       fireEvent.keyDown(radio('7d'), { key: 'a' });

@@ -13,6 +13,7 @@ The custom-range control for the heatmap and topology pages, placed in `StatsRan
 
 - Button reads "Custom", or "Since 3 Nov 2026" when active, with an X to clear.
 - Opens a dialog with one date input (not in the future). Apply writes the date; Cancel discards.
+- The date is a UTC day: the range starts at 00:00 UTC on it, matching the UTC-aligned preset windows, whatever the browser's time zone.
 - Open-ended: the heatmap endpoint has no end bound, so there is no "to" date.
 
 ## Wiring

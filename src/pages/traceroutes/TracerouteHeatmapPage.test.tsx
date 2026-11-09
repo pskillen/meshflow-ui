@@ -83,13 +83,15 @@ describe('TracerouteHeatmapPage URL → API', () => {
     expect(arg!.triggeredAtAfter!.getTime() % 3600000).toBe(0);
   });
 
-  it('offers 90d and sends a window 90 x 24h long', () => {
+  it('offers 90d and sends a window of at least 90 x 24h, starting on a UTC day boundary', () => {
     renderPage('/traceroutes/map/heat?range=90d');
     expect(screen.getByRole('radio', { name: '90d' })).toHaveAttribute('aria-checked', 'true');
     const after = mockUseHeatmap.mock.calls.at(-1)![0]!.triggeredAtAfter!;
     const hours = (Date.now() - after.getTime()) / 3600000;
     expect(hours).toBeGreaterThanOrEqual(2160);
-    expect(hours).toBeLessThan(2161);
+    // start is floored to the UTC day (90d uses daily buckets): up to 24h longer, plus the hour in progress
+    expect(hours).toBeLessThan(2185);
+    expect(after.getTime() % 86400000).toBe(0);
   });
 
   it('custom since date overrides the preset and clears the selection; a preset click drops it', () => {
