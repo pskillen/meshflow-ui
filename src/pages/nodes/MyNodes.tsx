@@ -15,6 +15,7 @@ import { SetupManagedNode } from '@/components/nodes/SetupManagedNode';
 import { NodesMap } from '@/components/nodes/NodesMap';
 import { MonitoredNodesBatteryChart } from '@/components/nodes/MonitoredNodesBatteryChart';
 import { MyNodeCard } from '@/components/nodes/MyNodeCard';
+import { FeederIdentityNotices } from '@/components/nodes/FeederIdentityNotices';
 import { useQuery } from '@tanstack/react-query';
 import { useMeshtasticApi } from '@/hooks/api/useApi';
 import {
@@ -174,6 +175,12 @@ function MyNodesContent() {
           <Settings className="mr-2 h-4 w-4" />
           Node Settings
         </Button>
+      </div>
+
+      <div className="mb-6 empty:hidden">
+        <FeederIdentityNotices
+          ownedManagedNodeIds={myManagedNodes.flatMap((n) => (n.internal_id ? [n.internal_id] : []))}
+        />
       </div>
 
       {error && (
