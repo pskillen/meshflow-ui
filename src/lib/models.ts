@@ -669,7 +669,8 @@ export interface NeighbourStats {
 }
 
 export interface StatsSnapshot {
-  id: number;
+  /** null on rows rolled up by the API (`bucket=1d`). */
+  id: number | null;
   recorded_at: string;
   stat_type:
     | 'online_nodes'
@@ -683,6 +684,8 @@ export interface StatsSnapshot {
   value: {
     count: number;
     window_hours?: number;
+    /** Rolled-up rows (`bucket=1d`) only: how many hourly samples the day covers. */
+    samples?: number;
     by_type?: Record<string, number>;
     /** node_firmware only: how each node's firmware was inferred. */
     by_basis?: Record<string, number>;
