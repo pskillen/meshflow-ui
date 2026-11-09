@@ -28,7 +28,7 @@ jobs:
         run: npm ci
 
       - name: Run TypeScript Check
-        run: npx tsc --noEmit
+        run: npx tsc -b
 
       - name: Run Lint
         run: npm run lint
