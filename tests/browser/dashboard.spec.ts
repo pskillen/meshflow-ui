@@ -17,14 +17,27 @@ test.describe('Dashboard', () => {
     await dashboard.expectLoaded();
   });
 
-  test('recently active nodes table shows MT and MC mock counts', async ({ page }) => {
+  test('right now band shows totals with MT and MC counts', async ({ page }) => {
     const dashboard = new DashboardPage(page);
     await dashboard.goto();
     await expect(dashboard.recentlyActiveNodesHeading).toBeVisible();
-    const section = page.getByTestId('dashboard-recently-active-nodes');
-    await expect(section.getByRole('row', { name: /Meshtastic/i })).toContainText('5');
-    await expect(section.getByRole('row', { name: /Meshtastic/i })).toContainText('12');
-    await expect(section.getByRole('row', { name: /MeshCore/i })).toContainText('2');
+    const online = page.getByTestId('right-now-tile-2');
+    await expect(online).toContainText('Online now');
+    await expect(online).toContainText('7');
+    await expect(online).toContainText('MT 5 · MC 2');
+    await expect(page.getByTestId('right-now-tile-24')).toContainText('MT 12 · MC 4');
+    await expect(page.getByTestId('right-now-table')).toBeHidden();
+  });
+
+  test('right now shows a compact table on phones', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 800 });
+    const dashboard = new DashboardPage(page);
+    await dashboard.goto();
+    const table = page.getByTestId('right-now-table');
+    await expect(table).toBeVisible();
+    await expect(table.getByRole('row', { name: /Meshtastic/ })).toContainText('12');
+    await expect(table.getByRole('row', { name: /MeshCore/ })).toContainText('4');
+    await expect(page.getByTestId('right-now-tiles')).toBeHidden();
   });
 
   test('meshflow map section has link to nodes page', async ({ page }) => {
