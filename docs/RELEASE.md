@@ -58,6 +58,16 @@ Use this to build and push from the current `main` branch without merging new co
 
 ---
 
+## Registry cleanup
+
+**Workflow:** [ghcr-cleanup.yaml](../.github/workflows/ghcr-cleanup.yaml)
+
+**Trigger:** Weekly (Sunday 04:47 UTC) or manually via "Run workflow".
+
+Deletes untagged `meshtastic-bot-ui` images from ghcr.io. It runs on its own schedule rather than after every build, so it never slows a release or `main` build.
+
+---
+
 ## Summary Table
 
 | Trigger        | Rolling tag  | Version tag  |
