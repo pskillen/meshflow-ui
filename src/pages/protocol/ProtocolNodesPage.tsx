@@ -20,6 +20,9 @@ import { filterManagedNodesByProtocol, type ProtocolPageConfig } from '@/lib/mes
 import { NODE_TIME_RANGE_OPTIONS, getLastHeardAfterForRange, type NodeTimeRangeOption } from '@/lib/node-time-range';
 import { formatDistanceToNow } from 'date-fns';
 
+/** The API's maximum page size, so a normal range arrives in one request. Further pages are on demand. */
+const NODE_LIST_PAGE_SIZE = 1000;
+
 type SortOption = 'last_heard' | 'name';
 
 function IdentityOnlyTable({ nodes, config }: { nodes: ObservedNode[]; config: ProtocolPageConfig }) {
@@ -91,7 +94,7 @@ function ProtocolNodesPageContent({
     hasNextPage,
   } = useProtocolObservedNodesSuspense(config, {
     lastHeardAfter,
-    pageSize: 100,
+    pageSize: NODE_LIST_PAGE_SIZE,
   });
 
   const sortNodes = (nodes: ObservedNode[]) => {
@@ -205,6 +208,13 @@ function ProtocolNodesPageContent({
           className="pl-10"
         />
       </div>
+
+      {hasNextPage && (
+        <p className="mb-4 text-sm text-muted-foreground" role="status">
+          Showing the first {mainListNodes.length} of {totalNodes} nodes. The map and search cover only the nodes loaded
+          so far; use &quot;Load more&quot; below to fetch the rest.
+        </p>
+      )}
 
       <Card className="mb-8">
         <CardHeader>
