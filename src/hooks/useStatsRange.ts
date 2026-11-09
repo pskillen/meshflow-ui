@@ -30,6 +30,11 @@ export interface UseStatsRangeOptions {
    * (NodeDetailSheet). Never reads or writes the host page's URL or the area memory.
    */
   local?: boolean;
+  /**
+   * Extra query params deleted whenever `setRange` is called (for example a screen's custom `since` date, which a
+   * preset click replaces). Pass a module-level constant.
+   */
+  clearOnChange?: readonly string[];
   /** Injected clock, for tests. */
   now?: () => Date;
 }
@@ -79,6 +84,7 @@ export function useStatsRange({
   area,
   options = STATS_PRESET_KEYS,
   local = false,
+  clearOnChange,
   now,
 }: UseStatsRangeOptions = {}): StatsRange {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -129,12 +135,13 @@ export function useStatsRange({
         (prev) => {
           const params = new URLSearchParams(prev);
           params.set(STATS_RANGE_PARAM, next);
+          for (const k of clearOnChange ?? []) params.delete(k);
           return params;
         },
         { replace: true }
       );
     },
-    [area, local, options, setSearchParams]
+    [area, local, options, clearOnChange, setSearchParams]
   );
 
   const def = STATS_RANGES[key];

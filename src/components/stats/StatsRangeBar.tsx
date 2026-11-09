@@ -3,8 +3,8 @@ import { cn } from '@/lib/utils';
 import { STATS_RANGES, type StatsRangeKey } from '@/lib/stats-range';
 
 export interface StatsRangeBarProps {
-  /** Currently selected range (`useStatsRange().key`). */
-  value: StatsRangeKey;
+  /** Currently selected range (`useStatsRange().key`). `null` while a screen's custom range is active: no preset is selected. */
+  value: StatsRangeKey | null;
   /** Ranges to offer, in order (`useStatsRange().options`). Online (2h) shows only if it is in here. */
   options: readonly StatsRangeKey[];
   onChange: (key: StatsRangeKey) => void;
