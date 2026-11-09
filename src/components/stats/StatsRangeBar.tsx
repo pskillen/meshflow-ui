@@ -30,15 +30,16 @@ export function StatsRangeBar({
   const buttons = useRef(new Map<StatsRangeKey, HTMLButtonElement>());
 
   // Radio-group keyboard model: one tab stop (the selected radio), arrows move and select, Home/End jump.
+  // With no selection (`value` null) the first option takes the tab stop and arrows select from the start.
   function onKeyDown(event: KeyboardEvent<HTMLDivElement>) {
-    const index = options.indexOf(value);
+    const index = value === null ? -1 : options.indexOf(value);
     let next: number;
     switch (event.key) {
       case 'ArrowRight':
         next = (index + 1) % options.length;
         break;
       case 'ArrowLeft':
-        next = (index - 1 + options.length) % options.length;
+        next = index < 0 ? options.length - 1 : (index - 1 + options.length) % options.length;
         break;
       case 'Home':
         next = 0;
@@ -76,15 +77,16 @@ export function StatsRangeBar({
           !title && !children && 'ml-auto'
         )}
       >
-        {options.map((key) => {
+        {options.map((key, i) => {
           const selected = key === value;
+          const tabStop = selected || (value === null && i === 0);
           return (
             <button
               key={key}
               type="button"
               role="radio"
               aria-checked={selected}
-              tabIndex={selected ? 0 : -1}
+              tabIndex={tabStop ? 0 : -1}
               ref={(el) => {
                 if (el) buttons.current.set(key, el);
                 else buttons.current.delete(key);
