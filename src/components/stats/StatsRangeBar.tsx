@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useRef, type KeyboardEvent, type ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 import { STATS_RANGES, type StatsRangeKey } from '@/lib/stats-range';
 
@@ -27,6 +27,35 @@ export function StatsRangeBar({
   sticky = true,
   className,
 }: StatsRangeBarProps) {
+  const buttons = useRef(new Map<StatsRangeKey, HTMLButtonElement>());
+
+  // Radio-group keyboard model: one tab stop (the selected radio), arrows move and select, Home/End jump.
+  function onKeyDown(event: KeyboardEvent<HTMLDivElement>) {
+    const index = options.indexOf(value);
+    let next: number;
+    switch (event.key) {
+      case 'ArrowRight':
+        next = (index + 1) % options.length;
+        break;
+      case 'ArrowLeft':
+        next = (index - 1 + options.length) % options.length;
+        break;
+      case 'Home':
+        next = 0;
+        break;
+      case 'End':
+        next = options.length - 1;
+        break;
+      default:
+        return;
+    }
+    event.preventDefault();
+    const key = options[next];
+    if (key === undefined) return;
+    onChange(key);
+    buttons.current.get(key)?.focus();
+  }
+
   return (
     <div
       data-testid="stats-range-bar"
@@ -41,6 +70,7 @@ export function StatsRangeBar({
       <div
         role="radiogroup"
         aria-label="Time range"
+        onKeyDown={onKeyDown}
         className={cn(
           'inline-flex max-w-full overflow-x-auto rounded-md border bg-muted/40 p-0.5',
           !title && !children && 'ml-auto'
@@ -54,6 +84,11 @@ export function StatsRangeBar({
               type="button"
               role="radio"
               aria-checked={selected}
+              tabIndex={selected ? 0 : -1}
+              ref={(el) => {
+                if (el) buttons.current.set(key, el);
+                else buttons.current.delete(key);
+              }}
               onClick={() => onChange(key)}
               className={cn(
                 'h-8 whitespace-nowrap rounded px-3 text-sm md:h-7 md:px-3',
