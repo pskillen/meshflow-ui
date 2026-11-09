@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { TimeRangeSelect, TimeRangeOption } from '@/components/TimeRangeSelect';
 import { useStatsSnapshotsForTypesSuspense } from '@/hooks/api/useStatsSnapshots';
+import { niceAxisMax } from '@/lib/axis-ticks';
 import { windowForTimeRangeKey } from '@/lib/time-range';
 import { Payload, ValueType, NameType } from 'recharts/types/component/DefaultTooltipContent';
 import {
@@ -123,22 +124,16 @@ export function OnlineNodesChart({
     });
   }, [snapshotResults, aggregationWindow, metric, overlayMode, protocolScope, mcStatType]);
 
-  const yAxisDomain = React.useMemo(() => {
-    if (!chartData.length) return [0, 'auto'] as [number, 'auto'];
+  const yAxis = React.useMemo(() => {
+    if (!chartData.length) return null;
     const values = overlayMode
       ? (chartData as { meshtastic: number; meshcore: number }[]).flatMap((item) => [item.meshtastic, item.meshcore])
       : (chartData as { value: number; movingAverage?: number }[]).flatMap((item) => [
           item.value,
           item.movingAverage ?? 0,
         ]);
-    const maxVal = Math.max(...values, 0);
-    if (metric === 'new_nodes') {
-      const top = maxVal <= 0 ? 1 : Math.max(Math.ceil(maxVal * 1.15), maxVal + 1);
-      return [0, top] as [number, number];
-    }
-    const maxOnline = Math.max(...values, 1);
-    return [0, maxOnline] as [number, number];
-  }, [chartData, metric, overlayMode]);
+    return niceAxisMax(Math.max(...values, 0));
+  }, [chartData, overlayMode]);
 
   const tickFormatter = (value: number) => {
     const date = new Date(value);
@@ -188,12 +183,12 @@ export function OnlineNodesChart({
           tickFormatter={tickFormatter}
         />
         <YAxis
-          domain={yAxisDomain}
+          domain={yAxis ? [0, yAxis.max] : [0, 'auto']}
+          ticks={yAxis?.ticks}
           tickLine={false}
           axisLine={false}
           tickMargin={8}
           allowDecimals={false}
-          tickFormatter={metric === 'new_nodes' ? (v: number) => Math.round(v).toString() : undefined}
         />
         <ChartTooltip
           cursor={false}
