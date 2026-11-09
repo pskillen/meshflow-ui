@@ -72,13 +72,13 @@ describe('FeederIdentityNotices', () => {
 
   it('renders a flagged event needing action with Re-point and Dismiss', async () => {
     api.getFeederIdentityEvents.mockResolvedValue(
-      page([makeEvent({ outcome: 'flagged', needs_action: true, reason: 'key_mismatch' })])
+      page([makeEvent({ outcome: 'flagged', needs_action: true, reason: 'shared_key' })])
     );
     renderNotices();
 
     expect(await screen.findByText('Feeder needs review')).toBeInTheDocument();
     expect(screen.getByText(/reported/)).toHaveTextContent('Roof Feeder reported !5678ef01 but is stored as !1234abcd.');
-    expect(screen.getByText('Its public key has changed.')).toBeInTheDocument();
+    expect(screen.getByText('Its public key is also used by another node.')).toBeInTheDocument();
     expect(screen.getByText(/still being ingested/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Re-point to !5678ef01' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Dismiss' })).toBeInTheDocument();
@@ -108,6 +108,43 @@ describe('FeederIdentityNotices', () => {
     expect(screen.getByRole('button', { name: 'Dismiss' })).toBeInTheDocument();
   });
 
+  it.each(['key_mismatch', 'crc_mismatch'] as const)('hides Re-point for %s and says to contact an administrator', async (reason) => {
+    api.getFeederIdentityEvents.mockResolvedValue(page([makeEvent({ outcome: 'flagged', needs_action: true, reason })]));
+    renderNotices();
+
+    expect(await screen.findByText('Feeder needs review')).toBeInTheDocument();
+    expect(screen.getByText(/Contact an administrator/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Re-point/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Dismiss' })).toBeInTheDocument();
+  });
+
+  it.each([
+    [403, 'repoint_not_proven', /can't be confirmed from the feeder's stored public key/],
+    [409, 'repoint_target_key_mismatch', /different public key/],
+    [409, 'repoint_target_claimed', /belongs to another user/],
+    [409, 'number_collision', /Another feeder already uses that number/],
+  ])('shows a plain message when re-point fails with %s %s', async (status, code, message) => {
+    const event = makeEvent({ outcome: 'flagged', needs_action: true, reason: 'shared_key' });
+    api.getFeederIdentityEvents.mockResolvedValue(page([event]));
+    api.repointManagedNode.mockRejectedValue(
+      new AxiosError('refused', 'ERR_BAD_REQUEST', undefined, undefined, {
+        status,
+        statusText: 'Refused',
+        headers: {},
+        config: {} as never,
+        data: { code, detail: 'raw server detail' },
+      })
+    );
+    renderNotices();
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Re-point to !5678ef01' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Confirm re-point' }));
+
+    expect(await screen.findByText(message)).toBeInTheDocument();
+    expect(screen.queryByText('raw server detail')).not.toBeInTheDocument();
+    expect(screen.getByText('Re-point feeder?')).toBeInTheDocument();
+  });
+
   it('Dismiss acknowledges the event and the row disappears after refetch', async () => {
     api.getFeederIdentityEvents.mockResolvedValueOnce(page([makeEvent({ id: 42 })])).mockResolvedValue(page([]));
     api.acknowledgeFeederIdentityEvent.mockResolvedValue(makeEvent({ id: 42 }));
@@ -135,15 +172,15 @@ describe('FeederIdentityNotices', () => {
     await waitFor(() => expect(screen.queryByText('Feeder needs review')).not.toBeInTheDocument());
   });
 
-  it("shows the API's message in the dialog when re-point fails with 409", async () => {
-    const event = makeEvent({ outcome: 'flagged', needs_action: true, reason: 'key_mismatch' });
+  it("shows the API's own message in the dialog for a code it doesn't know", async () => {
+    const event = makeEvent({ outcome: 'flagged', needs_action: true, reason: 'key_not_reported' });
     api.getFeederIdentityEvents.mockResolvedValue(page([event]));
     const err = new AxiosError('Conflict', 'ERR_BAD_REQUEST', undefined, undefined, {
       status: 409,
       statusText: 'Conflict',
       headers: {},
       config: {} as never,
-      data: { code: 'number_collision', error: 'Another feeder already uses !5678ef01.' },
+      data: { code: 'already_current', error: 'Another feeder already uses !5678ef01.' },
     });
     api.repointManagedNode.mockRejectedValue(err);
     renderNotices();

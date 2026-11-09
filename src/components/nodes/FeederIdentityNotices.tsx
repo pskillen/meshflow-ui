@@ -28,17 +28,41 @@ const REASON_LINES: Record<FeederIdentityReason, string> = {
   key_mismatch: 'Its public key has changed.',
   crc_mismatch: "Its number doesn't match its public key, so this may be a different radio.",
   key_not_reported: "It didn't report a public key.",
+  number_collision: 'Another feeder already uses that number.',
+};
+
+/** Reasons where an owner's re-point is always refused (the stored key can't prove the new number). */
+const REPOINT_UNAVAILABLE_REASONS: ReadonlySet<FeederIdentityReason> = new Set([
+  'number_collision',
+  'key_mismatch',
+  'crc_mismatch',
+]);
+
+/** Extra guidance for reasons where Re-point is hidden. */
+const NO_REPOINT_LINES: Partial<Record<FeederIdentityReason, string>> = {
+  number_collision: 'Contact an administrator.',
+  key_mismatch: "You can't re-point it yourself. Contact an administrator.",
+  crc_mismatch: "You can't re-point it yourself. Contact an administrator.",
+};
+
+const REPOINT_CODE_MESSAGES: Record<string, string> = {
+  repoint_not_proven:
+    "This number can't be confirmed from the feeder's stored public key, so you can't re-point it yourself. Contact an administrator.",
+  repoint_target_key_mismatch:
+    'Another node already uses that number with a different public key, so it was not changed. Contact an administrator.',
+  repoint_target_claimed:
+    'That number already belongs to another user, so it was not changed. Contact an administrator.',
   number_collision: 'Another feeder already uses that number. Contact an administrator.',
 };
 
-/** Prefer the API's own message over a generic one. */
+/** Plain message for a failed re-point: known codes first, then the API's own text, then a generic one. */
 function apiErrorMessage(err: unknown): string {
   if (axios.isAxiosError(err) && err.response?.data && typeof err.response.data === 'object') {
     const data = err.response.data as Record<string, unknown>;
+    if (typeof data.code === 'string' && REPOINT_CODE_MESSAGES[data.code]) return REPOINT_CODE_MESSAGES[data.code];
     for (const key of ['error', 'detail', 'message']) {
       if (typeof data[key] === 'string' && data[key]) return data[key] as string;
     }
-    if (data.code === 'number_collision') return REASON_LINES.number_collision;
     if (typeof data.code === 'string' && data.code) return `The server refused the change (${data.code}).`;
   }
   return 'Could not re-point this feeder. Try again.';
@@ -55,7 +79,7 @@ function FeederIdentityNotice({ event }: { event: FeederIdentityEvent }) {
   const [repointError, setRepointError] = useState<string | null>(null);
 
   const needsReview = event.outcome === 'flagged' && event.needs_action;
-  const canRepoint = needsReview && event.reason !== 'number_collision';
+  const canRepoint = needsReview && !(event.reason && REPOINT_UNAVAILABLE_REASONS.has(event.reason));
   const detailPath = nodeDetailPath({
     meshtastic_node_id: event.new_meshtastic_node_id,
     node_id_str: event.new_node_id_str,
@@ -87,7 +111,12 @@ function FeederIdentityNotice({ event }: { event: FeederIdentityEvent }) {
                 {event.managed_node_name} reported <NodeId id={event.new_node_id_str} /> but is stored as{' '}
                 <NodeId id={event.old_node_id_str} />.
               </p>
-              {event.reason && <p>{REASON_LINES[event.reason]}</p>}
+              {event.reason && (
+                <p>
+                  {REASON_LINES[event.reason]}
+                  {!canRepoint && NO_REPOINT_LINES[event.reason] && ` ${NO_REPOINT_LINES[event.reason]}`}
+                </p>
+              )}
               <p>Packets from this feeder are still being ingested.</p>
             </>
           ) : (

@@ -21,15 +21,22 @@ Numbers are shown exactly as the API sends them (`!1234abcd`), never shortened.
 
 - Automatic updates are off on this server.
 - Its public key is also used by another node.
-- Its public key has changed.
-- Its number doesn't match its public key, so this may be a different radio.
+- Its public key has changed. You can't re-point it yourself. Contact an administrator. (No **Re-point** button.)
+- Its number doesn't match its public key, so this may be a different radio. You can't re-point it yourself. Contact an administrator. (No **Re-point** button.)
 - It didn't report a public key.
 - Another feeder already uses that number. Contact an administrator. (No **Re-point** button in this case.)
 
 ### Re-point
 
 **Re-point** opens a confirmation. Confirming asks the API to store the feeder under the number it now reports. If the
-API refuses (for example another feeder took that number), its message is shown in the dialog and nothing changes.
+API refuses, a plain message is shown in the dialog and nothing changes:
+
+- `403 repoint_not_proven`: the number can't be confirmed from the feeder's stored public key; contact an administrator.
+- `409 repoint_target_key_mismatch`: another node uses that number with a different public key.
+- `409 repoint_target_claimed`: that number belongs to another user.
+- `409 number_collision`: another feeder already uses that number.
+
+Any other refusal shows the API's own text.
 On success the notice goes away and My Nodes refreshes.
 
 **Dismiss** marks the event as seen, so it stops appearing.
