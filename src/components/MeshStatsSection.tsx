@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { subDays } from 'date-fns';
+import { windowForTimeRangeKey } from '@/lib/time-range';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { TimeRangeSelect, TimeRangeOption } from '@/components/TimeRangeSelect';
 import { OnlineNodesChart } from '@/components/OnlineNodesChart';
@@ -79,10 +79,9 @@ const SECTION_COPY: Record<
 
 export function MeshStatsSection({ protocolScope = 'both' }: { protocolScope?: MeshStatsProtocolScope }) {
   const [timeRangeKey, setTimeRangeKey] = React.useState('2d');
-  const [dateRange, setDateRange] = React.useState<{ startDate: Date; endDate: Date }>({
-    startDate: subDays(new Date(), 2),
-    endDate: new Date(),
-  });
+  const [dateRange, setDateRange] = React.useState<{ startDate: Date; endDate: Date }>(() =>
+    windowForTimeRangeKey('2d')
+  );
 
   const handleTimeRangeChange = (value: string, timeRange: { startDate: Date; endDate: Date }) => {
     if (value === timeRangeKey) return;

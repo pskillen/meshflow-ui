@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { subHours, subDays, startOfDay } from 'date-fns';
+import { windowForTimeRangeKey } from '@/lib/time-range';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { TimeRangeSelect, TimeRangeOption } from '@/components/TimeRangeSelect';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
@@ -23,17 +23,7 @@ const STATS_TIME_RANGE_OPTIONS: TimeRangeOption[] = [
 ];
 
 function computeDateRange(value: string): { startDate: Date; endDate: Date } {
-  const now = new Date();
-  if (value.endsWith('d')) {
-    const days = parseInt(value);
-    const startDate = days === 1 ? startOfDay(now) : subDays(startOfDay(now), days);
-    return { startDate, endDate: now };
-  }
-  if (value.endsWith('h')) {
-    const hours = parseInt(value);
-    return { startDate: subHours(now, hours), endDate: now };
-  }
-  return { startDate: subDays(now, 7), endDate: now };
+  return windowForTimeRangeKey(value, new Date());
 }
 
 interface NodeStatsSectionProps {
