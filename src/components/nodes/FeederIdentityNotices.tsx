@@ -155,7 +155,7 @@ export function FeederIdentityNotices() {
   const { data, isError } = useFeederIdentityEvents();
 
   const events = useMemo(() => {
-    const rows = data?.results ?? [];
+    const rows = (data?.results ?? []).filter((e) => e.outcome !== 'key_changed');
     return [...rows].sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at));
   }, [data]);
 

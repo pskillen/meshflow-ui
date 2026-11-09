@@ -239,7 +239,8 @@ export interface FeederIdentityEvent {
   old_node_id_str: string;
   new_meshtastic_node_id: number;
   new_node_id_str: string;
-  outcome: 'auto_updated' | 'flagged' | 'manual';
+  /** `key_changed` is audit only; the API omits it from `unacknowledged=true` lists. */
+  outcome: 'auto_updated' | 'flagged' | 'manual' | 'key_changed';
   reason: FeederIdentityReason | null;
   needs_action: boolean;
   created_at: string;
