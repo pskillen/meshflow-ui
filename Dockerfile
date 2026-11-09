@@ -1,8 +1,5 @@
 # Build stage
-FROM node:26-alpine as build
-
-# Add build argument for version
-ARG VERSION=development
+FROM node:26-alpine AS build
 
 WORKDIR /app
 
@@ -14,6 +11,9 @@ RUN npm ci
 
 # Copy source code
 COPY . .
+
+# Build argument for version (declared late so a new version doesn't invalidate the npm ci layer)
+ARG VERSION=development
 
 # Replace version in config.ts
 RUN sed -i "s/const VERSION = 'development'/const VERSION = '${VERSION}'/" config.ts
