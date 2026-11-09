@@ -13,7 +13,7 @@ import {
   precisionBitsToMeters,
   buildNodePopupHtml,
 } from './map-utils';
-import { computeManagedConstellationGroups, constellationLegendItems } from './map-constellation-colors';
+import { computeManagedConstellationGroups, drawnConstellationLegendItems } from './map-constellation-colors';
 import { meshRoleLegendSwatches } from './map-role-legend';
 import { MapMarkerLegend } from './MapMarkerLegend';
 
@@ -127,7 +127,10 @@ export function NodesAndConstellationsMap({
     [managedNodes, filterConstellationIds]
   );
 
-  const legendConstellationItems = useMemo(() => constellationLegendItems(constellationGroups), [constellationGroups]);
+  const legendConstellationItems = useMemo(
+    () => drawnConstellationLegendItems(constellationGroups),
+    [constellationGroups]
+  );
 
   const showLegendResolved =
     showMapLegend === false

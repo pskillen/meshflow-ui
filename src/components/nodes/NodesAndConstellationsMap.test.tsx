@@ -79,4 +79,26 @@ describe('NodesAndConstellationsMap', () => {
     expect(legend).toHaveTextContent('Test Constellation');
     expect(screen.queryByText('Other mesh nodes (by role)')).not.toBeInTheDocument();
   });
+
+  it('lists only constellations that have a pin on the map', async () => {
+    const hidden: ManagedNode = {
+      ...managedWithConstellation(),
+      meshtastic_node_id: 2,
+      node_id_str: '!00000002',
+      constellation: { id: 11, name: 'Unpinned Constellation', map_color: '#00ff00' },
+      position: { latitude: null, longitude: null },
+    };
+    render(
+      <div style={{ height: 500 }}>
+        <NodesAndConstellationsMap
+          managedNodes={[managedWithConstellation(), hidden]}
+          observedNodes={[]}
+          showConstellation={true}
+        />
+      </div>
+    );
+    const legend = await screen.findByRole('region', { name: /Map marker colours/i });
+    expect(legend).toHaveTextContent('Test Constellation');
+    expect(legend).not.toHaveTextContent('Unpinned Constellation');
+  });
 });
