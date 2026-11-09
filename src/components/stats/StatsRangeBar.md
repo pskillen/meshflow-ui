@@ -17,6 +17,7 @@ The one time-range control for stats screens: a segmented set of presets, option
 ## Behaviour
 
 - Rendered as a `radiogroup` of `radio` buttons with `aria-checked`; labels come from `STATS_RANGES` in `src/lib/stats-range.ts`.
+- Keyboard: roving tabindex (only the selected radio is a tab stop); Left/Right move to and select the previous/next option, wrapping; Home/End select the first/last. Selection follows focus, as for a native radio group.
 - Wraps on narrow screens; the button group scrolls horizontally rather than overflowing the page, and buttons are 32px tall on touch widths.
 - Has an opaque-ish background (`bg-background/95` with blur) so content does not show through when stuck.
 - Custom range is not built yet: a screen that needs it passes its own control as `children`.

@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import { STATS_PRESET_KEYS } from '@/lib/stats-range';
+import { STATS_PRESET_KEYS, type StatsRangeKey } from '@/lib/stats-range';
 import { StatsRangeBar } from './StatsRangeBar';
 
 describe('StatsRangeBar', () => {
@@ -34,6 +34,45 @@ describe('StatsRangeBar', () => {
     expect(screen.getByText('Stats')).toBeTruthy();
     expect(screen.getByText('extra filter')).toBeTruthy();
     expect(screen.getByTestId('stats-range-bar').className).toContain('sticky');
+  });
+
+  describe('keyboard', () => {
+    function setup(value: StatsRangeKey = '7d') {
+      const onChange = vi.fn();
+      render(<StatsRangeBar value={value} options={STATS_PRESET_KEYS} onChange={onChange} />);
+      return { onChange, radio: (name: string) => screen.getByRole('radio', { name }) };
+    }
+
+    it('has one tab stop: the selected radio', () => {
+      const { radio } = setup('30d');
+      expect(radio('30d').tabIndex).toBe(0);
+      for (const name of ['24h', '7d', '90d']) expect(radio(name).tabIndex).toBe(-1);
+    });
+
+    it('arrows move to and select the neighbour and focus it', () => {
+      const { onChange, radio } = setup('7d');
+      fireEvent.keyDown(radio('7d'), { key: 'ArrowRight' });
+      expect(onChange).toHaveBeenLastCalledWith('30d');
+      expect(document.activeElement).toBe(radio('30d'));
+      fireEvent.keyDown(radio('7d'), { key: 'ArrowLeft' });
+      expect(onChange).toHaveBeenLastCalledWith('24h');
+    });
+
+    it('wraps at both ends and Home/End jump to the first/last', () => {
+      const { onChange, radio } = setup('24h');
+      fireEvent.keyDown(radio('24h'), { key: 'ArrowLeft' });
+      expect(onChange).toHaveBeenLastCalledWith('90d');
+      fireEvent.keyDown(radio('24h'), { key: 'End' });
+      expect(onChange).toHaveBeenLastCalledWith('90d');
+      fireEvent.keyDown(radio('24h'), { key: 'Home' });
+      expect(onChange).toHaveBeenLastCalledWith('24h');
+    });
+
+    it('ignores other keys', () => {
+      const { onChange, radio } = setup('7d');
+      fireEvent.keyDown(radio('7d'), { key: 'a' });
+      expect(onChange).not.toHaveBeenCalled();
+    });
   });
 
   it('can opt out of sticky', () => {
