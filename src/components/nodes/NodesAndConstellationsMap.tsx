@@ -13,7 +13,11 @@ import {
   precisionBitsToMeters,
   buildNodePopupHtml,
 } from './map-utils';
-import { computeManagedConstellationGroups, drawnConstellationLegendItems } from './map-constellation-colors';
+import {
+  computeManagedConstellationGroups,
+  drawnConstellationLegendItems,
+  hasMapPosition,
+} from './map-constellation-colors';
 import { meshRoleLegendSwatches } from './map-role-legend';
 import { MapMarkerLegend } from './MapMarkerLegend';
 
@@ -311,7 +315,7 @@ export function NodesAndConstellationsMap({
     if (showConstellation && drawBoundingBox) {
       Object.values(constellations).forEach((c) => {
         const points: Feature<Point>[] = c.nodes
-          .filter((n) => n.position?.latitude != null && n.position?.longitude != null)
+          .filter(hasMapPosition)
           .map((n) => turf.point([n.position!.longitude!, n.position!.latitude!]) as Feature<Point>);
         if (points.length >= 2) {
           const boundary = boundaryPolygonFromPoints(points, constellationBoundaryRadiusKm);
@@ -337,17 +341,15 @@ export function NodesAndConstellationsMap({
     // 2. Monitoring node radius circles
     if (showConstellation) {
       Object.values(constellations).forEach((c) => {
-        const positionedCount = c.nodes.filter(
-          (n) => n.position?.latitude != null && n.position?.longitude != null
-        ).length;
+        const positionedCount = c.nodes.filter(hasMapPosition).length;
         const isSingle = positionedCount === 1;
         const circleStyle = isSingle
           ? { fillOpacity: 0.2, weight: 4, opacity: 0.9, dashArray: '6 4' }
           : { fillOpacity: 0.08, weight: 2, opacity: 0.5, dashArray: '2 6' };
 
         c.nodes.forEach((node) => {
-          if (node.position?.latitude != null && node.position?.longitude != null) {
-            const point = turf.point([node.position.longitude, node.position.latitude]) as Feature<Point>;
+          if (hasMapPosition(node)) {
+            const point = turf.point([node.position!.longitude!, node.position!.latitude!]) as Feature<Point>;
             const buf = turf.buffer(point, constellationNodeRadiusKm, { units: 'kilometers' }) as Feature<Polygon>;
             if (buf?.geometry) {
               const draw = (coords: GeoPosition[]) =>
@@ -467,8 +469,8 @@ export function NodesAndConstellationsMap({
     if (showConstellation) {
       Object.values(constellations).forEach((c) => {
         c.nodes.forEach((node) => {
-          if (node.position?.latitude == null || node.position?.longitude == null) return;
-          const position: L.LatLngExpression = [node.position.latitude, node.position.longitude];
+          if (!hasMapPosition(node)) return;
+          const position: L.LatLngExpression = [node.position!.latitude!, node.position!.longitude!];
           const isSelected =
             selectedNodeId != null &&
             (selectedNodeId === getNodeId(node) || selectedNodeId === node.meshtastic_node_id);

@@ -1,6 +1,11 @@
 import * as d3 from 'd3';
 import type { ManagedNode } from '@/lib/models';
 
+/** True when a node has both coordinates, i.e. the map can draw a pin for it. Shared by the draw code and the key. */
+export function hasMapPosition(node: Pick<ManagedNode, 'position'>): boolean {
+  return node.position?.latitude != null && node.position?.longitude != null;
+}
+
 export type ConstellationMapGroup = {
   name: string;
   color: string;
@@ -61,7 +66,7 @@ export function drawnConstellationLegendItems(
 ): Array<{ id: number; name: string; color: string }> {
   const drawn: Record<number, ConstellationMapGroup> = {};
   Object.entries(groups).forEach(([id, g]) => {
-    if (g.nodes.some((n) => n.position?.latitude != null && n.position?.longitude != null)) {
+    if (g.nodes.some(hasMapPosition)) {
       drawn[+id] = g;
     }
   });
