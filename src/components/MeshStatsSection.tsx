@@ -77,10 +77,12 @@ const SECTION_COPY: Record<
   },
 };
 
+const DEFAULT_TIME_RANGE_KEY = '2d';
+
 export function MeshStatsSection({ protocolScope = 'both' }: { protocolScope?: MeshStatsProtocolScope }) {
-  const [timeRangeKey, setTimeRangeKey] = React.useState('2d');
+  const [timeRangeKey, setTimeRangeKey] = React.useState(DEFAULT_TIME_RANGE_KEY);
   const [dateRange, setDateRange] = React.useState<{ startDate: Date; endDate: Date }>(() =>
-    windowForTimeRangeKey('2d')
+    windowForTimeRangeKey(DEFAULT_TIME_RANGE_KEY)
   );
 
   const handleTimeRangeChange = (value: string, timeRange: { startDate: Date; endDate: Date }) => {

@@ -22,10 +22,6 @@ const STATS_TIME_RANGE_OPTIONS: TimeRangeOption[] = [
   { key: '14d', label: '14 days' },
 ];
 
-function computeDateRange(value: string): { startDate: Date; endDate: Date } {
-  return windowForTimeRangeKey(value, new Date());
-}
-
 interface NodeStatsSectionProps {
   internalId: string;
   node: ObservedNode;
@@ -35,7 +31,7 @@ interface NodeStatsSectionProps {
 export function NodeStatsSection({ internalId, node, isManagedNode }: NodeStatsSectionProps) {
   const meshtasticNodeId = node.meshtastic_node_id;
   const [timeRange, setTimeRange] = React.useState('48h');
-  const [dateRange, setDateRange] = React.useState(() => computeDateRange('48h'));
+  const [dateRange, setDateRange] = React.useState(() => windowForTimeRangeKey('48h'));
   const [batteryDisplayMode, setBatteryDisplayMode] = React.useState<BatteryDisplayMode>('voltage');
 
   const controlledDateRange = { startDate: dateRange.startDate, endDate: dateRange.endDate };
