@@ -71,7 +71,8 @@ function writeStored(area: string | undefined, key: StatsRangeKey) {
  * The one source of the time range for a stats screen.
  *
  * Resolution order: URL `?range=` (if valid for `options`) > the last range remembered for `area` this session >
- * 7d (or the first allowed option if 7d is not allowed).
+ * 7d (or the first allowed option if 7d is not allowed). An invalid URL value is skipped, not fatal, and the URL is
+ * then rewritten to the range in effect.
  * Writes use `replace` and keep every other query param.
  */
 export function useStatsRange({
@@ -89,6 +90,21 @@ export function useStatsRange({
   const key: StatsRangeKey = local
     ? ((localKey && options.includes(localKey) ? localKey : null) ?? fallback)
     : (urlKey ?? storedKey ?? fallback);
+
+  // A `?range=` the screen cannot use (garbage, 'all', 2h where not allowed) is rewritten to the range actually in
+  // effect, so the address bar never says something the page is not showing.
+  const urlHasRange = searchParams.has(STATS_RANGE_PARAM);
+  useEffect(() => {
+    if (local || !urlHasRange || urlKey) return;
+    setSearchParams(
+      (prev) => {
+        const params = new URLSearchParams(prev);
+        params.set(STATS_RANGE_PARAM, key);
+        return params;
+      },
+      { replace: true }
+    );
+  }, [local, urlHasRange, urlKey, key, setSearchParams]);
 
   // A range arriving by URL (a shared link, a reload) becomes the area's memory too.
   useEffect(() => {
@@ -122,15 +138,19 @@ export function useStatsRange({
   );
 
   const def = STATS_RANGES[key];
-  return {
-    key,
-    def,
-    label: def.label,
-    longLabel: def.longLabel,
-    bucket: def.bucket,
-    bucketLabel: def.bucketLabel,
-    window: window_,
-    options,
-    setRange,
-  };
+  // Memoised so consumers can put the result (or `range.window`) in dependency arrays without it changing every render.
+  return useMemo(
+    () => ({
+      key,
+      def,
+      label: def.label,
+      longLabel: def.longLabel,
+      bucket: def.bucket,
+      bucketLabel: def.bucketLabel,
+      window: window_,
+      options,
+      setRange,
+    }),
+    [key, def, window_, options, setRange]
+  );
 }

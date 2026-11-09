@@ -17,11 +17,13 @@ useStatsRange({ area?, options?, local?, now? }): StatsRange
 
 ## Returns
 
-`{ key, def, label, longLabel, bucket, bucketLabel, window: { start, end }, options, setRange }`.
+`{ key, def, label, longLabel, bucket, bucketLabel, window: { start, end, partialEnd, lastBucketStart }, options, setRange }`. The object is memoised: it is the same reference until the key, window or options change.
+
+Read it as `range.window`. Destructuring `const { window } = useStatsRange()` shadows the browser's global `window` in that scope; rename on the way out (`const { window: rangeWindow } = ...`) if you destructure.
 
 ## Behaviour
 
-- Resolution order: valid `?range=` in the URL, then the last range remembered for `area` this session, then `7d` (or the first allowed option if `7d` is not allowed). A value that is not in `options` is ignored.
+- Resolution order (pinned by tests): valid `?range=` in the URL, then the last range remembered for `area` this session, then `7d` (or the first allowed option if `7d` is not allowed). A URL value that is not in `options` is ignored for resolution and then rewritten (with `replace`, other params kept) to the range actually in effect, so an invalid `?range=all` on a screen whose area remembers `30d` shows 30d and the URL says `range=30d`.
 - `setRange` writes `?range=` with `replace: true`, keeps every other param (`tab`, `source_node`, `feeder`), and remembers the choice for the area. A range that arrives by URL is remembered too.
 - Memory is `sessionStorage`, key `meshflow.statsRange.<area>`, every access in try/catch. If storage is blocked the range just is not remembered.
 - `window` is stable across renders: it only changes with the key, once an hour for presets (they end at the top of the UTC hour) and every five minutes for Online (2h, which ends at now floored to the 5-minute tick, so every component gets the same value). That keeps query keys stable so Suspense queries do not remount.
