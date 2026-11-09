@@ -9,6 +9,10 @@ export interface UseProtocolObservedNodesOptions {
   lastHeardAfter?: Date;
 }
 
+/**
+ * Observed nodes for a protocol, one page per request. Further pages load only when the caller calls
+ * `fetchNextPage` (the node list page's "Load more"); nothing walks the list automatically.
+ */
 export function useProtocolObservedNodesSuspense(
   config: ProtocolPageConfig,
   options?: UseProtocolObservedNodesOptions
@@ -31,12 +35,6 @@ export function useProtocolObservedNodesSuspense(
     initialPageParam: 1,
     getNextPageParam: (lastPage, allPages) => (lastPage.next ? allPages.length + 1 : undefined),
   });
-
-  React.useEffect(() => {
-    if (query.hasNextPage && !query.isFetchingNextPage) {
-      query.fetchNextPage();
-    }
-  }, [query.hasNextPage, query.isFetchingNextPage]);
 
   const nodes = React.useMemo(
     () => query.data.pages.flatMap((p: PaginatedResponse<ObservedNode>) => p.results),
