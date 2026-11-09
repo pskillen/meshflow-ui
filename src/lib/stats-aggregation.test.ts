@@ -61,7 +61,7 @@ describe('aggregateStatsByType', () => {
       ],
       'daily'
     );
-    expect(out).toEqual([{ timestamp: Date.parse('2026-11-09T00:00:00Z'), byType: { a: 4, b: 2 } }]);
+    expect(out).toEqual([{ timestamp: Date.parse('2026-11-09T00:00:00Z'), byType: { a: 4, b: 2 }, samples: 2 }]);
   });
 });
 

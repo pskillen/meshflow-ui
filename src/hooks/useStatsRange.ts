@@ -14,6 +14,8 @@ import {
 } from '@/lib/stats-range';
 
 export const STATS_RANGE_PARAM = 'range';
+/** Area name shared by the Home, Meshtastic and MeshCore dashboards, so the range carries between them. */
+export const DASHBOARDS_AREA = 'dashboards';
 const STORAGE_PREFIX = 'meshflow.statsRange.';
 
 export interface UseStatsRangeOptions {
