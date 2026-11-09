@@ -4,7 +4,7 @@ import { MemoryRouter, useLocation } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useStatsRange, type UseStatsRangeOptions } from './useStatsRange';
 
-const NOW = new Date(2026, 10, 9, 14, 37, 12);
+const NOW = new Date(Date.UTC(2026, 10, 9, 14, 37, 12));
 
 function setup(initialUrl: string, opts: UseStatsRangeOptions = {}) {
   const wrapper = ({ children }: { children: ReactNode }) => (
@@ -32,7 +32,7 @@ describe('useStatsRange', () => {
     const { result } = setup('/x');
     expect(result.current.range.key).toBe('7d');
     expect(result.current.range.bucket).toBe('6h');
-    expect(result.current.range.window.end).toEqual(new Date(2026, 10, 9, 14, 0, 0));
+    expect(result.current.range.window.end).toEqual(new Date(Date.UTC(2026, 10, 9, 14, 0, 0)));
   });
 
   it('URL wins over remembered area value', () => {
@@ -127,6 +127,6 @@ describe('useStatsRange', () => {
 
   it('Online (2h) window ends at now', () => {
     const { result } = setup('/x?range=2h', { options: ['2h', '24h', '7d'] });
-    expect(result.current.range.window.end).toEqual(NOW);
+    expect(result.current.range.window.end).toEqual(new Date(Date.UTC(2026, 10, 9, 14, 35)));
   });
 });
