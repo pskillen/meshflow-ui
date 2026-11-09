@@ -5,15 +5,22 @@
 Notices at the top of **My Nodes** that tell a feeder's owner when its Meshtastic node number changed (for example
 after a Meshtastic 2.8 re-key), and let them act on it.
 
+## Props
+
+`ownedManagedNodeIds`: internal ids of the user's own managed nodes (My Nodes passes them from its managed-node list).
+Only events for those feeders are shown, because the API returns every owner's events to staff.
+
 ## What owners see
 
-One alert per event, newest first. At most five are shown, followed by "and N more" if there are others.
+One alert per event, newest first. At most five are shown, followed by "and N more" (counting events beyond the first
+page of results too). Neutral notices are `role="status"`; the red one is `role="alert"`.
 
-| Case                                           | Look                             | Text                                                                                                                            | Buttons                                |
-| ---------------------------------------------- | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------- |
-| Updated automatically                          | Neutral, "Feeder number changed" | "(name) changed from !old to !new. It keeps its history and API key."                                                           | **Dismiss**, link to the feeder's page |
-| Needs review                                   | Red, "Feeder needs review"       | "(name) reported !new but is stored as !old." plus one line giving the reason, and a note that packets are still being ingested | **Re-point to !new**, **Dismiss**      |
-| Flagged with nothing to do, or changed by hand | Neutral                          | The change, with no action                                                                                                      | **Dismiss**                            |
+| Case                    | Look                                                                          | Text                                                                                                                                                                                                   | Buttons                                                                                   |
+| ----------------------- | ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------- |
+| Updated automatically   | Neutral, "Feeder number changed"                                              | "(name) changed from !old to !new. It keeps its history and API key."                                                                                                                                  | **Dismiss**, link to the feeder's page (new number)                                       |
+| Changed by hand         | Neutral, "Feeder number changed"                                              | "(name) changed from !old to !new."                                                                                                                                                                    | **Dismiss**, link (new number)                                                            |
+| Needs review            | Red border, icon and title; body in normal text colour. "Feeder needs review" | "(name) reported !new but is stored as !old." (or "reported a different public key for !X." when the number is the same), one line giving the reason, and a note that packets are still being ingested | **Re-point to !new**, **Dismiss**, link (old number: the feeder is still stored under it) |
+| Flagged, since resolved | Neutral, "Feeder review resolved"                                             | "A number change for (name) (!old to !new) was flagged for review and has since been resolved."                                                                                                        | **Dismiss**, link (old number)                                                            |
 
 Numbers are shown exactly as the API sends them (`!1234abcd`), never shortened.
 
@@ -36,10 +43,14 @@ API refuses, a plain message is shown in the dialog and nothing changes:
 - `409 repoint_target_claimed`: that number belongs to another user.
 - `409 number_collision`: another feeder already uses that number.
 
-Any other refusal shows the API's own text.
+Any other refusal shows the API's own text. The API client turns failures into `{ message, status, data }`, so the
+code and text are read from `data`. Confirm is guarded against double-clicks (one request is sent).
 On success the notice goes away and My Nodes refreshes.
 
-**Dismiss** marks the event as seen, so it stops appearing.
+**Dismiss** marks the event as seen, so it stops appearing. It is also guarded against double-clicks; if it fails, the
+notice stays and says "Could not dismiss this notice. Try again."
+
+A dismissed notice that still needed review has no way back in this UI yet.
 
 ## When nothing shows
 

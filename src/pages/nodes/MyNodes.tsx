@@ -178,7 +178,9 @@ function MyNodesContent() {
       </div>
 
       <div className="mb-6 empty:hidden">
-        <FeederIdentityNotices />
+        <FeederIdentityNotices
+          ownedManagedNodeIds={myManagedNodes.flatMap((n) => (n.internal_id ? [n.internal_id] : []))}
+        />
       </div>
 
       {error && (

@@ -1,6 +1,5 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import axios from 'axios';
 import { AlertCircle, Info } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -55,10 +54,15 @@ const REPOINT_CODE_MESSAGES: Record<string, string> = {
   number_collision: 'Another feeder already uses that number. Contact an administrator.',
 };
 
-/** Plain message for a failed re-point: known codes first, then the API's own text, then a generic one. */
-function apiErrorMessage(err: unknown): string {
-  if (axios.isAxiosError(err) && err.response?.data && typeof err.response.data === 'object') {
-    const data = err.response.data as Record<string, unknown>;
+/**
+ * Plain message for a failed re-point: known codes first, then the API's own text, then a generic one.
+ * The API client's interceptor turns failures into `{ message, status, data }` (or `NotFoundError` with `data`),
+ * so the response body is read from `data`, not from an axios `response`.
+ */
+export function apiErrorMessage(err: unknown): string {
+  const body = typeof err === 'object' && err !== null ? (err as { data?: unknown }).data : undefined;
+  if (body && typeof body === 'object') {
+    const data = body as Record<string, unknown>;
     if (typeof data.code === 'string' && REPOINT_CODE_MESSAGES[data.code]) return REPOINT_CODE_MESSAGES[data.code];
     for (const key of ['error', 'detail', 'message']) {
       if (typeof data[key] === 'string' && data[key]) return data[key] as string;
@@ -77,14 +81,21 @@ function FeederIdentityNotice({ event }: { event: FeederIdentityEvent }) {
   const repoint = useRepointManagedNode();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [repointError, setRepointError] = useState<string | null>(null);
+  const [dismissError, setDismissError] = useState(false);
+  // Synchronous guards: `isPending` only updates on the next render, so a fast double-click gets through.
+  const repointInFlight = useRef(false);
+  const dismissInFlight = useRef(false);
 
-  const needsReview = event.outcome === 'flagged' && event.needs_action;
+  const flagged = event.outcome === 'flagged';
+  const needsReview = flagged && event.needs_action;
+  const resolvedFlag = flagged && !event.needs_action;
   const canRepoint = needsReview && !(event.reason && REPOINT_UNAVAILABLE_REASONS.has(event.reason));
-  const detailPath = nodeDetailPath({
-    meshtastic_node_id: event.new_meshtastic_node_id,
-    node_id_str: event.new_node_id_str,
-    protocol: 1,
-  });
+  // A flagged feeder is still stored under the old number; the new one only exists once applied.
+  const linkNumber = flagged
+    ? { meshtastic_node_id: event.old_meshtastic_node_id, node_id_str: event.old_node_id_str }
+    : { meshtastic_node_id: event.new_meshtastic_node_id, node_id_str: event.new_node_id_str };
+  const detailPath = nodeDetailPath({ ...linkNumber, protocol: 1 });
+  const sameNumber = event.old_node_id_str === event.new_node_id_str;
 
   const openConfirm = () => {
     setRepointError(null);
@@ -92,24 +103,57 @@ function FeederIdentityNotice({ event }: { event: FeederIdentityEvent }) {
   };
 
   const confirmRepoint = () => {
+    if (repointInFlight.current) return;
+    repointInFlight.current = true;
     setRepointError(null);
     repoint.mutate(event.managed_node, {
       onSuccess: () => setConfirmOpen(false),
       onError: (err) => setRepointError(apiErrorMessage(err)),
+      onSettled: () => {
+        repointInFlight.current = false;
+      },
+    });
+  };
+
+  const dismiss = () => {
+    if (dismissInFlight.current) return;
+    dismissInFlight.current = true;
+    setDismissError(false);
+    acknowledge.mutate(event.id, {
+      onError: () => setDismissError(true),
+      onSettled: () => {
+        dismissInFlight.current = false;
+      },
     });
   };
 
   return (
     <>
-      <Alert variant={needsReview ? 'destructive' : 'default'} data-testid="feeder-identity-notice">
+      <Alert
+        variant={needsReview ? 'destructive' : 'default'}
+        role={needsReview ? 'alert' : 'status'}
+        // Destructive text on the page background is too low-contrast for body copy: keep the red border, icon and title.
+        className={needsReview ? 'text-foreground' : undefined}
+        data-testid="feeder-identity-notice"
+      >
         {needsReview ? <AlertCircle className="h-4 w-4" /> : <Info className="h-4 w-4" />}
-        <AlertTitle>{needsReview ? 'Feeder needs review' : 'Feeder number changed'}</AlertTitle>
+        <AlertTitle className={needsReview ? 'text-destructive' : undefined}>
+          {needsReview ? 'Feeder needs review' : resolvedFlag ? 'Feeder review resolved' : 'Feeder number changed'}
+        </AlertTitle>
         <AlertDescription>
           {needsReview ? (
             <>
               <p>
-                {event.managed_node_name} reported <NodeId id={event.new_node_id_str} /> but is stored as{' '}
-                <NodeId id={event.old_node_id_str} />.
+                {sameNumber ? (
+                  <>
+                    {event.managed_node_name} reported a different public key for <NodeId id={event.old_node_id_str} />.
+                  </>
+                ) : (
+                  <>
+                    {event.managed_node_name} reported <NodeId id={event.new_node_id_str} /> but is stored as{' '}
+                    <NodeId id={event.old_node_id_str} />.
+                  </>
+                )}
               </p>
               {event.reason && (
                 <p>
@@ -119,6 +163,11 @@ function FeederIdentityNotice({ event }: { event: FeederIdentityEvent }) {
               )}
               <p>Packets from this feeder are still being ingested.</p>
             </>
+          ) : resolvedFlag ? (
+            <p>
+              A number change for {event.managed_node_name} (<NodeId id={event.old_node_id_str} /> to{' '}
+              <NodeId id={event.new_node_id_str} />) was flagged for review and has since been resolved.
+            </p>
           ) : (
             <p>
               {event.managed_node_name} changed from <NodeId id={event.old_node_id_str} /> to{' '}
@@ -136,16 +185,22 @@ function FeederIdentityNotice({ event }: { event: FeederIdentityEvent }) {
               variant="outline"
               size="sm"
               disabled={acknowledge.isPending}
-              onClick={() => acknowledge.mutate(event.id)}
+              onClick={dismiss}
+              aria-label={`Dismiss notice for ${event.managed_node_name}`}
             >
               Dismiss
             </Button>
             {detailPath && (
-              <Link to={detailPath} className="text-sm underline underline-offset-4">
+              <Link
+                to={detailPath}
+                className="text-sm underline underline-offset-4"
+                aria-label={`View feeder ${event.managed_node_name}`}
+              >
                 View feeder
               </Link>
             )}
           </div>
+          {dismissError && <p className="mt-2">Could not dismiss this notice. Try again.</p>}
         </AlertDescription>
       </Alert>
 
@@ -160,7 +215,7 @@ function FeederIdentityNotice({ event }: { event: FeederIdentityEvent }) {
               </DialogDescription>
             </DialogHeader>
             {repointError && (
-              <Alert variant="destructive">
+              <Alert variant="destructive" className="text-foreground">
                 <AlertDescription>{repointError}</AlertDescription>
               </Alert>
             )}
@@ -179,19 +234,26 @@ function FeederIdentityNotice({ event }: { event: FeederIdentityEvent }) {
   );
 }
 
-/** Notices on My Nodes when a feeder's Meshtastic number changed. Renders nothing on error or no events. */
-export function FeederIdentityNotices() {
+/**
+ * Notices on My Nodes when a feeder's Meshtastic number changed. Renders nothing on error or no events.
+ * `ownedManagedNodeIds` (internal ids from the user's own managed-node list) limits notices to their own feeders:
+ * the API returns every owner's events to staff.
+ */
+export function FeederIdentityNotices({ ownedManagedNodeIds }: { ownedManagedNodeIds: readonly string[] }) {
   const { data, isError } = useFeederIdentityEvents();
 
   const events = useMemo(() => {
-    const rows = (data?.results ?? []).filter((e) => e.outcome !== 'key_changed');
+    const owned = new Set(ownedManagedNodeIds);
+    const rows = (data?.results ?? []).filter((e) => e.outcome !== 'key_changed' && owned.has(e.managed_node));
     return [...rows].sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at));
-  }, [data]);
+  }, [data, ownedManagedNodeIds]);
 
   if (isError || events.length === 0) return null;
 
   const shown = events.slice(0, MAX_NOTICES);
-  const hidden = events.length - shown.length;
+  // Events beyond the first page (data.count > results.length) are counted too.
+  const beyondPage = Math.max(0, (data?.count ?? 0) - (data?.results.length ?? 0));
+  const hidden = events.length - shown.length + beyondPage;
 
   return (
     <div className="space-y-3" data-testid="feeder-identity-notices">
