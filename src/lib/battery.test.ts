@@ -17,8 +17,16 @@ describe('describeBattery', () => {
   it('keeps 100 as 100%', () => {
     expect(describeBattery(100)).toEqual({ kind: 'level', pct: 100, tone: 'good' });
   });
-  it('clamps negatives and rounds', () => {
-    expect(describeBattery(-5)).toEqual({ kind: 'level', pct: 0, tone: 'low' });
+  it('treats negatives as no data', () => {
+    expect(describeBattery(-1)).toEqual({ kind: 'none' });
+    expect(describeBattery(-5)).toEqual({ kind: 'none' });
+    expect(formatBattery(-1)).toBe('—');
+  });
+  it('clamps after rounding, so a fractional level above 100 never shows 101%', () => {
+    expect(describeBattery(100.5)).toEqual({ kind: 'level', pct: 100, tone: 'good' });
+    expect(formatBattery(100.5)).toBe('100%');
+  });
+  it('rounds', () => {
     expect(describeBattery(42.6)).toEqual({ kind: 'level', pct: 43, tone: 'warn' });
   });
 });
