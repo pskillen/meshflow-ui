@@ -8,6 +8,7 @@ import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from '
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { TimeRangeSelect, TimeRangeOption } from '@/components/TimeRangeSelect';
 import { useStatsSnapshotsForTypesSuspense } from '@/hooks/api/useStatsSnapshots';
+import { niceAxisMax } from '@/lib/axis-ticks';
 import { windowForTimeRangeKey } from '@/lib/time-range';
 import { Payload, ValueType, NameType } from 'recharts/types/component/DefaultTooltipContent';
 import {
@@ -133,8 +134,8 @@ export function PacketStatsChartFromSnapshots({
       ? chartDataTotal
       : (chartDataByType.map((d) => ({ timestamp: d.timestamp, ...d.byType })) as Record<string, number>[]);
 
-  const yAxisDomain = React.useMemo(() => {
-    if (!chartData.length) return [0, 'auto'] as [number, 'auto'];
+  const yAxis = React.useMemo(() => {
+    if (!chartData.length) return null;
     const values =
       viewMode === 'total'
         ? overlayMode
@@ -148,13 +149,8 @@ export function PacketStatsChartFromSnapshots({
               .filter(([k]) => k !== 'timestamp')
               .map(([, v]) => v)
           );
-    if (values.length === 0) return [0, 'auto'] as [number, 'auto'];
-    const mean = values.reduce((sum, val) => sum + val, 0) / values.length;
-    const squaredDiffs = values.map((val) => Math.pow(val - mean, 2));
-    const variance = squaredDiffs.reduce((sum, val) => sum + val, 0) / values.length;
-    const stdDev = Math.sqrt(variance);
-    const maxValue = Math.max(mean + 5 * stdDev, Math.max(...values));
-    return [0, maxValue] as [number, number];
+    if (values.length === 0) return null;
+    return niceAxisMax(Math.max(...values, 0));
   }, [chartData, viewMode, overlayMode]);
 
   const tickFormatter = (value: number) => {
@@ -206,7 +202,14 @@ export function PacketStatsChartFromSnapshots({
             domain={[dateRange.startDate.getTime(), dateRange.endDate.getTime()]}
             tickFormatter={tickFormatter}
           />
-          <YAxis domain={yAxisDomain} tickLine={false} axisLine={false} tickMargin={8} />
+          <YAxis
+            domain={yAxis ? [0, yAxis.max] : [0, 'auto']}
+            ticks={yAxis?.ticks}
+            allowDecimals={false}
+            tickLine={false}
+            axisLine={false}
+            tickMargin={8}
+          />
           <ChartTooltip
             cursor={false}
             content={<ChartTooltipContent labelFormatter={tooltipLabelFormatter} indicator="dot" />}
@@ -252,7 +255,14 @@ export function PacketStatsChartFromSnapshots({
             domain={[dateRange.startDate.getTime(), dateRange.endDate.getTime()]}
             tickFormatter={tickFormatter}
           />
-          <YAxis domain={yAxisDomain} tickLine={false} axisLine={false} tickMargin={8} />
+          <YAxis
+            domain={yAxis ? [0, yAxis.max] : [0, 'auto']}
+            ticks={yAxis?.ticks}
+            allowDecimals={false}
+            tickLine={false}
+            axisLine={false}
+            tickMargin={8}
+          />
           <ChartTooltip
             cursor={false}
             content={<ChartTooltipContent labelFormatter={tooltipLabelFormatter} indicator="dot" />}
