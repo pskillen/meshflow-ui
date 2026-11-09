@@ -49,6 +49,29 @@ describe('useStatsRange', () => {
     expect(setup('/x?range=2h', { options: ['2h', '24h', '7d'] }).result.current.range.key).toBe('2h');
   });
 
+  it('resolution order is URL > area memory > default, and an invalid URL value falls through to memory', () => {
+    window.sessionStorage.setItem('meshflow.statsRange.dash', '90d');
+    expect(setup('/x', { area: 'dash' }).result.current.range.key).toBe('90d');
+    expect(setup('/x?range=banana', { area: 'dash' }).result.current.range.key).toBe('90d');
+    expect(setup('/x?range=banana', { area: 'other' }).result.current.range.key).toBe('7d');
+    // a valid URL value beats the memory (and replaces it)
+    expect(setup('/x?range=24h', { area: 'dash' }).result.current.range.key).toBe('24h');
+  });
+
+  it('rewrites an invalid ?range= to the range in effect, keeping other params', () => {
+    const bad = setup('/x?tab=packets&range=banana');
+    expect(bad.result.current.search).toBe('?tab=packets&range=7d');
+    window.sessionStorage.setItem('meshflow.statsRange.dash', '30d');
+    expect(setup('/x?range=all', { area: 'dash' }).result.current.search).toBe('?range=30d');
+    expect(setup('/x?range=2h').result.current.search).toBe('?range=7d');
+  });
+
+  it('leaves the URL alone when ?range= is valid or absent, and in local mode', () => {
+    expect(setup('/x?range=24h&tab=a').result.current.search).toBe('?range=24h&tab=a');
+    expect(setup('/x').result.current.search).toBe('');
+    expect(setup('/x?range=banana', { local: true }).result.current.search).toBe('?range=banana');
+  });
+
   it('uses the first allowed option when 7d is not allowed', () => {
     const { result } = setup('/x', { options: ['24h', '30d'] });
     expect(result.current.range.key).toBe('24h');
@@ -123,6 +146,15 @@ describe('useStatsRange', () => {
     const first = result.current.range.window;
     rerender();
     expect(result.current.range.window).toBe(first);
+  });
+
+  it('returns the same object across renders until something changes', () => {
+    const { result, rerender } = setup('/x');
+    const first = result.current.range;
+    rerender();
+    expect(result.current.range).toBe(first);
+    act(() => result.current.range.setRange('30d'));
+    expect(result.current.range).not.toBe(first);
   });
 
   it('Online (2h) window ends at now', () => {
