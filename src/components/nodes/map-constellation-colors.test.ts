@@ -68,15 +68,16 @@ describe('drawnConstellationLegendItems', () => {
   const unpositioned = (nodeId: number, constellation: { id: number; name?: string; map_color?: string }) =>
     ({ ...makeManaged(nodeId, constellation), position: { latitude: null, longitude: null } }) as ManagedNode;
 
-  it('lists only constellations with at least one positioned node, across mixed protocols', () => {
+  // Protocol filtering is the pages' job (see ProtocolNodesPage.test.tsx); this only follows positions.
+  it('lists only constellations with at least one positioned node', () => {
     const nodes: ManagedNode[] = [
-      { ...makeManaged(1, { id: 1, name: 'Mesh drawn', map_color: '#111111' }), protocol: 1 } as ManagedNode,
-      { ...unpositioned(2, { id: 2, name: 'MeshCore no position', map_color: '#222222' }), protocol: 2 } as ManagedNode,
-      { ...makeManaged(3, { id: 3, name: 'MeshCore drawn', map_color: '#333333' }), protocol: 2 } as ManagedNode,
-      unpositioned(4, { id: 3, name: 'MeshCore drawn', map_color: '#333333' }),
+      makeManaged(1, { id: 1, name: 'Drawn', map_color: '#111111' }),
+      unpositioned(2, { id: 2, name: 'No position', map_color: '#222222' }),
+      makeManaged(3, { id: 3, name: 'Drawn by one of two', map_color: '#333333' }),
+      unpositioned(4, { id: 3, name: 'Drawn by one of two', map_color: '#333333' }),
     ];
     const items = drawnConstellationLegendItems(computeManagedConstellationGroups(nodes, null));
-    expect(items.map((i) => i.name)).toEqual(['Mesh drawn', 'MeshCore drawn']);
+    expect(items.map((i) => i.name)).toEqual(['Drawn', 'Drawn by one of two']);
   });
 
   it('does not recolour pins: fallback colours stay indexed over the full group set', () => {

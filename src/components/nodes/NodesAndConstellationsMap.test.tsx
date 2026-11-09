@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
+import L from 'leaflet';
 import type { ManagedNode } from '@/lib/models';
 import { NodesAndConstellationsMap } from './NodesAndConstellationsMap';
 
@@ -28,7 +29,7 @@ vi.mock('leaflet', () => ({
   default: {
     map: vi.fn(() => mapMocks.mapInstance),
     tileLayer: vi.fn(() => ({ addTo: vi.fn().mockReturnThis() })),
-    divIcon: vi.fn(() => ({})),
+    divIcon: vi.fn((opts: unknown) => opts),
     marker: vi.fn(() => ({
       bindPopup: vi.fn().mockReturnThis(),
       addTo: vi.fn().mockReturnThis(),
@@ -100,5 +101,17 @@ describe('NodesAndConstellationsMap', () => {
     const legend = await screen.findByRole('region', { name: /Map marker colours/i });
     expect(legend).toHaveTextContent('Test Constellation');
     expect(legend).not.toHaveTextContent('Unpinned Constellation');
+
+    // The key matches the pins: one pin (the positioned node), drawn in the key's colour for it.
+    expect(vi.mocked(L.marker)).toHaveBeenCalledTimes(1);
+    const pinHtml = vi.mocked(L.divIcon).mock.calls.map((c) => (c[0] as { html: string }).html);
+    expect(pinHtml).toHaveLength(1);
+    expect(pinHtml[0]).toContain('background: #ff0000;');
+    expect(pinHtml[0]).not.toContain('#00ff00');
+    const swatches = Array.from(legend.querySelectorAll<HTMLElement>('[style*="background"]')).map(
+      (el) => el.style.backgroundColor
+    );
+    expect(swatches).toContain('rgb(255, 0, 0)');
+    expect(swatches).not.toContain('rgb(0, 255, 0)');
   });
 });
