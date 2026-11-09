@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { TracerouteHeatmapPage } from './TracerouteHeatmapPage';
 
@@ -73,5 +73,33 @@ describe('TracerouteHeatmapPage URL → API', () => {
   it('renders source selector for URL round-trip', () => {
     renderPage('/traceroutes/map/heat?source=99');
     expect(screen.getByTestId('heatmap-source-select')).toBeInTheDocument();
+  });
+
+  it('defaults to the 7d preset as a fixed 168h window', () => {
+    renderPage('/traceroutes/map/heat');
+    const arg = mockUseHeatmap.mock.calls.at(-1)?.[0];
+    expect(screen.getByRole('radio', { name: '7d' })).toHaveAttribute('aria-checked', 'true');
+    expect(arg?.triggeredAtAfter).toBeInstanceOf(Date);
+    expect(arg!.triggeredAtAfter!.getTime() % 3600000).toBe(0);
+  });
+
+  it('offers 90d and sends a window 90 x 24h long', () => {
+    renderPage('/traceroutes/map/heat?range=90d');
+    expect(screen.getByRole('radio', { name: '90d' })).toHaveAttribute('aria-checked', 'true');
+    const after = mockUseHeatmap.mock.calls.at(-1)![0]!.triggeredAtAfter!;
+    const hours = (Date.now() - after.getTime()) / 3600000;
+    expect(hours).toBeGreaterThanOrEqual(2160);
+    expect(hours).toBeLessThan(2161);
+  });
+
+  it('custom since date overrides the preset and clears the selection; a preset click drops it', () => {
+    renderPage('/traceroutes/map/heat?since=2026-01-05');
+    const arg = mockUseHeatmap.mock.calls.at(-1)![0]!;
+    expect(arg.triggeredAtAfter).toEqual(new Date(2026, 0, 5));
+    expect(screen.getByTestId('map-since-button')).toHaveTextContent('Since 5 Jan 2026');
+    for (const r of screen.getAllByRole('radio')) expect(r).toHaveAttribute('aria-checked', 'false');
+    fireEvent.click(screen.getByRole('radio', { name: '30d' }));
+    expect(screen.getByTestId('map-since-button')).toHaveTextContent('Custom');
+    expect(screen.getByRole('radio', { name: '30d' })).toHaveAttribute('aria-checked', 'true');
   });
 });

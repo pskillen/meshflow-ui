@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -12,6 +13,8 @@ import {
 } from '@/components/ui/dropdown-menu';
 import type { ManagedNode } from '@/lib/models';
 import { RouteIcon, ChevronDown, X } from 'lucide-react';
+import { StatsRangeBar } from '@/components/stats/StatsRangeBar';
+import type { StatsRangeKey } from '@/lib/stats-range';
 import { TRACEROUTE_STRATEGIES, type TracerouteStrategyValue } from '@/lib/traceroute-strategy';
 
 const MESH_VIEW_OPTIONS = [
@@ -110,8 +113,12 @@ export interface TracerouteHeatmapChromeProps {
   viewMode: HeatmapViewMode;
   edgeMetric: EdgeMetric;
   searchSuffix: string;
-  timeRange: '24h' | '7d' | '30d' | 'custom';
-  onTimeRangeChange: (v: '24h' | '7d' | '30d' | 'custom') => void;
+  /** Preset to highlight in the range bar; null while a custom range is active. */
+  rangeValue: StatsRangeKey | null;
+  rangeOptions: readonly StatsRangeKey[];
+  onRangeChange: (key: StatsRangeKey) => void;
+  /** Custom range control, placed in the range bar's slot. */
+  rangeExtras?: ReactNode;
   strategyTokens: TracerouteStrategyValue[];
   sourceMeshId: number | null;
   managedNodes: ManagedNode[];
@@ -127,8 +134,10 @@ export function TracerouteHeatmapChrome({
   viewMode,
   edgeMetric,
   searchSuffix,
-  timeRange,
-  onTimeRangeChange,
+  rangeValue,
+  rangeOptions,
+  onRangeChange,
+  rangeExtras,
   strategyTokens,
   sourceMeshId,
   managedNodes,
@@ -139,12 +148,20 @@ export function TracerouteHeatmapChrome({
   const meshViewValue = `${viewMode}-${edgeMetric}`;
 
   return (
-    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-      <div className="flex items-center gap-2">
-        <RouteIcon className="h-6 w-6" />
-        <h1 className="text-xl font-semibold sm:text-2xl">Traceroute mesh</h1>
-      </div>
-      <div className="flex flex-wrap items-center gap-4" data-testid="heatmap-filters">
+    <StatsRangeBar
+      value={rangeValue}
+      options={rangeOptions}
+      onChange={onRangeChange}
+      sticky={false}
+      className="gap-y-3"
+      title={
+        <span className="flex items-center gap-2">
+          <RouteIcon className="h-6 w-6" />
+          <h1 className="text-xl font-semibold sm:text-2xl">Traceroute mesh</h1>
+        </span>
+      }
+    >
+      <div className="flex flex-wrap items-center gap-3" data-testid="heatmap-filters">
         <div className="w-full min-w-[min(100%,280px)] sm:w-auto sm:min-w-[280px]">
           <Select
             value={meshViewValue}
@@ -162,20 +179,6 @@ export function TracerouteHeatmapChrome({
                   {o.label}
                 </SelectItem>
               ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="w-full sm:w-auto sm:min-w-[180px]">
-          <Select value={timeRange} onValueChange={(v) => onTimeRangeChange(v as '24h' | '7d' | '30d' | 'custom')}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="24h">Last 24 Hours</SelectItem>
-              <SelectItem value="7d">Last 7 Days</SelectItem>
-              <SelectItem value="30d">Last 30 Days</SelectItem>
-              <SelectItem value="custom">Custom</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -237,7 +240,8 @@ export function TracerouteHeatmapChrome({
             Clear geo filters
           </Button>
         )}
+        {rangeExtras}
       </div>
-    </div>
+    </StatsRangeBar>
   );
 }

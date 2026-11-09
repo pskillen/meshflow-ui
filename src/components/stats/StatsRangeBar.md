@@ -6,7 +6,7 @@ The one time-range control for stats screens: a segmented set of presets, option
 
 ## Props
 
-- `value: StatsRangeKey` – selected range (`range.key`).
+- `value: StatsRangeKey | null` – selected range (`range.key`); `null` while a screen's own custom range is active, so no preset looks selected.
 - `options: readonly StatsRangeKey[]` – what to offer, in order (`range.options`). The default presets are `24h`, `7d`, `30d`, `90d`. **Online (2h)** appears only when `'2h'` is in `options`, which only node lists should do.
 - `onChange(key)` – `range.setRange`.
 - `title?` – optional heading at the start of the bar.
