@@ -18,7 +18,7 @@ The charts and tables on the Traceroute statistics page: sources, strategy mix, 
 
 ## Wiring
 
-Rendered by `src/pages/traceroutes/TracerouteStatsPage.tsx`, which owns the range (`useStatsRange({ area: 'traceroutes' })`, URL `?range=`) and the source filter, both in a [`StatsRangeBar`](../stats/StatsRangeBar.md). The section has no selector of its own. Restyling is phase 16 of the stats-ux delivery.
+Rendered by `src/pages/traceroutes/TracerouteStatsPage.tsx`, which owns the range (`useStatsRange({ area: 'traceroutes' })`, URL `?range=`) and the source filter, both in a [`StatsRangeBar`](../stats/StatsRangeBar.md). The section has no selector of its own.
 
 ## Related
 
