@@ -1,6 +1,11 @@
 import * as d3 from 'd3';
 import type { ManagedNode } from '@/lib/models';
 
+/** True when a node has both coordinates, i.e. the map can draw a pin for it. Shared by the draw code and the key. */
+export function hasMapPosition(node: Pick<ManagedNode, 'position'>): boolean {
+  return node.position?.latitude != null && node.position?.longitude != null;
+}
+
 export type ConstellationMapGroup = {
   name: string;
   color: string;
@@ -50,4 +55,20 @@ export function constellationLegendItems(
   return Object.entries(groups)
     .map(([id, g]) => ({ id: +id, name: g.name, color: g.color }))
     .sort((a, b) => a.id - b.id);
+}
+
+/**
+ * Keeps only legend items whose constellation has at least one node with a position, i.e. at least one pin on the map.
+ * Call on groups computed from the full set so fallback colours (assigned by index) stay the same as the pins.
+ */
+export function drawnConstellationLegendItems(
+  groups: Record<number, ConstellationMapGroup>
+): Array<{ id: number; name: string; color: string }> {
+  const drawn: Record<number, ConstellationMapGroup> = {};
+  Object.entries(groups).forEach(([id, g]) => {
+    if (g.nodes.some(hasMapPosition)) {
+      drawn[+id] = g;
+    }
+  });
+  return constellationLegendItems(drawn);
 }
