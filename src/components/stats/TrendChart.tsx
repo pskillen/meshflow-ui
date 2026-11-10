@@ -30,6 +30,8 @@ export interface TrendSeries {
   label: string;
   /** CSS colour, normally a chart token: `hsl(var(--chart-1))`. */
   color: string;
+  /** Lines only: draw the series dashed, so it is told apart without relying on colour. */
+  dashed?: boolean;
 }
 
 export interface TrendChartProps {
@@ -47,6 +49,8 @@ export interface TrendChartProps {
   syncId?: string;
   /** Lines only: draw a dot on every point. For sparse data (one snapshot a day) where a lone point has no line. */
   dots?: boolean;
+  /** Show the legend (default true; only drawn with more than one series). Hide it where the card lists the series. */
+  legend?: boolean;
   /** Pixel height. Default 190. */
   height?: number;
   /**
@@ -95,6 +99,7 @@ export function TrendChart({
   syncId,
   height = 190,
   dots = false,
+  legend: showLegend = true,
   label,
   headline,
   className,
@@ -173,7 +178,7 @@ export function TrendChart({
       }
     />
   );
-  const legend = series.length > 1 ? <ChartLegend content={<ChartLegendContent />} /> : null;
+  const legend = showLegend && series.length > 1 ? <ChartLegend content={<ChartLegendContent />} /> : null;
 
   return (
     <>
@@ -201,6 +206,7 @@ export function TrendChart({
                 name={s.label}
                 stroke={`var(--color-${s.key})`}
                 strokeWidth={2}
+                strokeDasharray={s.dashed ? '5 3' : undefined}
                 dot={dots ? { r: 2.5, fill: `var(--color-${s.key})`, strokeWidth: 0 } : false}
                 isAnimationActive={false}
               />
