@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { subHours, subDays } from 'date-fns';
 import { Card, CardContent } from '@/components/ui/card';
+import { useMapRange } from '@/hooks/useMapRange';
+import { MapSinceControl } from '@/components/traceroutes/MapSinceControl';
 import { useHeatmapEdges } from '@/hooks/api/useHeatmapEdges';
 import { useManagedNodesSuspense } from '@/hooks/api/useNodes';
 import { TracerouteTopologyGraph } from '@/components/traceroutes/TracerouteTopologyGraph';
@@ -12,8 +13,6 @@ import type { HeatmapNode } from '@/hooks/api/useHeatmapEdges';
 import type { TracerouteStrategyValue } from '@/lib/traceroute-strategy';
 
 export type { EdgeMetric };
-
-type TimeRange = '24h' | '7d' | '30d' | 'custom';
 
 function parseCsvParam<T extends string>(raw: string | null): T[] {
   if (!raw) return [];
@@ -33,7 +32,7 @@ const HEATMAP_STALE_THRESHOLD_HOURS = 6;
 
 export function TracerouteTopologyPage({ edgeMetric }: { edgeMetric: EdgeMetric }) {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [timeRange, setTimeRange] = useState<TimeRange>('7d');
+  const { range, barValue, since, triggeredAtAfter, setPreset, setSince } = useMapRange({ allowCustom: true });
 
   const strategyTokens = parseCsvParam<TracerouteStrategyValue>(searchParams.get('strategy'));
   const sourceMeshId = parseSourceParam(searchParams.get('source'));
@@ -49,13 +48,6 @@ export function TracerouteTopologyPage({ edgeMetric }: { edgeMetric: EdgeMetric 
     },
     [searchParams, setSearchParams]
   );
-
-  const triggeredAtAfter = useMemo(() => {
-    if (timeRange === '24h') return subHours(new Date(), 24);
-    if (timeRange === '7d') return subDays(new Date(), 7);
-    if (timeRange === '30d') return subDays(new Date(), 30);
-    return undefined;
-  }, [timeRange]);
 
   const { managedNodes } = useManagedNodesSuspense({ pageSize: 500 });
 
@@ -95,8 +87,10 @@ export function TracerouteTopologyPage({ edgeMetric }: { edgeMetric: EdgeMetric 
         viewMode="topology"
         edgeMetric={edgeMetric}
         searchSuffix={searchSuffix}
-        timeRange={timeRange}
-        onTimeRangeChange={(v) => setTimeRange(v)}
+        rangeValue={barValue}
+        rangeOptions={range.options}
+        onRangeChange={setPreset}
+        rangeExtras={<MapSinceControl since={since} onChange={setSince} />}
         strategyTokens={strategyTokens}
         sourceMeshId={sourceMeshId}
         managedNodes={managedNodes}

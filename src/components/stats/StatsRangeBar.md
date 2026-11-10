@@ -6,21 +6,22 @@ The one time-range control for stats screens: a segmented set of presets, option
 
 ## Props
 
-- `value: StatsRangeKey` – selected range (`range.key`).
+- `value: StatsRangeKey | null` – selected range (`range.key`); `null` while a screen's own custom range is active, so no preset looks selected.
 - `options: readonly StatsRangeKey[]` – what to offer, in order (`range.options`). The default presets are `24h`, `7d`, `30d`, `90d`. **Online (2h)** appears only when `'2h'` is in `options`, which only node lists should do.
 - `onChange(key)` – `range.setRange`.
 - `title?` – optional heading at the start of the bar.
 - `children?` – slot for screen extras placed before the range control (the source/feeder filter on traceroutes, a custom range on maps).
+- `compact?`, `rangeExtras?` – see Behaviour; `rangeExtras` sits right after the presets.
 - `sticky?` (default true) – `position: sticky; top: 0` so the control stays in reach while scrolling.
 - `className?`.
 
 ## Behaviour
 
 - Rendered as a `radiogroup` of `radio` buttons with `aria-checked`; labels come from `STATS_RANGES` in `src/lib/stats-range.ts`.
-- Keyboard: roving tabindex (only the selected radio is a tab stop); Left/Right move to and select the previous/next option, wrapping; Home/End select the first/last. Selection follows focus, as for a native radio group.
+- Keyboard: roving tabindex (only the selected radio is a tab stop, or the first when `value` is null); Left/Right move to and select the previous/next option, wrapping; Home/End select the first/last. With `value` null, arrows select from the start (Right: first, Left: last). Selection follows focus, as for a native radio group.
 - Wraps on narrow screens; the button group scrolls horizontally rather than overflowing the page, and buttons are 32px tall on touch widths.
 - Has an opaque-ish background (`bg-background/95` with blur) so content does not show through when stuck.
-- Custom range is not built yet: a screen that needs it passes its own control as `children`.
+- `compact` (map pages): presets pinned to the right edge with `rangeExtras` (a custom range button) on the same row, and `children` as a two-column grid below `sm` (a full-width child takes `col-span-2`). Other screens leave it off.
 
 ## Wiring
 

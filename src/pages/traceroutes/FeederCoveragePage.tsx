@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { subDays, subHours } from 'date-fns';
 import { CircleDashedIcon, RouteIcon } from 'lucide-react';
 
+import { StatsRangeBar } from '@/components/stats/StatsRangeBar';
+import { MapInfoButton } from '@/components/traceroutes/MapInfoButton';
+import { CoverageStrategyMenu } from '@/components/traceroutes/CoverageStrategyMenu';
+import { useMapRange } from '@/hooks/useMapRange';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -16,14 +18,10 @@ import { useObservedNodesHeard } from '@/hooks/api/useObservedNodesHeard';
 import { observedNodesToCoverageGhosts } from '@/lib/coverageHeardGhosts';
 import { FeederCoverageMap, type CoverageLayerKey } from '@/components/traceroutes/FeederCoverageMap';
 import {
-  TRACEROUTE_STRATEGIES,
-  STRATEGY_META,
   createCoverageStrategiesAllSelected,
   coverageTargetStrategyQueryParam,
   coverageTargetStrategySummary,
 } from '@/lib/traceroute-strategy';
-
-type TimeRange = '24h' | '7d' | '30d';
 
 const ALL_LAYERS: CoverageLayerKey[] = ['dots', 'hex', 'polygon', 'heard'];
 const LAYER_LABEL: Record<CoverageLayerKey, string> = {
@@ -109,7 +107,7 @@ function StatsCard({
 
 export function FeederCoveragePage() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [timeRange, setTimeRange] = useState<TimeRange>('7d');
+  const { range, barValue, triggeredAtAfter, setPreset } = useMapRange();
   const [minAttempts, setMinAttempts] = useState<number>(3);
   const [layers, setLayers] = useState<Record<CoverageLayerKey, boolean>>({
     dots: true,
@@ -156,12 +154,6 @@ export function FeederCoveragePage() {
     next.set('feeder', String(selectedFeederId));
     setSearchParams(next, { replace: true });
   }, [selectedFeederId, searchParams, setSearchParams]);
-
-  const triggeredAtAfter = useMemo(() => {
-    if (timeRange === '24h') return subHours(new Date(), 24);
-    if (timeRange === '7d') return subDays(new Date(), 7);
-    return subDays(new Date(), 30);
-  }, [timeRange]);
 
   const targetStrategyParam = useMemo(() => coverageTargetStrategyQueryParam(strategies), [strategies]);
   const strategySummary = useMemo(() => coverageTargetStrategySummary(strategies), [strategies]);
@@ -210,114 +202,91 @@ export function FeederCoveragePage() {
 
   return (
     <div className="flex min-h-[50vh] flex-col gap-4 px-4 py-4 md:px-6 md:py-6">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div className="min-w-0 flex-1 space-y-1">
-          <div className="flex items-center gap-2">
+      <StatsRangeBar
+        value={barValue}
+        options={range.options}
+        onChange={setPreset}
+        sticky={false}
+        compact
+        title={
+          <span className="flex items-center gap-2">
             <CircleDashedIcon className="h-6 w-6 shrink-0" />
-            <h1 className="text-xl font-semibold sm:text-2xl">Managed node coverage</h1>
-          </div>
-          <p className="max-w-2xl text-sm text-muted-foreground">
-            Maps completed and failed auto-traceroutes from one managed node to each probed target over the time window.
-            Dots show per-target reliability; hex bins summarise nearby targets; the polygon outlines where at least one
-            successful route was observed (not a guarantee of RF coverage). The selected managed node appears as an
-            orange tower marker (distinct from the heatmap dots). Use the strategy checkboxes to include only
-            traceroutes recorded under specific target-selection hypotheses.
-          </p>
-        </div>
-        <div className="flex flex-col gap-3" data-testid="coverage-filters">
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="flex w-full items-center gap-2 sm:w-auto">
-              <Label className="text-xs text-muted-foreground" htmlFor="feeder-coverage-feeder">
-                Feeder
-              </Label>
-              <Select
-                value={selectedFeederId != null ? String(selectedFeederId) : undefined}
-                onValueChange={(v) => setSelectedFeederId(Number.parseInt(v, 10))}
-                disabled={feedersLoading || feederOptions.length === 0}
-              >
-                <SelectTrigger id="feeder-coverage-feeder" className="min-w-[200px]" aria-label="Select feeder">
-                  <SelectValue placeholder="Select feeder" />
-                </SelectTrigger>
-                <SelectContent>
-                  {feederOptions.map((n) => (
-                    <SelectItem key={n.meshtastic_node_id} value={String(n.meshtastic_node_id)}>
-                      {n.short_name || n.long_name || n.node_id_str}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex items-center gap-2">
-              <Label className="text-xs text-muted-foreground" htmlFor="feeder-coverage-window">
-                Window
-              </Label>
-              <Select value={timeRange} onValueChange={(v) => setTimeRange(v as TimeRange)}>
-                <SelectTrigger id="feeder-coverage-window" className="min-w-[140px]" aria-label="Time window">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="24h">Last 24 hours</SelectItem>
-                  <SelectItem value="7d">Last 7 days</SelectItem>
-                  <SelectItem value="30d">Last 30 days</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex items-center gap-2">
-              <Label className="text-xs text-muted-foreground" htmlFor="feeder-coverage-min-attempts">
-                Min attempts
-              </Label>
-              <Input
-                id="feeder-coverage-min-attempts"
-                type="number"
-                min={1}
-                value={minAttempts}
-                onChange={(e) => {
-                  const v = Number.parseInt(e.target.value, 10);
-                  setMinAttempts(Number.isFinite(v) && v >= 1 ? v : 1);
-                }}
-                className="w-20"
-              />
-            </div>
-            <div className="flex rounded-md border border-input bg-muted/50 p-0.5" data-testid="layer-pills">
-              {ALL_LAYERS.map((key) => (
-                <button
-                  key={key}
-                  type="button"
-                  aria-pressed={layers[key]}
-                  aria-label={`Toggle ${LAYER_LABEL[key]} layer`}
-                  onClick={() => setLayers((s) => ({ ...s, [key]: !s[key] }))}
-                  className={cn(
-                    'rounded px-3 py-1.5 text-sm font-medium transition-colors',
-                    layers[key]
-                      ? 'bg-background text-foreground shadow-sm'
-                      : 'text-muted-foreground hover:text-foreground'
-                  )}
-                >
-                  {LAYER_LABEL[key]}
-                </button>
+            <h1 className="text-xl font-semibold">Managed node coverage</h1>
+            <MapInfoButton title="Managed node coverage">
+              <p>
+                Maps completed and failed auto-traceroutes from one managed node to each probed target over the selected
+                time range. Dots show per-target reliability; hex bins summarise nearby targets; the polygon outlines
+                where at least one successful route was observed (not a guarantee of RF coverage).
+              </p>
+              <p>
+                The selected managed node appears as an orange tower marker (distinct from the heatmap dots). Use the
+                strategies menu to include only traceroutes recorded under specific target-selection hypotheses.
+              </p>
+            </MapInfoButton>
+          </span>
+        }
+      >
+        <div className="col-span-2 flex items-center gap-2 sm:col-auto">
+          <Label className="whitespace-nowrap text-xs text-muted-foreground" htmlFor="feeder-coverage-feeder">
+            Feeder
+          </Label>
+          <Select
+            value={selectedFeederId != null ? String(selectedFeederId) : undefined}
+            onValueChange={(v) => setSelectedFeederId(Number.parseInt(v, 10))}
+            disabled={feedersLoading || feederOptions.length === 0}
+          >
+            <SelectTrigger
+              id="feeder-coverage-feeder"
+              className="min-w-0 flex-1 sm:min-w-[150px] sm:flex-none"
+              aria-label="Select feeder"
+            >
+              <SelectValue placeholder="Select feeder" />
+            </SelectTrigger>
+            <SelectContent>
+              {feederOptions.map((n) => (
+                <SelectItem key={n.meshtastic_node_id} value={String(n.meshtastic_node_id)}>
+                  {n.short_name || n.long_name || n.node_id_str}
+                </SelectItem>
               ))}
-            </div>
-          </div>
-          <div className="flex flex-col gap-2 rounded-md border border-border bg-muted/30 px-3 py-2">
-            <span className="text-xs font-medium text-muted-foreground">Target selection strategies</span>
-            <div className="flex flex-wrap gap-x-4 gap-y-2">
-              {TRACEROUTE_STRATEGIES.map((opt) => (
-                <label
-                  key={opt}
-                  htmlFor={`feeder-coverage-strategy-${opt}`}
-                  className="flex cursor-pointer items-center gap-2 text-sm"
-                >
-                  <Checkbox
-                    id={`feeder-coverage-strategy-${opt}`}
-                    checked={strategies[opt] ?? false}
-                    onCheckedChange={(c) => setStrategies((s) => ({ ...s, [opt]: c === true }))}
-                  />
-                  <span className="leading-none">{STRATEGY_META[opt].label}</span>
-                </label>
-              ))}
-            </div>
-          </div>
+            </SelectContent>
+          </Select>
         </div>
+        <div className="flex items-center gap-2">
+          <Label className="whitespace-nowrap text-xs text-muted-foreground" htmlFor="feeder-coverage-min-attempts">
+            Min attempts
+          </Label>
+          <Input
+            id="feeder-coverage-min-attempts"
+            type="number"
+            min={1}
+            value={minAttempts}
+            onChange={(e) => {
+              const v = Number.parseInt(e.target.value, 10);
+              setMinAttempts(Number.isFinite(v) && v >= 1 ? v : 1);
+            }}
+            className="w-20"
+          />
+        </div>
+      </StatsRangeBar>
+      <div className="flex flex-wrap items-center gap-3" data-testid="coverage-filters">
+        <div className="flex rounded-md border border-input bg-muted/50 p-0.5" data-testid="layer-pills">
+          {ALL_LAYERS.map((key) => (
+            <button
+              key={key}
+              type="button"
+              aria-pressed={layers[key]}
+              aria-label={`Toggle ${LAYER_LABEL[key]} layer`}
+              onClick={() => setLayers((s) => ({ ...s, [key]: !s[key] }))}
+              className={cn(
+                'rounded px-3 py-1.5 text-sm font-medium transition-colors',
+                layers[key] ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+              )}
+            >
+              {LAYER_LABEL[key]}
+            </button>
+          ))}
+        </div>
+        <CoverageStrategyMenu value={strategies} onChange={setStrategies} />
       </div>
 
       <div className="block md:hidden">
