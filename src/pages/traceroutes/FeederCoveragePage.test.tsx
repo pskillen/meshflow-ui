@@ -4,7 +4,7 @@ import { MemoryRouter } from 'react-router-dom';
 import type { ManagedNode } from '@/lib/models';
 
 vi.mock('@/hooks/api/useNodes', () => ({
-  useNodes: vi.fn(),
+  useManagedNodes: vi.fn(),
 }));
 
 vi.mock('@/hooks/api/useFeederReach', () => ({
@@ -40,11 +40,11 @@ vi.mock('@/components/traceroutes/FeederCoverageMap', () => ({
   ),
 }));
 
-import { useNodes } from '@/hooks/api/useNodes';
+import { useManagedNodes } from '@/hooks/api/useNodes';
 import { useFeederReach } from '@/hooks/api/useFeederReach';
 import { FeederCoveragePage } from './FeederCoveragePage';
 
-const mockedUseNodes = vi.mocked(useNodes);
+const mockedUseManagedNodes = vi.mocked(useManagedNodes);
 const mockedUseFeederReach = vi.mocked(useFeederReach);
 
 function makeManagedNode(overrides: Partial<ManagedNode> = {}): ManagedNode {
@@ -73,10 +73,10 @@ function setupHooks({
   isLoading?: boolean;
   error?: Error | null;
 } = {}) {
-  mockedUseNodes.mockReturnValue({
+  mockedUseManagedNodes.mockReturnValue({
     managedNodes,
     isLoadingManagedNodes: false,
-  } as unknown as ReturnType<typeof useNodes>);
+  } as unknown as ReturnType<typeof useManagedNodes>);
 
   mockedUseFeederReach.mockReturnValue({
     data,

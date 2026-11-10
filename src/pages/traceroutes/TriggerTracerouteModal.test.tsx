@@ -9,9 +9,9 @@ vi.mock('@/providers/ConfigProvider', () => ({
 }));
 
 vi.mock('@/hooks/api/useNodes', () => ({
-  useNodes: () => ({
+  useNodeSearch: () => ({
     searchNodes: vi.fn(),
-    searchResults: [],
+    results: [],
     isSearching: false,
   }),
 }));

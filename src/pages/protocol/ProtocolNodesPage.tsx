@@ -20,6 +20,9 @@ import { filterManagedNodesByProtocol, type ProtocolPageConfig } from '@/lib/mes
 /** Node lists offer Online (2h) on top of the shared presets. Module-level so the hook sees a stable array. */
 const NODE_LIST_RANGE_OPTIONS = [STATS_ONLINE_KEY, ...STATS_PRESET_KEYS] as const;
 
+/** The API's maximum page size, so a normal range arrives in one request. Further pages are on demand. */
+const NODE_LIST_PAGE_SIZE = 1000;
+
 /** A short map on phones so the list starts in the first screen; the desktop default is unchanged. */
 const MAP_MIN_HEIGHT = 'min-h-[260px] sm:min-h-[400px]';
 
@@ -43,7 +46,7 @@ function ProtocolNodesPageContent({
     hasNextPage,
   } = useProtocolObservedNodesSuspense(config, {
     lastHeardAfter,
-    pageSize: 100,
+    pageSize: NODE_LIST_PAGE_SIZE,
   });
 
   const filterNodes = (nodes: ObservedNode[]) => {
@@ -115,6 +118,13 @@ function ProtocolNodesPageContent({
           </div>
         </div>
       </div>
+
+      {hasNextPage && (
+        <p className="mb-4 text-sm text-muted-foreground" role="status">
+          Showing the first {mainListNodes.length} of {totalNodes} nodes. The map and search cover only the nodes loaded
+          so far; use &quot;Load more&quot; below to fetch the rest.
+        </p>
+      )}
 
       <Card className="mb-8">
         <CardHeader>

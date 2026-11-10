@@ -11,7 +11,7 @@ vi.mock('@/hooks/api/useConstellationCoverage', () => ({
 }));
 
 vi.mock('@/hooks/api/useNodes', () => ({
-  useNodes: vi.fn(() => ({ managedNodes: [], isLoadingManagedNodes: false })),
+  useManagedNodes: vi.fn(() => ({ managedNodes: [], isLoadingManagedNodes: false })),
 }));
 
 vi.mock('@/hooks/api/useObservedNodesHeard', () => ({
