@@ -21,8 +21,12 @@ vi.mock('@/components/nodes/ChannelAirChart', () => ({ ChannelAirChart: chartMoc
 vi.mock('@/components/BatteryChartShadcn', () => ({ BatteryChartShadcn: chartMock('battery-chart') }));
 vi.mock('@/components/nodes/EnvironmentMetricsChart', () => ({ EnvironmentMetricsChart: chartMock('env-chart') }));
 vi.mock('@/components/nodes/PowerMetricsChart', () => ({ PowerMetricsChart: chartMock('power-chart') }));
-vi.mock('@/components/PacketTypeChart', () => ({ PacketTypeChart: chartMock('packet-chart') }));
-vi.mock('@/components/ReceivedPacketTypeChart', () => ({ ReceivedPacketTypeChart: chartMock('received-chart') }));
+const rangeMock = vi.hoisted(() =>
+  (testId: string) =>
+  ({ range }: { range?: StatsRange }) => <div data-testid={testId} data-range={range?.key} />
+);
+vi.mock('@/components/PacketTypeChart', () => ({ PacketTypeChart: rangeMock('packet-chart') }));
+vi.mock('@/components/ReceivedPacketTypeChart', () => ({ ReceivedPacketTypeChart: rangeMock('received-chart') }));
 vi.mock('@/components/NeighbourPieChart', () => ({ NeighbourPieChart: chartMock('neighbour-chart') }));
 
 const node = { meshtastic_node_id: 100, latest_environment_metrics: null, latest_power_metrics: null } as ObservedNode;
@@ -32,18 +36,13 @@ function rangeAt(now: Date): StatsRange {
 }
 
 describe('NodeStatsSection', () => {
-  it('asks the old packet charts for data up to at least now, not just the top of the hour', () => {
-    const now = new Date('2026-11-10T09:37:00Z');
-    render(<NodeStatsSection internalId="x" node={node} isManagedNode range={rangeAt(now)} />);
-    const end = new Date(screen.getByTestId('packet-chart').getAttribute('data-end')!);
-    expect(end.getTime()).toBeGreaterThanOrEqual(now.getTime());
-    expect(screen.getByTestId('received-chart').getAttribute('data-end')).toBe(end.toISOString());
-  });
-
-  it('keeps the start of the window unchanged', () => {
-    const now = new Date('2026-11-10T09:37:00Z');
-    const range = rangeAt(now);
-    render(<NodeStatsSection internalId="x" node={node} isManagedNode={false} range={range} />);
-    expect(screen.getByTestId('packet-chart').getAttribute('data-start')).toBe(range.window.start.toISOString());
+  it('gives the packet charts the page range, and the received chart only for managed nodes', () => {
+    const range = rangeAt(new Date('2026-11-10T09:37:00Z'));
+    const { rerender } = render(<NodeStatsSection internalId="x" node={node} isManagedNode range={range} />);
+    expect(screen.getByTestId('packet-chart').getAttribute('data-range')).toBe('7d');
+    expect(screen.getByTestId('received-chart').getAttribute('data-range')).toBe('7d');
+    rerender(<NodeStatsSection internalId="x" node={node} isManagedNode={false} range={range} />);
+    expect(screen.queryByTestId('received-chart')).toBeNull();
+    expect(screen.getByTestId('packet-chart')).toBeTruthy();
   });
 });
