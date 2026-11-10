@@ -147,8 +147,11 @@ export function describeTrend(args: {
   bucket: StatsBucket;
   rows: TrendRow[];
   series: { key: string; label: string }[];
+  /** Format a value for the name and table. Default: whole-number grouping ("1,234"). */
+  format?: (value: number) => string;
 }): { name: string; table: { timestamp: number; label: string; cells: string[] }[] } {
   const { label, headline, bucket, rows, series } = args;
+  const fmt = args.format ?? ((v: number) => countFormat.format(v));
   const valueOf = (row: TrendRow, key: string) => (typeof row[key] === 'number' ? (row[key] as number) : null);
   const withData = (row: TrendRow) => series.some((s) => valueOf(row, s.key) != null);
 
@@ -159,7 +162,7 @@ export function describeTrend(args: {
     const values = series
       .map((s) => ({ s, v: valueOf(latest, s.key) }))
       .filter((x) => x.v != null)
-      .map((x) => `${x.s.label} ${countFormat.format(x.v!)}`)
+      .map((x) => `${x.s.label} ${fmt(x.v!)}`)
       .join(', ');
     parts.push(`Latest, ${formatTrendLabel(latest.timestamp, bucket)}: ${values}.`);
   }
@@ -170,17 +173,23 @@ export function describeTrend(args: {
     label: `${formatTrendLabel(row.timestamp, bucket)}${row.partial ? ' (partial)' : ''}`,
     cells: series.map((s) => {
       const v = valueOf(row, s.key);
-      return v == null ? 'no data' : countFormat.format(v);
+      return v == null ? 'no data' : fmt(v);
     }),
   }));
   return { name: parts.join(' '), table };
 }
 
+/** How many x labels fit a plot `width` px wide: about 80px each, 3 at the narrowest, 6 at most. */
+export function maxTrendTicks(width: number): number {
+  return Math.min(6, Math.max(3, Math.floor(width / 80)));
+}
+
 /**
- * X ticks for a bucket grid: at most about six, a whole number of buckets apart starting at the first, so the labels
- * are evenly spaced (a "preserve start and end" tick on a grid that does not divide evenly leaves an odd last gap).
+ * X ticks for a bucket grid: at most `maxTicks` (default 6), a whole number of buckets apart starting at the first,
+ * so the labels are evenly spaced (a "preserve start and end" tick on a grid that does not divide evenly leaves an
+ * odd last gap). Pass `maxTrendTicks(width)` on a narrow chart so the labels do not collide.
  */
-export function evenTrendTicks(timestamps: number[]): number[] {
-  const stride = Math.max(1, Math.ceil(timestamps.length / 6));
+export function evenTrendTicks(timestamps: number[], maxTicks = 6): number[] {
+  const stride = Math.max(1, Math.ceil(timestamps.length / Math.max(2, maxTicks)));
   return timestamps.filter((_, i) => i % stride === 0);
 }

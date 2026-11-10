@@ -5,6 +5,8 @@ import {
   densifyTrendRows,
   formatTrendLabel,
   formatTrendTick,
+  evenTrendTicks,
+  maxTrendTicks,
   markPartialBuckets,
   splitPartialLine,
 } from '@/lib/stats-trend';
@@ -106,5 +108,22 @@ describe('UTC formatting', () => {
     expect(formatTrendTick(ts, 'daily')).toBe('9 Nov');
     expect(formatTrendLabel(ts, '6h')).toBe('Mon 9 Nov 06:00-12:00 UTC');
     expect(formatTrendLabel(ts, 'daily')).toBe('Mon 9 Nov (UTC day)');
+  });
+});
+
+describe('narrow x ticks', () => {
+  it('allows 3 labels on a narrow plot and 6 on a wide one', () => {
+    expect(maxTrendTicks(200)).toBe(3);
+    expect(maxTrendTicks(300)).toBe(3);
+    expect(maxTrendTicks(400)).toBe(5);
+    expect(maxTrendTicks(900)).toBe(6);
+  });
+
+  it('thins the ticks to the limit, evenly, from the first', () => {
+    const ts = Array.from({ length: 28 }, (_, i) => i * 6 * 3_600_000);
+    const ticks = evenTrendTicks(ts, 3);
+    expect(ticks.length).toBeLessThanOrEqual(3);
+    expect(ticks[0]).toBe(ts[0]);
+    expect(evenTrendTicks(ts).length).toBeLessThanOrEqual(6);
   });
 });

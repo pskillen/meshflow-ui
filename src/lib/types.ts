@@ -1,7 +1,14 @@
 // API request types
+import type { MetricApiBucket } from '@/lib/stats-range';
+
 export interface DateRangeParams {
   startDate?: Date;
   endDate?: Date;
+}
+
+/** A node metric history request that asks the API for one mean row per UTC bucket. */
+export interface NodeMetricBucketParams extends DateRangeParams {
+  bucket: MetricApiBucket;
 }
 
 export interface DateRangeIntervalParams extends DateRangeParams {

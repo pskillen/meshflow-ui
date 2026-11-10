@@ -6,8 +6,11 @@ import {
   OwnedManagedNode,
   FeederIdentityEvent,
   DeviceMetrics,
+  DeviceMetricBucket,
   EnvironmentMetrics,
+  EnvironmentMetricBucket,
   PowerMetrics,
+  PowerMetricBucket,
   Position,
   NodeSearchResult,
   PaginatedResponse,
@@ -43,6 +46,7 @@ import {
   ApiConfig,
   DateRangeParams,
   DateRangeIntervalParams,
+  NodeMetricBucketParams,
   PaginationParams,
   StatsSnapshotsParams,
   DxEventsQueryParams,
@@ -353,22 +357,41 @@ export class MeshflowApi extends BaseApi {
   }
 
   /**
-   * Get device metrics for a specific node
+   * Get device metrics for a specific node. With `bucket` the API returns one mean row per UTC bucket (newest first)
+   * instead of every report.
    */
-  async getNodeDeviceMetrics(internalId: string, params?: DateRangeParams): Promise<DeviceMetrics[]> {
+  async getNodeDeviceMetrics(internalId: string, params: NodeMetricBucketParams): Promise<DeviceMetricBucket[]>;
+  async getNodeDeviceMetrics(internalId: string, params?: DateRangeParams): Promise<DeviceMetrics[]>;
+  async getNodeDeviceMetrics(
+    internalId: string,
+    params?: DateRangeParams | NodeMetricBucketParams
+  ): Promise<DeviceMetrics[] | DeviceMetricBucket[]> {
+    return this.getNodeMetricHistory<DeviceMetrics[] | DeviceMetricBucket[]>(internalId, 'device_metrics', params);
+  }
+
+  /** Shared request for the three per-node metric history endpoints; parses times, passes `bucket` through. */
+  private async getNodeMetricHistory<T extends unknown[]>(
+    internalId: string,
+    path: 'device_metrics' | 'environment_metrics' | 'power_metrics',
+    params?: DateRangeParams | NodeMetricBucketParams
+  ): Promise<T> {
     const searchParams = new URLSearchParams();
     if (params?.startDate) searchParams.append('start_date', params.startDate.toISOString());
     if (params?.endDate) searchParams.append('end_date', params.endDate.toISOString());
+    if (params && 'bucket' in params && params.bucket) searchParams.append('bucket', params.bucket);
 
-    const metrics = await this.get<DeviceMetrics[]>(
-      `/nodes/observed-nodes/${internalId}/device_metrics/`,
+    const metrics = await this.get<Array<{ logged_time?: Date | string | null; reported_time: Date | string | null }>>(
+      `/nodes/observed-nodes/${internalId}/${path}/`,
       searchParams
     );
+    // Bucketed rows have no `logged_time`; raw rows always do.
     return metrics.map((metric) => ({
       ...metric,
-      logged_time: metric.logged_time != null ? new Date(metric.logged_time) : null,
+      ...(metric.logged_time !== undefined
+        ? { logged_time: metric.logged_time != null ? new Date(metric.logged_time) : null }
+        : {}),
       reported_time: metric.reported_time != null ? new Date(metric.reported_time) : null,
-    }));
+    })) as T;
   }
 
   /**
@@ -399,39 +422,31 @@ export class MeshflowApi extends BaseApi {
     }));
   }
 
-  /**
-   * Get environment metrics for a specific node
-   */
-  async getNodeEnvironmentMetrics(internalId: string, params?: DateRangeParams): Promise<EnvironmentMetrics[]> {
-    const searchParams = new URLSearchParams();
-    if (params?.startDate) searchParams.append('start_date', params.startDate.toISOString());
-    if (params?.endDate) searchParams.append('end_date', params.endDate.toISOString());
-
-    const metrics = await this.get<EnvironmentMetrics[]>(
-      `/nodes/observed-nodes/${internalId}/environment_metrics/`,
-      searchParams
+  /** Environment metrics for a specific node; with `bucket`, one mean row per UTC bucket. */
+  async getNodeEnvironmentMetrics(
+    internalId: string,
+    params: NodeMetricBucketParams
+  ): Promise<EnvironmentMetricBucket[]>;
+  async getNodeEnvironmentMetrics(internalId: string, params?: DateRangeParams): Promise<EnvironmentMetrics[]>;
+  async getNodeEnvironmentMetrics(
+    internalId: string,
+    params?: DateRangeParams | NodeMetricBucketParams
+  ): Promise<EnvironmentMetrics[] | EnvironmentMetricBucket[]> {
+    return this.getNodeMetricHistory<EnvironmentMetrics[] | EnvironmentMetricBucket[]>(
+      internalId,
+      'environment_metrics',
+      params
     );
-    return metrics.map((metric) => ({
-      ...metric,
-      logged_time: metric.logged_time != null ? new Date(metric.logged_time) : null,
-      reported_time: metric.reported_time != null ? new Date(metric.reported_time) : null,
-    }));
   }
 
-  /**
-   * Get power metrics for a specific node
-   */
-  async getNodePowerMetrics(internalId: string, params?: DateRangeParams): Promise<PowerMetrics[]> {
-    const searchParams = new URLSearchParams();
-    if (params?.startDate) searchParams.append('start_date', params.startDate.toISOString());
-    if (params?.endDate) searchParams.append('end_date', params.endDate.toISOString());
-
-    const metrics = await this.get<PowerMetrics[]>(`/nodes/observed-nodes/${internalId}/power_metrics/`, searchParams);
-    return metrics.map((metric) => ({
-      ...metric,
-      logged_time: metric.logged_time != null ? new Date(metric.logged_time) : null,
-      reported_time: metric.reported_time != null ? new Date(metric.reported_time) : null,
-    }));
+  /** Power metrics for a specific node; with `bucket`, one mean row per UTC bucket. */
+  async getNodePowerMetrics(internalId: string, params: NodeMetricBucketParams): Promise<PowerMetricBucket[]>;
+  async getNodePowerMetrics(internalId: string, params?: DateRangeParams): Promise<PowerMetrics[]>;
+  async getNodePowerMetrics(
+    internalId: string,
+    params?: DateRangeParams | NodeMetricBucketParams
+  ): Promise<PowerMetrics[] | PowerMetricBucket[]> {
+    return this.getNodeMetricHistory<PowerMetrics[] | PowerMetricBucket[]>(internalId, 'power_metrics', params);
   }
 
   /**

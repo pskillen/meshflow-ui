@@ -14,7 +14,7 @@ export function usePacketStats(params?: StatsQueryParams) {
   params = roundDateParams(params);
 
   const keyValue = getKeyValue(params);
-  const key = ['stats', keyValue];
+  const key = ['stats', keyValue, params?.interval ?? 1, params?.intervalType ?? 'hour'];
 
   return useQuery<GlobalStats>({
     refetchInterval: 5 * 1000 * 60, // 5 minutes
@@ -40,7 +40,7 @@ export function usePacketStatsSuspense(params?: StatsQueryParams) {
   const api = useMeshtasticApi();
   params = roundDateParams(params);
   const keyValue = getKeyValue(params);
-  const key = ['stats', keyValue];
+  const key = ['stats', keyValue, params?.interval ?? 1, params?.intervalType ?? 'hour'];
 
   const query = useSuspenseQuery<GlobalStats, Error>({
     refetchInterval: 5 * 1000 * 60, // 5 minutes
@@ -70,7 +70,7 @@ export function useReceivedPacketStatsSuspense(params?: StatsQueryParams) {
   const api = useMeshtasticApi();
   params = roundDateParams(params);
   const keyValue = getKeyValue(params);
-  const key = ['received-stats', keyValue];
+  const key = ['received-stats', keyValue, params?.interval ?? 1, params?.intervalType ?? 'hour'];
 
   const query = useSuspenseQuery<GlobalStats, Error>({
     refetchInterval: 5 * 1000 * 60, // 5 minutes

@@ -41,3 +41,32 @@ export function maxStackTotal(rows: Record<string, number>[]): number {
     return Math.max(max, total);
   }, 0);
 }
+
+/**
+ * Axis that hugs the data instead of starting at 0, for readings that sit in a narrow band (battery volts, 3.4 to
+ * 4.2). Pads the span by 10%, picks a 1/2/5 step for about `targetIntervals` gaps and snaps both ends to it.
+ * A flat series still gets a visible span.
+ */
+export function fitAxis(min: number, max: number, targetIntervals = 4): { min: number; max: number; ticks: number[] } {
+  let lo = Number.isFinite(min) ? min : 0;
+  let hi = Number.isFinite(max) ? max : lo + 1;
+  if (hi < lo) [lo, hi] = [hi, lo];
+  if (hi - lo < 1e-9) {
+    const pad = Math.max(Math.abs(hi) * 0.05, 0.5);
+    lo -= pad;
+    hi += pad;
+  }
+  const pad = (hi - lo) * 0.1;
+  lo -= pad;
+  hi += pad;
+  const rawStep = (hi - lo) / targetIntervals;
+  const magnitude = Math.pow(10, Math.floor(Math.log10(rawStep)));
+  const step = (STEP_MULTIPLIERS.find((m) => m * magnitude >= rawStep) ?? 10) * magnitude;
+  const decimals = Math.max(0, -Math.floor(Math.log10(step)) + 1);
+  const round = (n: number) => Number(n.toFixed(decimals));
+  const start = round(Math.floor(lo / step) * step);
+  const end = round(Math.ceil(hi / step) * step);
+  const ticks: number[] = [];
+  for (let t = start; t <= end + step / 2; t += step) ticks.push(round(t));
+  return { min: start, max: end, ticks };
+}

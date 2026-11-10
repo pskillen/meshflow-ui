@@ -1,4 +1,4 @@
-import { useContext, useMemo } from 'react';
+import { useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { Bar, BarChart, CartesianGrid, Line, LineChart, Rectangle, XAxis, YAxis } from 'recharts';
 import {
   ChartContainer,
@@ -9,7 +9,7 @@ import {
   type ChartConfig,
 } from '@/components/ui/chart';
 import { ChartCardContext } from '@/components/stats/chart-card-context';
-import { maxStackTotal, niceAxisMax } from '@/lib/axis-ticks';
+import { fitAxis, maxStackTotal, niceAxisMax } from '@/lib/axis-ticks';
 import type { StatsBucket, StatsRangeWindow } from '@/lib/stats-range';
 import {
   PARTIAL_LINE_SUFFIX,
@@ -19,6 +19,7 @@ import {
   formatCompact,
   formatTrendLabel,
   formatTrendTick,
+  maxTrendTicks,
   splitPartialLine,
   type TrendRow,
 } from '@/lib/stats-trend';
@@ -51,6 +52,13 @@ export interface TrendChartProps {
   dots?: boolean;
   /** Show the legend (default true; only drawn with more than one series). Hide it where the card lists the series. */
   legend?: boolean;
+  /**
+   * Y axis. `zero` (default): 0 to a nice top, whole-number ticks, for counts. `fit`: hug the data, with decimals, for
+   * readings in a narrow band (volts). `[min, max]`: fixed (percent, 0 to 100).
+   */
+  yRange?: 'zero' | 'fit' | [number, number];
+  /** Format values on the y axis and in the accessible name and table. Default: compact whole numbers. */
+  formatValue?: (value: number) => string;
   /** Pixel height. Default 190. */
   height?: number;
   /**
@@ -62,6 +70,14 @@ export interface TrendChartProps {
   /** The card's headline ("avg 88"), repeated in the accessible name. */
   headline?: string;
   className?: string;
+}
+
+const Y_AXIS_WIDTH = 44;
+/** Width assumed before the chart is measured (and where there is no layout, as in tests). */
+const DEFAULT_WIDTH = 800;
+
+function numericValues(rows: TrendRow[], keys: string[]): number[] {
+  return rows.flatMap((r) => keys.map((k) => r[k]).filter((v): v is number => typeof v === 'number'));
 }
 
 /** Marker on a bucket that is in progress or only partly covered. */
@@ -100,6 +116,8 @@ export function TrendChart({
   height = 190,
   dots = false,
   legend: showLegend = true,
+  yRange = 'zero',
+  formatValue,
   label,
   headline,
   className,
@@ -127,18 +145,51 @@ export function TrendChart({
       kind === 'bar' && stacked
         ? maxStackTotal(numeric)
         : Math.max(0, ...numeric.flatMap((r) => keys.map((k) => r[k] ?? 0)));
-    return niceAxisMax(max);
-  }, [dense, keys, kind, stacked]);
+    if (Array.isArray(yRange)) {
+      const [lo, hi] = yRange;
+      const step = (hi - lo) / 4;
+      return { min: lo, max: hi, ticks: [0, 1, 2, 3, 4].map((i) => lo + step * i) };
+    }
+    if (yRange === 'fit') {
+      const values = numericValues(dense, keys);
+      return values.length ? fitAxis(Math.min(...values), Math.max(...values)) : { min: 0, max: 1, ticks: [0, 1] };
+    }
+    return { min: 0, ...niceAxisMax(max) };
+  }, [dense, keys, kind, stacked, yRange]);
 
-  const ticks = useMemo(() => evenTrendTicks(dense.map((r) => r.timestamp)), [dense]);
+  // Fewer x labels on a narrow chart (a phone, a card in a column) so they do not run into each other.
+  const boxRef = useRef<HTMLDivElement>(null);
+  const [width, setWidth] = useState(DEFAULT_WIDTH);
+  useEffect(() => {
+    const el = boxRef.current;
+    if (!el) return;
+    const read = () => {
+      const w = el.getBoundingClientRect().width;
+      if (w > 0) setWidth(w);
+    };
+    read();
+    if (typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(read);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  const ticks = useMemo(
+    () =>
+      evenTrendTicks(
+        dense.map((r) => r.timestamp),
+        maxTrendTicks(width - Y_AXIS_WIDTH)
+      ),
+    [dense, width]
+  );
   const description = useMemo(
-    () => describeTrend({ label, headline, bucket, rows: dense, series }),
-    [label, headline, bucket, dense, series]
+    () => describeTrend({ label, headline, bucket, rows: dense, series, format: formatValue }),
+    [label, headline, bucket, dense, series, formatValue]
   );
 
   const common = {
     syncId,
-    margin: { top: 8, right: 8, left: 0, bottom: 0 },
+    // The right margin leaves room for half of the last x label ("10 Nov"), which is centred on its tick.
+    margin: { top: 8, right: 20, left: 0, bottom: 0 },
   };
 
   const xAxis = (
@@ -154,13 +205,13 @@ export function TrendChart({
   );
   const yAxis = (
     <YAxis
-      width={44}
+      width={Y_AXIS_WIDTH}
       tickLine={false}
       axisLine={false}
-      domain={[0, axis.max]}
+      domain={[axis.min, axis.max]}
       ticks={axis.ticks}
-      allowDecimals={false}
-      tickFormatter={formatCompact}
+      allowDecimals={yRange !== 'zero'}
+      tickFormatter={formatValue ?? formatCompact}
     />
   );
   const tooltip = (
@@ -178,11 +229,13 @@ export function TrendChart({
       }
     />
   );
-  const legend = showLegend && series.length > 1 ? <ChartLegend content={<ChartLegendContent />} /> : null;
+  const legend =
+    showLegend && series.length > 1 ? <ChartLegend itemSorter={null} content={<ChartLegendContent />} /> : null;
 
   return (
     <>
       <ChartContainer
+        ref={boxRef}
         config={config}
         className={className ?? 'aspect-auto w-full'}
         style={{ height }}

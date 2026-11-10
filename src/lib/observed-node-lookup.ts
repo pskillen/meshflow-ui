@@ -14,8 +14,7 @@ export type ObservedNodeLookupAmbiguous = {
 };
 
 export type ResolveObservedNodeResult =
-  | { status: 'ok'; node: ObservedNode }
-  | { status: 'ambiguous'; ambiguous: ObservedNodeLookupAmbiguous };
+  { status: 'ok'; node: ObservedNode } | { status: 'ambiguous'; ambiguous: ObservedNodeLookupAmbiguous };
 
 export function isObservedNodeLookupAmbiguous(
   value: ResolveObservedNodeResult

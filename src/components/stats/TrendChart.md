@@ -8,19 +8,20 @@ One line or bar chart over a stats range window. Online nodes is a line (a point
 
 - `kind: 'line' | 'bar'`
 - `rows: TrendRow[]` – `{ timestamp (bucket start, ms), <seriesKey>: number, partial?: boolean }`. Missing buckets and values are fine.
-- `series: { key, label, color }[]` – colours are chart tokens (`hsl(var(--chart-1))`), by protocol: Meshtastic `--chart-1`, MeshCore `--chart-4`.
+- `series: { key, label, color, dashed? }[]` – `dashed` draws that line dashed (lines only), so two series differ without colour; colours are chart tokens (`hsl(var(--chart-1))`), by protocol: Meshtastic `--chart-1`, MeshCore `--chart-4`.
 - `window: { start, end }` – from `useStatsRange().window`. Fixes the x-axis.
 - `bucket: 'hourly' | '6h' | 'daily'` – from `useStatsRange().bucket`.
-- `stacked?` (bars, default true), `dots?` (lines: a dot on every point, for sparse daily data such as firmware), `legend?` (default true; false where the card already lists the series), `syncId?`, `height?` (default 190), `label?` (the title and range: "Online nodes, last 7 days"), `headline?` (the card's headline text), `className?`.
+- `stacked?` (bars, default true), `dots?` (lines: a dot on every point, for sparse daily data such as firmware), `legend?` (default true; only drawn with more than one series, in series order, wrapping onto more lines when narrow; false where the card already lists the series), `yRange?` (`'zero'` default: 0 to a nice top with whole-number ticks, for counts; `'fit'`: hug the data with decimal ticks, for volts and temperatures; `[min, max]`: fixed, for percent), `formatValue?` (y ticks and the screen-reader name and table; default compact whole numbers), `syncId?`, `height?` (default 190), `label?` (the title and range: "Online nodes, last 7 days"), `headline?` (the card's headline text), `className?`.
 
 Helpers in `src/lib/stats-trend.ts`: `markPartialBuckets(rows, window, bucket)` sets `partial` from the range window and each row's `samples`; `buildBucketGrid`, `densifyTrendRows`, `evenTrendTicks`, `describeTrend`, `splitPartialLine`, `formatTrendTick`, `formatTrendLabel`.
 
 ## Behaviour
 
+- X ticks are evenly spaced whole buckets apart, starting at the first: up to six, fewer as the chart narrows (measured; 3 under about 300px of plot, 4 to 5 up to about 500px). The plot keeps a 20px right margin so the last label is not clipped.
 - Rows are laid on the full UTC bucket grid between `window.start` and `window.end`, so every chart with the same window has the same x positions. Charts sharing a `syncId` share hover.
 - The y-axis runs from 0 to a `niceAxisMax` top (stacked bars fit the stack total).
 - Partial buckets (the one in progress, or a first bucket with fewer samples than a whole one) are drawn as faded dashed bars, or a dashed continuation of the line, and the tooltip adds "partial bucket".
-- X labels and tooltips are in UTC, matching the buckets. Ticks are every Nth bucket from the first (about six in all), so the gaps are even.
+- X labels and tooltips are in UTC, matching the buckets. Ticks are every Nth bucket from the first, so the gaps are even.
 
 ## Accessibility (the pattern every chart in phases 11-16 reuses)
 
@@ -35,7 +36,7 @@ A new chart passes `label` and `headline` and gets all of this; it does not writ
 
 ## Wiring
 
-`MeshStatsSection` builds rows from stats snapshots and renders three of these.
+`MeshStatsSection` builds rows from stats snapshots and renders three of these. The node Statistics charts reach it through [`MetricTrendCard`](../nodes/MetricTrendCard.md); the node packet charts use it as stacked bars ([`NodePacketTypeCard`](../nodes/NodePacketTypeCard.md)).
 
 ## Related
 

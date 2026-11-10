@@ -2,15 +2,11 @@ import { Link } from 'react-router-dom';
 import { useNodeSuspense, useManagedNodesSuspense } from '@/hooks/api/useNodes';
 import { useNodeTracerouteLinks } from '@/hooks/api/useNodeTracerouteLinks';
 import { useRecentNodes } from '@/hooks/useRecentNodes';
-import { subDays, subHours } from 'date-fns';
-import { formatUptimeSeconds } from '@/lib/utils';
 import { NodeStatsSection } from '@/components/nodes/NodeStatsSection';
 import { NodesMap } from '@/components/nodes/NodesMap';
 import { NodeTracerouteLinksMap } from '@/components/nodes/NodeTracerouteLinksMap';
 import { LinkSNRCharts } from '@/components/nodes/LinkSNRCharts';
-import { BatteryGauge } from '@/components/nodes/BatteryGauge';
 import { MetricsCard } from '@/components/nodes/MetricsCard';
-import { PercentGauge } from '@/components/nodes/PercentGauge';
 import { FirmwareBadge } from '@/components/nodes/FirmwareBadge';
 import { hasFirmwareBadge } from '@/lib/firmware';
 import { StaleReportedTime } from '@/components/nodes/StaleReportedTime';
@@ -19,7 +15,6 @@ import { Suspense, useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { CheckCircle, Clock, Copy, Settings } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { authService } from '@/lib/auth/authService';
 import { getRoleLabel, INFRASTRUCTURE_ROLE_IDS } from '@/lib/meshtastic';
 import type { EnvironmentExposureSlug, LatestEnvironmentMetrics, ObservedNode, WeatherUseSlug } from '@/lib/models';
@@ -28,8 +23,13 @@ import { NodeMeshMonitoringSection } from '@/components/nodes/NodeMeshMonitoring
 import { NodeTracerouteHistorySection } from '@/components/nodes/NodeTracerouteHistorySection';
 import { NodeOutgoingTraceroutesSection } from '@/components/nodes/NodeOutgoingTraceroutesSection';
 import { RfPropagationSection } from '@/components/nodes/RfPropagationSection';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import type { NodeDetailTab } from '@/lib/node-detail-tab';
+import { NodeRightNow } from '@/components/nodes/NodeRightNow';
+import { NodeShell, type NodeShellTab } from '@/components/nodes/NodeShell';
+import { StatTile } from '@/components/stats/StatTile';
+import { bestEdgeSnr } from '@/lib/node-traceroute-snr';
+import { STATS_PRESET_KEYS } from '@/lib/stats-range';
+import { useStatsRange, type StatsRange } from '@/hooks/useStatsRange';
+import { isRangedNodeDetailTab, type NodeDetailTab } from '@/lib/node-detail-tab';
 import {
   isMeshCoreObservedNode,
   observedNodeMapRoleLegend,
@@ -45,8 +45,6 @@ interface NodeDetailContentProps {
   activeTab?: NodeDetailTab;
   onTabChange?: (tab: NodeDetailTab) => void;
 }
-
-type TracerouteTimeRange = '24h' | '7d' | '30d';
 
 /** True when the node has at least one environment *sensor* reading (not placement/weather alone). */
 function hasEnvironmentSensorMetrics(env: LatestEnvironmentMetrics | null | undefined): boolean {
@@ -160,31 +158,62 @@ function TracerouteLinksSection({
   internalId,
   meshtasticNodeId,
   isManagedNode,
+  range,
 }: {
   internalId: string;
   meshtasticNodeId: number;
   isManagedNode: boolean;
+  /** The page's shared range; the bar lives in the node header. */
+  range: StatsRange;
 }) {
-  const [timeRange, setTimeRange] = useState<TracerouteTimeRange>('7d');
-  const triggeredAtAfter = useMemo(() => {
-    if (timeRange === '24h') return subHours(new Date(), 24);
-    if (timeRange === '7d') return subDays(new Date(), 7);
-    if (timeRange === '30d') return subDays(new Date(), 30);
-    return undefined;
-  }, [timeRange]);
+  const triggeredAtAfter = range.window.start;
 
   const { data, isLoading, error } = useNodeTracerouteLinks(internalId, { triggeredAtAfter });
 
   const hasData = data && (data.edges.length > 0 || data.nodes.length > 0);
 
+  const bestSnr = data ? bestEdgeSnr(data.edges) : null;
+
   return (
     <div className="mb-6">
+      {hasData && data && (
+        <section className="mb-6 space-y-2 md:space-y-3" aria-labelledby="node-traceroutes-heading">
+          <h2 id="node-traceroutes-heading" className="text-sm font-semibold md:text-base">
+            Over the {range.longLabel}
+          </h2>
+          <div className="grid grid-cols-3 gap-2 md:gap-3" role="list" data-testid="node-traceroute-tiles">
+            <StatTile
+              role="listitem"
+              hero
+              label="Links"
+              value={data.edges.length}
+              sub="with this node"
+              data-testid="node-traceroute-tile-links"
+            />
+            <StatTile
+              role="listitem"
+              label="Peers"
+              value={data.snr_history.length}
+              sub="seen in traceroutes"
+              data-testid="node-traceroute-tile-peers"
+            />
+            <StatTile
+              role="listitem"
+              label="Best SNR"
+              value={bestSnr != null ? bestSnr.toFixed(1) : '\u2014'}
+              sub="dB, best link average"
+              data-testid="node-traceroute-tile-best-snr"
+            />
+          </div>
+        </section>
+      )}
       <Card>
         <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-4">
           <div>
             <CardTitle>Traceroute Links</CardTitle>
             <CardDescription>
-              Mesh links from traceroutes. Arcs colored by average SNR (green = good, red = poor).
+              Mesh links from traceroutes over the {range.longLabel}. Arcs colored by average SNR (green = good, red =
+              poor).
             </CardDescription>
           </div>
           <div className="flex w-full items-center gap-2 sm:w-auto">
@@ -197,18 +226,6 @@ function TracerouteLinksSection({
                 Coverage map
               </Link>
             )}
-            <div className="w-full sm:w-auto sm:min-w-[140px]">
-              <Select value={timeRange} onValueChange={(v) => setTimeRange(v as TracerouteTimeRange)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="24h">Last 24 hours</SelectItem>
-                  <SelectItem value="7d">Last 7 days</SelectItem>
-                  <SelectItem value="30d">Last 30 days</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -243,12 +260,7 @@ function TracerouteLinksSection({
               {data.snr_history.length > 0 && (
                 <div>
                   <h4 className="mb-3 text-sm font-medium">SNR over time by link</h4>
-                  <LinkSNRCharts
-                    snrHistory={data.snr_history}
-                    initialVisible={3}
-                    timeRangeStart={triggeredAtAfter}
-                    timeRangeEnd={new Date()}
-                  />
+                  <LinkSNRCharts snrHistory={data.snr_history} range={range} />
                 </div>
               )}
             </>
@@ -276,12 +288,14 @@ function NodeTraceroutesPanel({
   isManagedNode,
   managedForThisNode,
   node,
+  range,
 }: {
   internalId: string;
   meshtasticNodeId: number;
   isManagedNode: boolean;
   managedForThisNode: ReturnType<typeof useManagedNodesSuspense>['managedNodes'][number] | undefined;
   node: ObservedNode;
+  range: StatsRange;
 }) {
   if (!supportsMeshtasticTraceroutes(node)) {
     return <MeshCoreTraceroutesPlaceholder />;
@@ -292,6 +306,7 @@ function NodeTraceroutesPanel({
         internalId={internalId}
         meshtasticNodeId={meshtasticNodeId}
         isManagedNode={isManagedNode}
+        range={range}
       />
       <Suspense
         fallback={
@@ -303,11 +318,18 @@ function NodeTraceroutesPanel({
         {isManagedNode && managedForThisNode ? (
           <NodeOutgoingTraceroutesSection nodeId={meshtasticNodeId} managed={managedForThisNode} />
         ) : null}
-        <NodeTracerouteHistorySection nodeId={meshtasticNodeId} observedNode={node} />
+        <NodeTracerouteHistorySection
+          nodeId={meshtasticNodeId}
+          observedNode={node}
+          since={range.window.start}
+          rangeLabel={range.longLabel}
+        />
       </Suspense>
     </>
   );
 }
+
+const NODE_RANGE_OPTIONS = STATS_PRESET_KEYS;
 
 export function NodeDetailContent({ internalId, compact = false, activeTab, onTabChange }: NodeDetailContentProps) {
   const node = useNodeSuspense(internalId);
@@ -346,6 +368,10 @@ export function NodeDetailContent({ internalId, compact = false, activeTab, onTa
   const fullPageTabs = !compact && activeTab !== undefined && onTabChange !== undefined;
   const showRfPropagation =
     !compact && node.meshtastic_role != null && INFRASTRUCTURE_ROLE_IDS.has(node.meshtastic_role);
+
+  // One range for the page, in the URL as `?range=` so it carries between Statistics and Traceroutes. Compact (the
+  // slide-over) keeps it in state: it must not touch the host page's URL. No `area`: another node must not inherit it.
+  const range = useStatsRange({ options: NODE_RANGE_OPTIONS, local: !fullPageTabs });
 
   const isMeshCore = isMeshCoreObservedNode(node);
   const showTraceroutesTab = supportsMeshtasticTraceroutes(node);
@@ -441,39 +467,6 @@ export function NodeDetailContent({ internalId, compact = false, activeTab, onTa
         </CardContent>
       </Card>
 
-      {node.latest_device_metrics && (
-        <Card>
-          <CardHeader>
-            <div>
-              <CardTitle>Device Metrics</CardTitle>
-              <CardDescription>
-                Battery, voltage, channel utilisation — last reported{' '}
-                <StaleReportedTime at={node.latest_device_metrics.reported_time} />
-              </CardDescription>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <BatteryGauge
-                batteryLevel={node.latest_device_metrics.battery_level ?? null}
-                voltage={node.latest_device_metrics.voltage ?? null}
-              />
-              <PercentGauge
-                value={node.latest_device_metrics.meshtastic_channel_utilization ?? null}
-                label="Channel Utilization"
-              />
-              <PercentGauge value={node.latest_device_metrics.meshtastic_air_util_tx ?? null} label="Air Utilization" />
-              <p>
-                <span className="font-medium">Uptime:</span>{' '}
-                {node.latest_device_metrics.uptime_seconds != null
-                  ? formatUptimeSeconds(node.latest_device_metrics.uptime_seconds)
-                  : '—'}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
       {hasEnvironmentSensorMetrics(node.latest_environment_metrics) && (
         <>
           <MetricsCard
@@ -559,181 +552,153 @@ export function NodeDetailContent({ internalId, compact = false, activeTab, onTa
     </div>
   );
 
-  const renderLegacyLocationBlock = () => (
-    <div className={showRfPropagation ? 'mb-6 grid grid-cols-1 gap-6 lg:grid-cols-2' : 'mb-6'}>
-      <NodeLocationCard node={node} internalId={internalId} compact={compact} />
-      {showRfPropagation ? <RfPropagationSection node={node} className="mb-0" /> : null}
-    </div>
-  );
+  const claimBadge =
+    hasPendingClaim || hasApprovedClaim || (node.owner && (!currentUser || node.owner.id !== currentUser.id)) ? (
+      hasPendingClaim ? (
+        <Badge variant="outline" className="flex items-center gap-1">
+          <Clock className="h-3 w-3" />
+          <span>Claim Pending</span>
+        </Badge>
+      ) : hasApprovedClaim ? (
+        <Badge variant="default" className="flex items-center gap-1">
+          <CheckCircle className="h-3 w-3" />
+          <span>Claimed by You</span>
+        </Badge>
+      ) : node.owner ? (
+        <Badge variant="outline" className="flex items-center gap-1">
+          <CheckCircle className="h-3 w-3" />
+          <span>Claimed by {node.owner.username}</span>
+        </Badge>
+      ) : null
+    ) : null;
 
-  return (
-    <div className={compact ? 'px-2' : 'container mx-auto px-4 py-8'}>
-      {!compact && (
-        <Link to="/nodes" replace={true} className="mb-4 inline-block text-teal-600 hover:underline dark:text-teal-400">
-          ← Back to Nodes
-        </Link>
-      )}
+  const claimLink =
+    !node.owner || hasPendingClaim ? (
+      <Link
+        to={`/nodes/${internalId}/claim`}
+        className="whitespace-nowrap rounded-md bg-teal-600 px-3 py-1 text-xs text-white transition-colors hover:bg-teal-700 dark:bg-teal-500 dark:hover:bg-teal-600"
+      >
+        {hasPendingClaim ? 'View Claim' : 'Claim Node'}
+      </Link>
+    ) : null;
 
-      <div className={`flex items-start justify-between ${compact ? 'mb-4' : 'mb-6'}`}>
-        <div>
-          <h1 className={`font-bold ${compact ? 'text-xl' : 'text-3xl'}`}>{node.short_name}</h1>
-          <p className="text-slate-600 dark:text-slate-400">{node.long_name}</p>
-          {(hasPendingClaim ||
-            hasApprovedClaim ||
-            (node.owner && (!currentUser || node.owner.id !== currentUser.id))) && (
-            <div className="mt-2 flex items-center">
-              {hasPendingClaim ? (
-                <Badge variant="outline" className="flex items-center gap-1">
-                  <Clock className="h-3 w-3" />
-                  <span>Claim Pending</span>
-                </Badge>
-              ) : hasApprovedClaim ? (
-                <Badge variant="default" className="flex items-center gap-1">
-                  <CheckCircle className="h-3 w-3" />
-                  <span>Claimed by You</span>
-                </Badge>
-              ) : node.owner ? (
-                <Badge variant="outline" className="flex items-center gap-1">
-                  <CheckCircle className="h-3 w-3" />
-                  <span>Claimed by {node.owner.username}</span>
-                </Badge>
-              ) : null}
-            </div>
-          )}
-        </div>
-        <div className="flex shrink-0 items-start gap-2">
-          {(!node.owner || hasPendingClaim) && (
-            <Link
-              to={`/nodes/${internalId}/claim`}
-              className="whitespace-nowrap rounded-md bg-teal-600 px-4 py-2 text-sm text-white transition-colors hover:bg-teal-700 dark:bg-teal-500 dark:hover:bg-teal-600"
-            >
-              {hasPendingClaim ? 'View Claim' : 'Claim Node'}
-            </Link>
-          )}
+  const shellTabs: NodeShellTab[] = [
+    { value: 'overview', label: 'Overview' },
+    { value: 'map', label: 'Map' },
+    ...(showTraceroutesTab ? [{ value: 'traceroutes' as const, label: 'Traceroutes' }] : []),
+    { value: 'statistics', label: 'Statistics' },
+    ...(showMonitoringTab ? [{ value: 'monitoring' as const, label: 'Monitoring' }] : []),
+  ];
+
+  const recentlyViewed =
+    !compact && recentNodes.length > 1 ? (
+      <div className="mt-8" data-testid="node-recently-viewed">
+        <div className="mb-2 text-sm text-slate-500 dark:text-slate-400">Recently viewed:</div>
+        <div className="flex flex-wrap gap-2">
+          {recentNodes
+            .filter((recentNode) => recentNode.meshtastic_node_id !== meshtasticNodeId)
+            .map((recentNode) => (
+              <Link
+                key={recentNode.meshtastic_node_id}
+                to={observedNodeDetailPath(recentNode) ?? '#'}
+                replace={true}
+                className="rounded-full bg-slate-100 px-3 py-1 text-sm text-teal-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-teal-400 dark:hover:bg-slate-700"
+              >
+                {recentNode.short_name}
+              </Link>
+            ))}
         </div>
       </div>
+    ) : null;
 
-      {!compact && recentNodes.length > 1 && (
-        <div className="mb-6">
-          <div className="mb-2 text-sm text-slate-500 dark:text-slate-400">Recently viewed:</div>
-          <div className="flex flex-wrap gap-2">
-            {recentNodes
-              .filter((recentNode) => recentNode.meshtastic_node_id !== meshtasticNodeId)
-              .map((recentNode) => (
-                <Link
-                  key={recentNode.meshtastic_node_id}
-                  to={observedNodeDetailPath(recentNode) ?? '#'}
-                  replace={true}
-                  className="rounded-full bg-slate-100 px-3 py-1 text-sm text-teal-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-teal-400 dark:hover:bg-slate-700"
-                >
-                  {recentNode.short_name}
-                </Link>
-              ))}
-          </div>
-        </div>
-      )}
-
-      {fullPageTabs && onTabChange ? (
-        <>
-          <Tabs
-            value={effectiveTab}
-            onValueChange={(v) => onTabChange(v as NodeDetailTab)}
-            className="mb-6"
-            data-testid="node-detail-tabs"
-          >
-            <TabsList className="mb-4 flex h-auto min-h-9 w-full flex-wrap justify-start gap-1">
-              <TabsTrigger value="overview" data-testid="node-detail-tab-overview">
-                Overview
-              </TabsTrigger>
-              <TabsTrigger value="map" data-testid="node-detail-tab-map">
-                Map
-              </TabsTrigger>
-              {showTraceroutesTab && (
-                <TabsTrigger value="traceroutes" data-testid="node-detail-tab-traceroutes">
-                  Traceroutes
-                </TabsTrigger>
-              )}
-              <TabsTrigger value="statistics" data-testid="node-detail-tab-statistics">
-                Statistics
-              </TabsTrigger>
-              {showMonitoringTab && (
-                <TabsTrigger value="monitoring" data-testid="node-detail-tab-monitoring">
-                  Monitoring
-                </TabsTrigger>
-              )}
-            </TabsList>
-
-            {effectiveTab === 'overview' && (
-              <div data-testid="node-detail-panel-overview">
-                {renderMetricsGrid()}
-                <div className="mb-6">
-                  <NodeLocationCard node={node} internalId={internalId} compact={false} mapTabLink />
-                </div>
-              </div>
-            )}
-
-            {effectiveTab === 'map' && (
-              <div data-testid="node-detail-panel-map">
-                <div className={showRfPropagation ? 'mb-6 grid grid-cols-1 gap-6 lg:grid-cols-2' : 'mb-6'}>
-                  <NodeLocationCard node={node} internalId={internalId} compact={false} />
-                  {showRfPropagation ? <RfPropagationSection node={node} className="mb-0" /> : null}
-                </div>
-              </div>
-            )}
-
-            {effectiveTab === 'traceroutes' && (
-              <div data-testid="node-detail-panel-traceroutes">
-                <NodeTraceroutesPanel
-                  internalId={internalId}
-                  meshtasticNodeId={meshtasticNodeId ?? 0}
-                  isManagedNode={isManagedNode}
-                  managedForThisNode={managedForThisNode}
-                  node={node}
-                />
-              </div>
-            )}
-
-            {effectiveTab === 'statistics' && (
-              <div data-testid="node-detail-panel-statistics">
-                <NodeStatsSection internalId={internalId} node={node} isManagedNode={isManagedNode} />
-              </div>
-            )}
-
-            {effectiveTab === 'monitoring' && showMonitoringTab && (
-              <div data-testid="node-detail-panel-monitoring">
-                <NodeMeshMonitoringSection node={node} />
-              </div>
-            )}
-          </Tabs>
-        </>
-      ) : (
-        <>
-          {renderMetricsGrid()}
-          {renderLegacyLocationBlock()}
-
-          {!compact && (
+  if (fullPageTabs && onTabChange) {
+    return (
+      <div className="container mx-auto px-4 pb-8" data-testid="node-detail-page">
+        <NodeShell
+          shortName={node.short_name}
+          longName={node.long_name}
+          hardware={node.meshtastic_hw_model}
+          actions={
             <>
-              {showMonitoringTab ? <NodeMeshMonitoringSection node={node} /> : null}
-              {showTraceroutesTab ? (
-                <NodeTraceroutesPanel
-                  internalId={internalId}
-                  meshtasticNodeId={meshtasticNodeId ?? 0}
-                  isManagedNode={isManagedNode}
-                  managedForThisNode={managedForThisNode}
-                  node={node}
-                />
-              ) : null}
-              <NodeStatsSection internalId={internalId} node={node} isManagedNode={isManagedNode} />
+              {claimBadge}
+              {claimLink}
             </>
+          }
+          tabs={shellTabs}
+          activeTab={effectiveTab}
+          onTabChange={onTabChange}
+          range={isRangedNodeDetailTab(effectiveTab) ? range : null}
+        >
+          {effectiveTab === 'overview' && (
+            <div data-testid="node-detail-panel-overview">
+              <NodeRightNow node={node} note="Latest reports. Charts live under Statistics." />
+              {renderMetricsGrid()}
+              <div className="mb-6">
+                <NodeLocationCard node={node} internalId={internalId} compact={false} mapTabLink />
+              </div>
+            </div>
           )}
 
-          {compact && (
-            <Link to={`/nodes/${internalId}`} className="text-sm text-teal-600 hover:underline dark:text-teal-400">
-              View full details →
-            </Link>
+          {effectiveTab === 'map' && (
+            <div data-testid="node-detail-panel-map">
+              <div className={showRfPropagation ? 'mb-6 grid grid-cols-1 gap-6 lg:grid-cols-2' : 'mb-6'}>
+                <NodeLocationCard node={node} internalId={internalId} compact={false} />
+                {showRfPropagation ? <RfPropagationSection node={node} className="mb-0" /> : null}
+              </div>
+            </div>
           )}
-        </>
-      )}
+
+          {effectiveTab === 'traceroutes' && (
+            <div data-testid="node-detail-panel-traceroutes">
+              <NodeTraceroutesPanel
+                internalId={internalId}
+                meshtasticNodeId={meshtasticNodeId ?? 0}
+                isManagedNode={isManagedNode}
+                managedForThisNode={managedForThisNode}
+                node={node}
+                range={range}
+              />
+            </div>
+          )}
+
+          {effectiveTab === 'statistics' && (
+            <div data-testid="node-detail-panel-statistics">
+              <NodeRightNow node={node} note="Latest reports from this node. Not affected by the range." />
+              <NodeStatsSection internalId={internalId} node={node} isManagedNode={isManagedNode} range={range} />
+            </div>
+          )}
+
+          {effectiveTab === 'monitoring' && showMonitoringTab && (
+            <div data-testid="node-detail-panel-monitoring">
+              <NodeMeshMonitoringSection node={node} />
+            </div>
+          )}
+        </NodeShell>
+        {recentlyViewed}
+      </div>
+    );
+  }
+
+  // Not a full page with tabs: the compact view in the slide-over (NodeDetailSheet). No back link, no ranged content.
+  return (
+    <div className="px-2">
+      <div className="mb-4 flex items-start justify-between">
+        <div>
+          <h1 className="text-xl font-bold">{node.short_name}</h1>
+          <p className="text-slate-600 dark:text-slate-400">{node.long_name}</p>
+          {claimBadge ? <div className="mt-2 flex items-center">{claimBadge}</div> : null}
+        </div>
+        <div className="flex shrink-0 items-start gap-2">{claimLink}</div>
+      </div>
+
+      {renderMetricsGrid()}
+      <div className="mb-6">
+        <NodeLocationCard node={node} internalId={internalId} compact />
+      </div>
+
+      <Link to={`/nodes/${internalId}`} className="text-sm text-teal-600 hover:underline dark:text-teal-400">
+        View full details →
+      </Link>
     </div>
   );
 }
