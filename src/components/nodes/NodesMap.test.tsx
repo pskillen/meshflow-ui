@@ -104,7 +104,7 @@ describe('NodesMap', () => {
 
   it('shows MeshCore node type legend when roleLegend is meshcore', () => {
     render(<NodesMap nodes={[nodeWithPosition(1, 55.1, -4.2, { protocol: 2 })]} roleLegend="meshcore" />);
-    const legend = screen.getByRole('region', { name: /Map marker colours/i });
+    const legend = screen.getByRole('region', { name: /Map key/i });
     expect(legend).toHaveTextContent('MeshCore node type');
     expect(legend).toHaveTextContent('Repeater');
     expect(screen.queryByText('ROUTER')).not.toBeInTheDocument();
@@ -119,7 +119,7 @@ describe('NodesMap', () => {
         mapLegendStatusTitle="Watch status"
       />
     );
-    const legend = screen.getByRole('region', { name: /Map marker colours/i });
+    const legend = screen.getByRole('region', { name: /Map key/i });
     expect(legend).toHaveTextContent('Watch status');
     expect(legend).toHaveTextContent('Offline');
     expect(screen.queryByText('Node role')).not.toBeInTheDocument();

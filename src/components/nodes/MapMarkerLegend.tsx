@@ -1,4 +1,4 @@
-import { useId, useState } from 'react';
+import { useId, useRef, useState, type KeyboardEvent } from 'react';
 import { cn } from '@/lib/utils';
 import type { RoleLegendSwatch } from './map-role-legend';
 
@@ -45,24 +45,35 @@ export function MapMarkerLegend({
   // Phones only (below sm): the key is a button that opens the panel. From sm up the panel is always shown.
   const [open, setOpen] = useState(false);
   const panelId = useId();
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === 'Escape' && open) {
+      event.stopPropagation();
+      setOpen(false);
+      buttonRef.current?.focus();
+    }
+  };
   if (!hasConstellation && !showRoleSwatches && !hasStatus) return null;
 
   return (
     <div
+      onKeyDown={onKeyDown}
       className={cn(
         // Below sheet/dialog overlays (z-50); above Leaflet panes inside the map container.
-        'absolute top-2 right-2 z-10 flex max-h-[85%] max-w-[min(100%,20rem)] flex-col items-end gap-1 sm:max-h-[40%]',
+        // On phones the right edge is kept clear of the Leaflet zoom control (top-left, about 3.5rem wide).
+        'absolute top-2 right-2 z-10 flex max-h-[85%] max-w-[calc(100%-4rem)] flex-col items-end gap-1 sm:max-h-[40%] sm:max-w-[min(100%,20rem)]',
         className
       )}
     >
       <button
+        ref={buttonRef}
         type="button"
         aria-expanded={open}
         aria-controls={panelId}
         onClick={() => setOpen((v) => !v)}
-        className="rounded-md border bg-background/95 px-2.5 py-1 text-xs shadow-sm backdrop-blur-sm sm:hidden"
+        className="min-h-8 rounded-md border bg-background/95 px-3 text-xs shadow-sm backdrop-blur-sm sm:hidden"
       >
-        {open ? 'Hide key' : 'Map key'}
+        Map key
       </button>
       <div
         id={panelId}
@@ -71,7 +82,7 @@ export function MapMarkerLegend({
           open ? 'block' : 'hidden sm:block'
         )}
         role="region"
-        aria-label="Map marker colours"
+        aria-label="Map key"
       >
         <div className="flex flex-wrap gap-x-3 gap-y-2 flex-col sm:flex-row sm:items-start">
           {hasConstellation ? (

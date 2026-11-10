@@ -74,9 +74,9 @@ describe('NodesAndConstellationsMap', () => {
       </div>
     );
     await waitFor(() => {
-      expect(screen.getByRole('region', { name: /Map marker colours/i })).toBeInTheDocument();
+      expect(screen.getByRole('region', { name: /Map key/i })).toBeInTheDocument();
     });
-    const legend = screen.getByRole('region', { name: /Map marker colours/i });
+    const legend = screen.getByRole('region', { name: /Map key/i });
     expect(legend).toHaveTextContent('Test Constellation');
     expect(screen.queryByText('Other mesh nodes (by role)')).not.toBeInTheDocument();
   });
