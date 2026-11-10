@@ -52,6 +52,36 @@ describe('bucketMetricRows', () => {
   });
 });
 
+describe('bucketMetricRows, raw rows', () => {
+  const raw = (h: number, over: Record<string, number | null>) => ({
+    reported_time: new Date(Date.UTC(2026, 10, 5, h, 10)),
+    voltage: null,
+    battery_level: null,
+    ...over,
+  });
+
+  it('leaves a 0 voltage or 0 level out of the mean, unless every reading is 0', () => {
+    const rows = [
+      raw(1, { voltage: 3.9, battery_level: 80 }),
+      raw(1, { voltage: 0, battery_level: 0 }),
+      raw(2, { voltage: 0, battery_level: 0 }),
+    ];
+    const [a, b] = bucketMetricRows(rows, ['voltage', 'battery_level'], 'hourly');
+    expect(a).toMatchObject({ voltage: 3.9, battery_level: 80 });
+    expect(b).toMatchObject({ voltage: 0, battery_level: 0 });
+  });
+
+  it('keeps a 0 in other fields (channel use of 0% is a reading)', () => {
+    const rows = [
+      { ...raw(1, {}), meshtastic_channel_utilization: 0 },
+      { ...raw(1, {}), meshtastic_channel_utilization: 10 },
+    ];
+    expect(bucketMetricRows(rows, ['meshtastic_channel_utilization'], 'hourly')[0]).toMatchObject({
+      meshtastic_channel_utilization: 5,
+    });
+  });
+});
+
 describe('buildBatteryTrend', () => {
   const w = statsRangeWindow('30d', NOW);
 

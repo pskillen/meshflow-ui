@@ -87,11 +87,30 @@ describe('BatteryChartShadcn', () => {
 
   it('shows a raw 101 as Powered, not a 101% spike', () => {
     useNodeMetricsSuspense.mockReturnValue({
-      metrics: [row(5, { voltage: 5.1, battery_level: 101 }), row(6, { voltage: 5.1, battery_level: 101 })],
+      metrics: [row(8, { voltage: 5.1, battery_level: 101 }), row(9, { voltage: 5.1, battery_level: 101 })],
     });
     render(<BatteryChartShadcn internalId="n1" range={rangeFor('30d')} defaultMode="percentage" />);
     expect(screen.getByTestId('chart-node-battery-empty').textContent).toMatch(/Powered/);
+    expect(screen.getByTestId('chart-node-battery-headline').textContent).toBe('Powered');
     expect(document.body.textContent).not.toMatch(/101/);
+    expect(document.body.textContent).not.toMatch(/Dashed: the bucket in progress/);
+  });
+
+  it('says Powered (external supply) on the Voltage view when the latest bucket is powered', () => {
+    useNodeMetricsSuspense.mockReturnValue({
+      metrics: [row(5, { voltage: 3.9, battery_level: 88 }), row(6, { voltage: 5.1, battery_level: 101 })],
+    });
+    render(<BatteryChartShadcn internalId="n1" range={rangeFor('30d')} />);
+    expect(screen.getByTestId('chart-node-battery-headline').textContent).toBe('5.1 V');
+    expect(screen.getByTestId('chart-node-battery').textContent).toMatch(/Powered \(external supply\)\./);
+  });
+
+  it('does not say Powered when the latest bucket is a real level', () => {
+    useNodeMetricsSuspense.mockReturnValue({
+      metrics: [row(5, { voltage: 5.1, battery_level: 101 }), row(6, { voltage: 3.9, battery_level: 88 })],
+    });
+    render(<BatteryChartShadcn internalId="n1" range={rangeFor('30d')} />);
+    expect(screen.getByTestId('chart-node-battery').textContent).not.toMatch(/Powered \(external supply\)\./);
   });
 
   it('notes powered buckets when other buckets have a real level, and the toggle switches the reading', () => {

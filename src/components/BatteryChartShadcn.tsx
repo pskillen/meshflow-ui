@@ -52,6 +52,13 @@ export function BatteryChartShadcn({ internalId, range, defaultMode = 'voltage' 
         : `No battery ${volt ? 'voltage' : 'level'} reported in the ${range.longLabel}.`;
   }
 
+  // "Powered" must show in both modes when the newest bucket is powered; the count is only for plotted percent charts.
+  const buckets = `${trend.poweredBuckets} ${trend.poweredBuckets === 1 ? 'bucket' : 'buckets'}`;
+  const notPlotted = !volt && trend.hasData && trend.poweredBuckets > 0;
+  let note: string | undefined;
+  if (notPlotted) note = `Powered (external supply) in ${buckets}, not plotted.`;
+  else if (trend.latest.kind === 'powered') note = 'Powered (external supply).';
+
   return (
     <MetricTrendCard
       title="Battery"
@@ -62,11 +69,8 @@ export function BatteryChartShadcn({ internalId, range, defaultMode = 'voltage' 
       series={[{ key: 'value', label: volt ? 'Voltage (V)' : 'Battery (%)', color: 'hsl(var(--chart-1))' }]}
       yRange={volt ? 'fit' : [0, 100]}
       formatValue={volt ? volts : percent}
-      note={
-        !volt && trend.hasData && trend.poweredBuckets > 0
-          ? `Powered (external supply) in ${trend.poweredBuckets} ${trend.poweredBuckets === 1 ? 'bucket' : 'buckets'}, not plotted.`
-          : undefined
-      }
+      note={note}
+      keepHeadline={!volt && trend.latest.kind === 'powered'}
       actions={
         <ToggleGroup
           type="single"
