@@ -75,7 +75,7 @@ const test = base.extend({
       '**/api/nodes/observed-nodes/*/**': createJsonHandler([]),
       [`**/api/nodes/observed-nodes/${NODE_ID}/`]: createJsonHandler(NODE),
       [`**/api/nodes/observed-nodes/${NODE_ID}/traceroute-links/**`]: createJsonHandler(LINKS),
-      '**/api/traceroutes/**': createJsonHandler({ results: [], count: 0, next: null, previous: null }),
+      '**/api/traceroutes/**': createJsonHandler({ results: [], count: 23, next: null, previous: null }),
       '**/api/traceroutes/triggerable-nodes/**': createJsonHandler([]),
     });
     // eslint-disable-next-line react-hooks/rules-of-hooks -- Playwright fixture callback
@@ -107,7 +107,7 @@ test.describe('Node Traceroutes tab', () => {
       await page.goto(`/nodes/${NODE_ID}?tab=traceroutes&range=${range}`);
       await expect(page.getByTestId('node-traceroute-tiles')).toBeVisible();
       await expect(page.getByTestId('node-traceroute-tile-links')).toContainText('6');
-      await expect(page.getByTestId('node-traceroute-tile-peers')).toContainText('6');
+      await expect(page.getByTestId('node-traceroute-tile-traceroutes')).toContainText('23');
       await expect(page.getByTestId('node-traceroute-tile-best-snr')).toContainText('6.3');
 
       await expect.poll(() => linkParams.length).toBeGreaterThan(0);
@@ -125,6 +125,19 @@ test.describe('Node Traceroutes tab', () => {
       expect(historyParams[0].searchParams.get('target_node')).toBe(String(MESH_ID));
     });
   }
+
+  test('the Traceroutes tile and the history table share one request', async ({ page }) => {
+    const history: string[] = [];
+    page.on('request', (req) => {
+      const url = new URL(req.url());
+      if (/\/api\/traceroutes\/$/.test(url.pathname) && url.searchParams.has('target_node')) history.push(req.url());
+    });
+    await page.goto(`/nodes/${NODE_ID}?tab=traceroutes&range=7d`);
+    await expect(page.getByTestId('node-traceroute-tile-traceroutes')).toContainText('23');
+    await expect(page.getByTestId('node-traceroute-tile-traceroutes')).toContainText('to this node');
+    await expect(page.getByTestId('node-traceroute-tile-peers')).toHaveCount(0);
+    expect(history).toHaveLength(1);
+  });
 
   test('SNR cards: four links first, then all; each has a headline and both directions', async ({ page }) => {
     await page.goto(`/nodes/${NODE_ID}?tab=traceroutes&range=24h`);
