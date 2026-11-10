@@ -33,6 +33,7 @@ import {
   NodeMonitoringConfig,
   NodeMonitoringConfigPatch,
   MeshInfraMonitoringAlertSummary,
+  MeshInfraProtocol,
   DxEventListItem,
   DxEventDetail,
   DxNodeExclusionResponse,
@@ -1307,8 +1308,12 @@ export class MeshflowApi extends BaseApi {
     return this.patch<NodeMonitoringConfig>(`/monitoring/nodes/${observedNodeId}/config/`, body);
   }
 
-  async getMeshInfraMonitoringAlertsSummary(): Promise<{ mesh_infra: MeshInfraMonitoringAlertSummary }> {
-    return this.get<{ mesh_infra: MeshInfraMonitoringAlertSummary }>('/monitoring/alerts/summary/?scope=mesh_infra');
+  async getMeshInfraMonitoringAlertsSummary(
+    protocol: MeshInfraProtocol = 'meshtastic'
+  ): Promise<{ mesh_infra: MeshInfraMonitoringAlertSummary }> {
+    return this.get<{ mesh_infra: MeshInfraMonitoringAlertSummary }>(
+      `/monitoring/alerts/summary/?scope=mesh_infra&protocol=${protocol}`
+    );
   }
 
   // ===== DX monitoring (staff-only) =====

@@ -26,8 +26,11 @@ vi.mock('@/lib/auth/authService', () => ({
   },
 }));
 
+type InfraSummary = { alerting_nodes_count: number; supported?: boolean };
+const infraSummaries: Record<string, InfraSummary> = {};
+
 vi.mock('@/hooks/api/useNodeWatches', () => ({
-  useMeshInfraMonitoringAlertsSummary: () => ({ data: { mesh_infra: { alerting_nodes_count: 0 } } }),
+  useMeshInfraMonitoringAlertsSummary: (protocol: string) => ({ data: { mesh_infra: infraSummaries[protocol] } }),
 }));
 
 function renderNavAt(path: string) {
@@ -43,6 +46,38 @@ function renderNavAt(path: string) {
 describe('NavMain', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    infraSummaries.meshtastic = { alerting_nodes_count: 0, supported: true };
+    infraSummaries.meshcore = { alerting_nodes_count: 0, supported: false };
+  });
+
+  function infraLink(href: string) {
+    return screen.getAllByRole('link', { name: /Mesh infra/ }).find((el) => el.getAttribute('href') === href)!;
+  }
+
+  it('shows each protocol its own Mesh infra badge count', () => {
+    infraSummaries.meshtastic = { alerting_nodes_count: 3, supported: true };
+    infraSummaries.meshcore = { alerting_nodes_count: 7, supported: true };
+    renderNavAt('/');
+    expect(infraLink('/nodes/infrastructure').textContent).toContain('3');
+    expect(infraLink('/nodes/infrastructure').textContent).not.toContain('7');
+    expect(infraLink('/meshcore/infrastructure').textContent).toContain('7');
+    expect(infraLink('/meshcore/infrastructure').textContent).not.toContain('3');
+  });
+
+  it('hides the MeshCore badge when monitoring is unsupported', () => {
+    infraSummaries.meshtastic = { alerting_nodes_count: 3, supported: true };
+    infraSummaries.meshcore = { alerting_nodes_count: 5, supported: false };
+    renderNavAt('/');
+    expect(infraLink('/nodes/infrastructure').textContent).toContain('3');
+    expect(infraLink('/meshcore/infrastructure').textContent).not.toMatch(/\d/);
+  });
+
+  it('treats missing supported as true for Meshtastic and false for MeshCore (older API)', () => {
+    infraSummaries.meshtastic = { alerting_nodes_count: 2 };
+    infraSummaries.meshcore = { alerting_nodes_count: 4 };
+    renderNavAt('/');
+    expect(infraLink('/nodes/infrastructure').textContent).toContain('2');
+    expect(infraLink('/meshcore/infrastructure').textContent).not.toMatch(/\d/);
   });
 
   it('shows Meshtastic and MeshCore section labels', () => {
