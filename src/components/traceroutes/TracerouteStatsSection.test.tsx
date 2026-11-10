@@ -166,13 +166,65 @@ describe('TracerouteStatsSection', () => {
     });
     expect(within(feeders).getAllByRole('listitem')[0]).toHaveTextContent('ALP');
     expect(feeders).toHaveTextContent('80% · 25');
+    expect(feeders).toHaveTextContent('80% success, 25 runs');
+  });
+
+  it('gives every bar row a spoken figure with units', () => {
+    renderSection();
+    const trigger = within(screen.getByTestId('traceroute-by-trigger-card')).getByRole('list', {
+      name: 'Runs by trigger',
+    });
+    expect(trigger).toHaveTextContent('of runs');
+    expect(trigger.tagName).toBe('UL');
+    expect(trigger).toHaveAttribute('role', 'list');
+  });
+
+  it('shows share of all runs in the strategy table, from by_strategy', () => {
+    useTracerouteStats.mockReturnValue({
+      data: {
+        ...BASE,
+        by_strategy: {
+          ...BASE.by_strategy,
+          manual: { completed: 20, failed: 0, pending: 0, sent: 0 },
+        },
+      },
+      isLoading: false,
+      error: null,
+    });
+    renderSection();
+    const card = screen.getByTestId('traceroute-by-strategy-card');
+    fireEvent.click(within(card).getByRole('button', { name: 'Show table' }));
+    const table = within(card).getByRole('table');
+    expect(table).toHaveTextContent('Share of all runs');
+    // 26 of 63 runs in by_strategy (26 + 17 + 20 extra, which the excluding-external set omits)
+    expect(within(table).getByText('Intra-zone').closest('tr')).toHaveTextContent('41%');
+  });
+
+  it('says there are no runs instead of drawing an empty Outcomes chart', () => {
+    useTracerouteStats.mockReturnValue({
+      data: { ...BASE, success_failure: [], success_over_time: [] },
+      isLoading: false,
+      error: null,
+    });
+    renderSection();
+    expect(screen.getByTestId('traceroute-outcomes-card')).toHaveTextContent('No runs in this period');
+  });
+
+  it('keeps the scope hint for a feeder with no runs', () => {
+    useTracerouteStats.mockReturnValue({ data: { ...BASE, by_source: [] }, isLoading: false, error: null });
+    renderSection('7d', 12);
+    expect(screen.getByText('Stats scoped to the selected source node.')).toBeInTheDocument();
   });
 
   it('ranks targets with at least 5 attempts, best and worst first', () => {
     renderSection();
     const most = within(screen.getByTestId('traceroute-top-targets-card')).getAllByRole('listitem');
     const least = within(screen.getByTestId('traceroute-least-targets-card')).getAllByRole('listitem');
-    expect(most.map((li) => li.textContent)).toEqual(['GOOD90% · 10', 'MID50% · 10', 'BAD10% · 10']);
+    expect(most.map((li) => li.textContent)).toEqual([
+      'GOOD90% · 1090% success, 10 runs',
+      'MID50% · 1050% success, 10 runs',
+      'BAD10% · 1010% success, 10 runs',
+    ]);
     expect(least[0]).toHaveTextContent('BAD');
     expect(screen.queryByText('FEW')).toBeNull();
     expect(within(most[0]!).getByRole('link')).toHaveAttribute('href', '/traceroutes/history?target_node=1');

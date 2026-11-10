@@ -32,7 +32,7 @@ export const TOP_TARGETS_MIN_ATTEMPTS = 5;
 
 /** Bars shown per card; the table behind "Show table" has the rest. */
 const BAR_LIMIT = 6;
-const TARGET_BAR_LIMIT = 5;
+const TARGET_BAR_LIMIT = 6;
 const TARGET_TABLE_LIMIT = 25;
 
 const COMPLETED_COLOR = 'hsl(var(--chart-2))';
@@ -49,6 +49,8 @@ export type TracerouteStatsSectionProps = {
   /** The page's range (`useStatsRange()`): its key picks hourly or daily data, its window starts the query. */
   range: Pick<StatsRange, 'key' | 'longLabel' | 'window'>;
 };
+
+const plural = (n: number, noun: string) => `${n.toLocaleString()} ${noun}${n === 1 ? '' : 's'}`;
 
 const pct = (rate: number | null | undefined) => (rate != null ? `${(rate * 100).toFixed(0)}%` : '—');
 
@@ -70,16 +72,26 @@ export function TracerouteStatsSection({ sourceNodeId = null, range }: Tracerout
   const reached = (data?.by_target ?? []).filter((t) => t.completed > 0).length;
 
   const sourceScopeHint = useMemo(() => {
-    if (sourceNodeId == null || !data?.by_source?.length) return null;
-    const row = data.by_source.find((r) => r.meshtastic_node_id === sourceNodeId);
+    if (sourceNodeId == null || isLoading) return null;
+    const row = data?.by_source?.find((r) => r.meshtastic_node_id === sourceNodeId);
     if (!row) return 'Stats scoped to the selected source node.';
     return `Stats scoped to source ${row.short_name ?? row.node_id_str ?? sourceNodeId}.`;
-  }, [sourceNodeId, data?.by_source]);
+  }, [sourceNodeId, isLoading, data?.by_source]);
 
   const strategies = useMemo(
     () => buildStrategySuccessBarChartData(data?.by_strategy_excluding_external ?? data?.by_strategy),
     [data?.by_strategy_excluding_external, data?.by_strategy]
   );
+  const strategyShare = useMemo(() => {
+    const all = buildStrategySuccessBarChartData(data?.by_strategy);
+    const count = (s: { completed: number; failed: number; pending: number; sent: number }) =>
+      s.completed + s.failed + s.pending + s.sent;
+    const total = all.reduce((acc, s) => acc + count(s), 0);
+    return (key: string) => {
+      const row = all.find((s) => s.strategyKey === key);
+      return total && row ? `${Math.round((100 * count(row)) / total)}%` : '—';
+    };
+  }, [data?.by_strategy]);
   const strategyBars: BarListRow[] = strategies
     .filter((s) => s.completed + s.failed + s.pending + s.sent > 0)
     .map((s) => ({
@@ -87,6 +99,10 @@ export function TracerouteStatsSection({ sourceNodeId = null, range }: Tracerout
       label: s.label,
       percent: s.success_pct ?? 0,
       text: s.success_pct != null ? `${s.success_pct.toFixed(0)}% · ${s.completed + s.failed}` : '— · 0',
+      spoken:
+        s.success_pct != null
+          ? `${s.success_pct.toFixed(0)}% success, ${plural(s.completed + s.failed, 'run')}`
+          : 'No finished runs',
     }));
 
   const feeders = useMemo(
@@ -98,6 +114,7 @@ export function TracerouteStatsSection({ sourceNodeId = null, range }: Tracerout
     label: r.short_name ?? r.node_id_str ?? `Node ${r.managed_node_id}`,
     percent: (r.success_rate ?? 0) * 100,
     text: `${pct(r.success_rate)} · ${r.total}`,
+    spoken: `${pct(r.success_rate)} success, ${plural(r.total, 'run')}`,
   }));
 
   const triggers = useMemo(() => [...(data?.sources ?? [])].sort((a, b) => b.count - a.count), [data?.sources]);
@@ -107,6 +124,7 @@ export function TracerouteStatsSection({ sourceNodeId = null, range }: Tracerout
     label: SOURCE_LABELS[String(s.trigger_type)] ?? String(s.trigger_type),
     percent: triggerTotal ? (100 * s.count) / triggerTotal : 0,
     text: `${triggerTotal ? Math.round((100 * s.count) / triggerTotal) : 0}% · ${s.count}`,
+    spoken: `${triggerTotal ? Math.round((100 * s.count) / triggerTotal) : 0}% of runs, ${plural(s.count, 'run')}`,
   }));
 
   const eligibleTargets = useMemo(
@@ -131,6 +149,8 @@ export function TracerouteStatsSection({ sourceNodeId = null, range }: Tracerout
     );
   }
 
+  const noOutcomes =
+    finished === 0 && trend.rows.every((r) => (Number(r.completed) || 0) + (Number(r.failed) || 0) === 0);
   const loading = <p className="py-6 text-center text-sm text-muted-foreground">Loading…</p>;
   const dash = '…';
   const measure = `Runs per ${bucketPhrase(trend.bucket)}, by trigger time`;
@@ -161,17 +181,17 @@ export function TracerouteStatsSection({ sourceNodeId = null, range }: Tracerout
           />
           <StatTile
             role="listitem"
-            label="Targets probed"
-            value={isLoading ? dash : (data?.by_target?.length ?? 0).toLocaleString()}
-            sub={isLoading ? undefined : `${reached.toLocaleString()} reached`}
-            data-testid="tile-targets"
-          />
-          <StatTile
-            role="listitem"
             label="Feeders running"
             value={isLoading ? dash : feeders.length.toLocaleString()}
             sub="sent at least one"
             data-testid="tile-feeders"
+          />
+          <StatTile
+            role="listitem"
+            label="Targets probed"
+            value={isLoading ? dash : (data?.by_target?.length ?? 0).toLocaleString()}
+            sub={isLoading ? undefined : `${reached.toLocaleString()} reached`}
+            data-testid="tile-targets"
           />
         </div>
 
@@ -190,6 +210,8 @@ export function TracerouteStatsSection({ sourceNodeId = null, range }: Tracerout
         >
           {isLoading ? (
             loading
+          ) : noOutcomes ? (
+            <p className="py-6 text-center text-sm text-muted-foreground">No runs in this period</p>
           ) : (
             <TrendChart
               kind="bar"
@@ -218,7 +240,16 @@ export function TracerouteStatsSection({ sourceNodeId = null, range }: Tracerout
             }
             table={
               <SimpleTable
-                head={['Strategy', 'Total', 'Completed', 'Failed', 'Pending', 'In flight', 'Success']}
+                head={[
+                  'Strategy',
+                  'Total',
+                  'Completed',
+                  'Failed',
+                  'Pending',
+                  'In flight',
+                  'Success',
+                  'Share of all runs',
+                ]}
                 rows={strategies.map((s) => [
                   s.label,
                   s.completed + s.failed + s.pending + s.sent,
@@ -227,10 +258,11 @@ export function TracerouteStatsSection({ sourceNodeId = null, range }: Tracerout
                   s.pending,
                   s.sent,
                   s.success_pct != null ? `${s.success_pct.toFixed(0)}%` : '—',
+                  strategyShare(s.strategyKey),
                 ])}
               />
             }
-            note="External mesh reports are left out here: they do not select a hypothesis. Runs with no recorded strategy are Legacy."
+            note="External mesh reports are left out here: they do not select a hypothesis. Runs with no recorded strategy are Legacy. Share of all runs counts external reports too."
           />
 
           <TableCard
@@ -312,6 +344,7 @@ function targetBars(rows: TargetRow[]): BarListRow[] {
     label: r.short_name ?? r.node_id_str,
     percent: (r.success_rate ?? 0) * 100,
     text: `${pct(r.success_rate)} · ${r.completed + r.failed}`,
+    spoken: `${pct(r.success_rate)} success, ${plural(r.completed + r.failed, 'run')}`,
     href: `/traceroutes/history?target_node=${r.meshtastic_node_id}`,
   }));
 }
@@ -346,7 +379,7 @@ function TableCard({
           type="button"
           aria-expanded={open}
           onClick={() => setOpen((v) => !v)}
-          className="rounded-md border px-2 py-1 text-xs text-muted-foreground hover:text-foreground"
+          className="h-8 rounded-md border px-2 text-xs text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:h-auto sm:py-1"
         >
           {open ? 'Hide table' : 'Show table'}
         </button>
@@ -356,7 +389,7 @@ function TableCard({
         <p className="py-6 text-center text-sm text-muted-foreground">Loading…</p>
       ) : (
         <div className="space-y-3">
-          {bars}
+          <div className="px-3 sm:px-0">{bars}</div>
           {open ? <div className="rounded-md border overflow-x-auto">{table}</div> : null}
         </div>
       )}
