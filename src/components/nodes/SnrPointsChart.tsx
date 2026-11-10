@@ -45,7 +45,7 @@ function TriangleMark({ cx, cy }: ShapeProps) {
   if (cx == null || cy == null) return null;
   const r = RADIUS + 1;
   const pts = `${cx},${cy - r} ${cx + r},${cy + r * 0.8} ${cx - r},${cy + r * 0.8}`;
-  return <polygon points={pts} fill="none" stroke={COLOR_OUT} strokeWidth={1.5} />;
+  return <polygon points={pts} fill="none" stroke={COLOR_OUT} strokeWidth={2} />;
 }
 
 function PointTooltip({ active, payload }: { active?: boolean; payload?: Array<{ payload?: RawSnrPoint }> }) {
@@ -173,7 +173,7 @@ export function SnrPointsChart({
         </span>
         <span className="inline-flex items-center gap-1">
           <svg width="10" height="10" aria-hidden>
-            <polygon points="5,1 9,8 1,8" fill="none" stroke={COLOR_OUT} strokeWidth="1.5" />
+            <polygon points="5,1 9,8 1,8" fill="none" stroke={COLOR_OUT} strokeWidth="2" />
           </svg>
           SNR out (dB)
         </span>
