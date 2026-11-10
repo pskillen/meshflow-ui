@@ -26,6 +26,7 @@ import { NodeMeshMonitoringSection } from '@/components/nodes/NodeMeshMonitoring
 import { NodeTracerouteHistorySection } from '@/components/nodes/NodeTracerouteHistorySection';
 import { NodeOutgoingTraceroutesSection } from '@/components/nodes/NodeOutgoingTraceroutesSection';
 import { RfPropagationSection } from '@/components/nodes/RfPropagationSection';
+import { NodeRightNow } from '@/components/nodes/NodeRightNow';
 import { NodeShell, type NodeShellTab } from '@/components/nodes/NodeShell';
 import { STATS_PRESET_KEYS } from '@/lib/stats-range';
 import { useStatsRange, type StatsRange } from '@/hooks/useStatsRange';
@@ -638,6 +639,7 @@ export function NodeDetailContent({ internalId, compact = false, activeTab, onTa
         >
           {effectiveTab === 'overview' && (
             <div data-testid="node-detail-panel-overview">
+              <NodeRightNow node={node} note="Latest reports. Charts live under Statistics." />
               {renderMetricsGrid()}
               <div className="mb-6">
                 <NodeLocationCard node={node} internalId={internalId} compact={false} mapTabLink />
@@ -669,6 +671,7 @@ export function NodeDetailContent({ internalId, compact = false, activeTab, onTa
 
           {effectiveTab === 'statistics' && (
             <div data-testid="node-detail-panel-statistics">
+              <NodeRightNow node={node} note="Latest reports from this node. Not affected by the range." />
               <NodeStatsSection internalId={internalId} node={node} isManagedNode={isManagedNode} range={range} />
             </div>
           )}
