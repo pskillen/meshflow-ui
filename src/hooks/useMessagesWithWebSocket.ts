@@ -58,7 +58,7 @@ function prependToMessagesQuery(
  */
 export function useMessagesWithWebSocket(options?: UseMessagesWithWebSocketOptions) {
   const queryClient = useQueryClient();
-  const { isConnected, takeUnreadForChannel } = useWebSocket();
+  const { isConnected, reportShownMessage } = useWebSocket();
   const [realtimeMessages, setRealtimeMessages] = useState<TextMessage[]>([]);
 
   const messagesResult = useMessagesSuspense({
@@ -99,17 +99,19 @@ export function useMessagesWithWebSocket(options?: UseMessagesWithWebSocketOptio
     return merged;
   }, [realtimeMessages, messagesResult.messages]);
 
-  // Promote channel unread into the list when switching channels.
+  // Clear realtime rows when the list scope changes (the query itself is keyed by scope).
+  useEffect(() => {
+    setRealtimeMessages([]);
+  }, [options?.channelId, options?.constellationId, options?.protocol]);
+
+  // Tell the provider the newest message on screen so it can advance the channel's read cursor.
+  const newestMessageId = allMessages[0]?.id ?? null;
   useEffect(() => {
     if (options?.channelId == null || !options?.protocol) {
-      setRealtimeMessages([]);
       return;
     }
-
-    const taken = takeUnreadForChannel(options.protocol, options.channelId);
-    setRealtimeMessages(taken);
-    prependToMessagesQuery(queryClient, queryKey, taken);
-  }, [options?.channelId, options?.constellationId, options?.protocol, takeUnreadForChannel, queryClient, queryKey]);
+    reportShownMessage(options.protocol, options.channelId, newestMessageId);
+  }, [options?.channelId, options?.protocol, newestMessageId, reportShownMessage]);
 
   useEffect(() => {
     const handleNewMessage = (message: TextMessage) => {

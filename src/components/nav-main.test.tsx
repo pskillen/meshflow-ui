@@ -1,20 +1,18 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { NavMain } from './nav-main';
 import { SidebarProvider } from '@/components/ui/sidebar';
 
+const unread = vi.hoisted(() => ({ meshtastic: 0, meshcore: 0 }));
+
 vi.mock('@/providers/WebSocketProvider', () => ({
   useWebSocket: () => ({
     hasUnreadMessages: false,
-    unreadMessages: [],
-    markAllAsRead: vi.fn(),
-    markAsReadForProtocol: vi.fn(),
-    markAsReadForChannel: vi.fn(),
-    takeUnreadForChannel: () => [],
     setActiveMessagesView: vi.fn(),
-    unreadCountForProtocol: () => 0,
-    hasUnreadForProtocol: () => false,
+    reportShownMessage: vi.fn(),
+    unreadCountForProtocol: (p: 'meshtastic' | 'meshcore') => unread[p],
+    hasUnreadForProtocol: (p: 'meshtastic' | 'meshcore') => unread[p] > 0,
     unreadCountForChannel: () => 0,
     hasUnreadForChannel: () => false,
   }),
@@ -46,6 +44,8 @@ function renderNavAt(path: string) {
 describe('NavMain', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    unread.meshtastic = 0;
+    unread.meshcore = 0;
     infraSummaries.meshtastic = { alerting_nodes_count: 0, supported: true };
     infraSummaries.meshcore = { alerting_nodes_count: 0, supported: false };
   });
@@ -160,5 +160,46 @@ describe('NavMain', () => {
     renderNavAt('/traceroutes/map/heat');
     const link = screen.getByRole('link', { name: 'Geographic' });
     expect(link.closest('[data-active="true"]')).toBeTruthy();
+  });
+
+  describe('Messages unread badges', () => {
+    it('shows no badge when nothing is unread', () => {
+      renderNavAt('/');
+      expect(screen.queryByTestId('messages-unread-badge-meshtastic')).toBeNull();
+      expect(screen.queryByTestId('messages-unread-badge-meshcore')).toBeNull();
+    });
+
+    it('shows each protocol total independently', () => {
+      unread.meshtastic = 3;
+      unread.meshcore = 5;
+      renderNavAt('/');
+      expect(screen.getByTestId('messages-unread-badge-meshtastic')).toHaveTextContent('3');
+      expect(screen.getByTestId('messages-unread-badge-meshcore')).toHaveTextContent('5');
+    });
+
+    it('shows only the protocol that has unread', () => {
+      unread.meshcore = 2;
+      renderNavAt('/');
+      expect(screen.queryByTestId('messages-unread-badge-meshtastic')).toBeNull();
+      expect(screen.getByTestId('messages-unread-badge-meshcore')).toHaveTextContent('2');
+    });
+
+    it('abbreviates large counts as 9+ and 99+', () => {
+      unread.meshtastic = 12;
+      unread.meshcore = 150;
+      renderNavAt('/');
+      expect(screen.getByTestId('messages-unread-badge-meshtastic')).toHaveTextContent('9+');
+      expect(screen.getByTestId('messages-unread-badge-meshcore')).toHaveTextContent('99+');
+    });
+
+    it('is a plain link: clicking Messages does not clear unread', () => {
+      unread.meshtastic = 4;
+      renderNavAt('/');
+      const link = screen
+        .getAllByRole('link', { name: /Messages/ })
+        .find((el) => el.getAttribute('href') === '/messages')!;
+      fireEvent.click(link);
+      expect(screen.getByTestId('messages-unread-badge-meshtastic')).toHaveTextContent('4');
+    });
   });
 });

@@ -340,3 +340,8 @@ export function useAuth() {
 
   return context;
 }
+
+/** Like {@link useAuth} but returns null outside an AuthProvider instead of throwing. */
+export function useOptionalAuth() {
+  return useContext(AuthContext);
+}

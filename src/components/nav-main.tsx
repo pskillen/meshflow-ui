@@ -15,7 +15,7 @@ import {
   Share2,
   type LucideIcon,
 } from 'lucide-react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 
 import {
   SidebarGroup,
@@ -176,17 +176,20 @@ const INFRA_BADGE_PROTOCOL_BY_URL: Record<string, MeshInfraProtocol> = {
   '/meshcore/infrastructure': 'meshcore',
 };
 
+function unreadBadgeLabel(count: number): string {
+  if (count > 99) return '99+';
+  return count > 9 ? '9+' : String(count);
+}
+
 function NavMenuItems({
   items,
   pathname,
-  onMessagesClick,
   infraAlertCountForUrl,
   unreadCountForProtocol,
   hasUnreadForProtocol,
 }: {
   items: NavItem[];
   pathname: string;
-  onMessagesClick: (protocol: MessageProtocolSlug, url: string) => (e: React.MouseEvent<HTMLAnchorElement>) => void;
   /** Badge count for a nav child URL; 0 hides the badge. */
   infraAlertCountForUrl: (url: string) => number;
   unreadCountForProtocol: (protocol: MessageProtocolSlug) => number;
@@ -203,12 +206,15 @@ function NavMenuItems({
           <SidebarMenuItem key={`${item.title}-${item.url}`}>
             <SidebarMenuButton asChild tooltip={item.tooltip ?? item.title} isActive={parentActive}>
               {messagesProtocol ? (
-                <Link to={item.url} className="relative" onClick={onMessagesClick(messagesProtocol, item.url)}>
+                <Link to={item.url} className="relative">
                   <Icon />
                   <span>{item.title}</span>
                   {hasUnreadForProtocol(messagesProtocol) && (
-                    <span className="absolute right-2 top-2 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 p-0 text-xs text-white shadow-sm ring-2 ring-sidebar">
-                      {unreadCountForProtocol(messagesProtocol) > 9 ? '9+' : unreadCountForProtocol(messagesProtocol)}
+                    <span
+                      data-testid={`messages-unread-badge-${messagesProtocol}`}
+                      className="absolute right-2 top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-xs text-white shadow-sm ring-2 ring-sidebar"
+                    >
+                      {unreadBadgeLabel(unreadCountForProtocol(messagesProtocol))}
                     </span>
                   )}
                 </Link>
@@ -254,8 +260,7 @@ function NavMenuItems({
 }
 
 export function NavMain() {
-  const { markAsReadForProtocol, unreadCountForProtocol, hasUnreadForProtocol } = useWebSocket();
-  const navigate = useNavigate();
+  const { unreadCountForProtocol, hasUnreadForProtocol } = useWebSocket();
   const { pathname } = useLocation();
   const currentUser = authService.getCurrentUser();
   const showDxMonitoring = Boolean(currentUser?.is_staff);
@@ -271,13 +276,6 @@ export function NavMain() {
     return supported ? (summary.alerting_nodes_count ?? 0) : 0;
   };
 
-  const handleMessagesClick =
-    (protocol: MessageProtocolSlug, url: string) => (e: React.MouseEvent<HTMLAnchorElement>) => {
-      e.preventDefault();
-      markAsReadForProtocol(protocol);
-      navigate(url);
-    };
-
   const sections = buildNavSections(showDxMonitoring);
 
   return (
@@ -290,7 +288,6 @@ export function NavMain() {
               <NavMenuItems
                 items={section.items}
                 pathname={pathname}
-                onMessagesClick={handleMessagesClick}
                 infraAlertCountForUrl={infraAlertCountForUrl}
                 unreadCountForProtocol={unreadCountForProtocol}
                 hasUnreadForProtocol={hasUnreadForProtocol}

@@ -491,6 +491,22 @@ export interface TextMessage {
   heard: PacketObservation[] | MeshCoreHeardObservation[];
 }
 
+/** Per-protocol unread summary from `GET /api/messages/unread-counts/` (channel keys are channel ids). */
+export interface UnreadProtocolCounts {
+  total: number;
+  channels: Record<string, number>;
+}
+
+export interface UnreadCountsResponse {
+  meshtastic: UnreadProtocolCounts;
+  meshcore: UnreadProtocolCounts;
+}
+
+export interface MarkChannelReadResponse {
+  channel_id: number;
+  last_read_at: string;
+}
+
 export interface TextMessageResponse {
   count: number;
   next: string | null;

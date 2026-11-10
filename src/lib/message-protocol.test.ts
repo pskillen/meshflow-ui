@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { messageProtocol, isOnMessagesPage, messagesRouteForProtocol, channelIdFromMessage } from './message-protocol';
+import { messageProtocol, messageProtocolOrNull, isOnMessagesPage, messagesRouteForProtocol, channelIdFromMessage } from './message-protocol';
 import type { TextMessage } from '@/lib/models';
 
 function msg(overrides: Partial<TextMessage> = {}): TextMessage {
@@ -19,6 +19,12 @@ function msg(overrides: Partial<TextMessage> = {}): TextMessage {
 }
 
 describe('message-protocol', () => {
+  it('returns null (not Meshtastic) when the protocol cannot be determined', () => {
+    expect(messageProtocolOrNull(msg())).toBeNull();
+    expect(messageProtocolOrNull(msg({ protocol: 'bogus' }))).toBeNull();
+    expect(messageProtocol(msg())).toBe('meshtastic');
+  });
+
   it('normalizes protocol from API string or number', () => {
     expect(messageProtocol(msg({ protocol: 'meshcore' }))).toBe('meshcore');
     expect(messageProtocol(msg({ protocol: 2 }))).toBe('meshcore');

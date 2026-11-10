@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useRef, useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { MessageList } from '@/components/messages/MessageList';
 import { useConstellationsSuspense } from '@/hooks/api/useConstellations';
@@ -18,6 +18,7 @@ type ProtocolMessageHistoryPageProps = {
 };
 
 function channelUnreadBadgeLabel(count: number): string {
+  if (count > 99) return '99+';
   return count > 9 ? '9+' : String(count);
 }
 
@@ -31,6 +32,10 @@ export function ProtocolMessageHistoryPage({ config }: ProtocolMessageHistoryPag
 
   const [selectedConstellation, setSelectedConstellation] = useState<number | null>(null);
   const [selectedChannel, setSelectedChannel] = useState<number | null>(null);
+  // Channel the user chose (or the initial one on mount). Only this channel counts as read; a channel auto-selected
+  // after a constellation switch is shown but stays unread (meshflow-api#396).
+  const [readChannel, setReadChannel] = useState<number | null>(null);
+  const autoSelectIsSwitch = useRef(false);
 
   const activeConstellationId = useMemo(
     () => resolveMessageConstellationId(constellations, selectedConstellation, config.slug),
@@ -59,21 +64,32 @@ export function ProtocolMessageHistoryPage({ config }: ProtocolMessageHistoryPag
     }
     if (selectedChannel == null || !channels.some((ch) => ch.id === selectedChannel)) {
       setSelectedChannel(channels[0].id);
+      if (autoSelectIsSwitch.current) {
+        autoSelectIsSwitch.current = false;
+      } else {
+        setReadChannel(channels[0].id);
+      }
     }
   }, [channels, selectedChannel, activeConstellationId]);
 
   useEffect(() => {
     if (selectedChannel != null) {
-      setActiveMessagesView({ protocol: config.slug, channelId: selectedChannel });
+      setActiveMessagesView({
+        protocol: config.slug,
+        channelId: selectedChannel,
+        markRead: readChannel === selectedChannel,
+      });
     } else {
       setActiveMessagesView(null);
     }
     return () => setActiveMessagesView(null);
-  }, [selectedChannel, config.slug, setActiveMessagesView]);
+  }, [selectedChannel, readChannel, config.slug, setActiveMessagesView]);
 
   const selectConstellation = (id: number) => {
     setSelectedConstellation(id);
     setSelectedChannel(null);
+    setReadChannel(null);
+    autoSelectIsSwitch.current = true;
     if (typeof window !== 'undefined') {
       window.localStorage.setItem(constellationStorageKey(config.slug), String(id));
     }
@@ -81,6 +97,7 @@ export function ProtocolMessageHistoryPage({ config }: ProtocolMessageHistoryPag
 
   const selectChannel = (channelId: number) => {
     setSelectedChannel(channelId);
+    setReadChannel(channelId);
   };
 
   return (

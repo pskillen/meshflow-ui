@@ -102,6 +102,8 @@ export function useMessagesSuspense(options?: UseMessagesOptions) {
       }),
     initialPageParam: 1,
     getNextPageParam: (lastPage, allPages) => (lastPage.next ? allPages.length + 1 : undefined),
+    // Cached lists can miss messages that arrived while the list was not mounted; unread counts rely on this refresh.
+    refetchOnMount: 'always',
   });
 
   if (!messagesQuery.data) {

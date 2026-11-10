@@ -1,10 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, act, screen } from '@testing-library/react';
+import { render, act, screen, waitFor } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Routes, Route, useNavigate } from 'react-router-dom';
 import { WebSocketProvider, useWebSocket } from './WebSocketProvider';
 import { eventService } from '@/lib/events/eventService';
 import { WebSocketEventType } from '@/lib/websocket/websocketService';
 import type { TextMessage } from '@/lib/models';
+import { NotFoundError } from '@/lib/types';
 
 const mockConfig = { apis: { meshBot: { baseUrl: 'http://127.0.0.1:8000' } } };
 
@@ -14,8 +16,17 @@ const { connect, disconnect, initialize } = vi.hoisted(() => ({
   initialize: vi.fn(),
 }));
 
+const { getUnreadCounts, markChannelRead } = vi.hoisted(() => ({
+  getUnreadCounts: vi.fn(),
+  markChannelRead: vi.fn(),
+}));
+
 vi.mock('@/providers/ConfigProvider', () => ({
   useConfig: () => mockConfig,
+}));
+
+vi.mock('@/hooks/api/useApi', () => ({
+  useMeshflowApi: () => ({ getUnreadCounts, markChannelRead }),
 }));
 
 vi.mock('@/lib/websocket/websocketService', () => ({
@@ -73,17 +84,17 @@ function UnreadProbe() {
       <button type="button" onClick={() => ws.setActiveMessagesView({ protocol: 'meshtastic', channelId: 1 })}>
         set-active-ch1
       </button>
+      <button
+        type="button"
+        onClick={() => ws.setActiveMessagesView({ protocol: 'meshtastic', channelId: 1, markRead: false })}
+      >
+        set-auto-ch1
+      </button>
       <button type="button" onClick={() => ws.setActiveMessagesView(null)}>
         clear-active
       </button>
-      <button type="button" onClick={() => ws.markAsReadForChannel('meshtastic', 2)}>
-        mark-ch2-read
-      </button>
-      <button type="button" onClick={() => ws.markAsReadForProtocol('meshtastic')}>
-        mark-mt-read
-      </button>
-      <button type="button" onClick={() => ws.takeUnreadForChannel('meshtastic', 2)}>
-        take-ch2
+      <button type="button" onClick={() => ws.reportShownMessage('meshtastic', 1, 'newest-1')}>
+        shown-ch1
       </button>
     </div>
   );
@@ -97,19 +108,22 @@ function NavigationHarness({ onNavigate }: { onNavigate: (navigate: ReturnType<t
 
 function renderWithRoutes(initialPath: string, withProbe = false) {
   let navigateFn: ReturnType<typeof useNavigate> | null = null;
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
 
   const utils = render(
-    <MemoryRouter initialEntries={[initialPath]}>
-      <WebSocketProvider>
-        {withProbe ? <UnreadProbe /> : null}
-        <Routes>
-          <Route path="/" element={<NavigationHarness onNavigate={(n) => (navigateFn = n)} />} />
-          <Route path="/nodes" element={<NavigationHarness onNavigate={(n) => (navigateFn = n)} />} />
-          <Route path="/messages" element={<NavigationHarness onNavigate={(n) => (navigateFn = n)} />} />
-          <Route path="/meshcore/messages" element={<NavigationHarness onNavigate={(n) => (navigateFn = n)} />} />
-        </Routes>
-      </WebSocketProvider>
-    </MemoryRouter>
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter initialEntries={[initialPath]}>
+        <WebSocketProvider>
+          {withProbe ? <UnreadProbe /> : null}
+          <Routes>
+            <Route path="/" element={<NavigationHarness onNavigate={(n) => (navigateFn = n)} />} />
+            <Route path="/nodes" element={<NavigationHarness onNavigate={(n) => (navigateFn = n)} />} />
+            <Route path="/messages" element={<NavigationHarness onNavigate={(n) => (navigateFn = n)} />} />
+            <Route path="/meshcore/messages" element={<NavigationHarness onNavigate={(n) => (navigateFn = n)} />} />
+          </Routes>
+        </WebSocketProvider>
+      </MemoryRouter>
+    </QueryClientProvider>
   );
 
   return {
@@ -123,9 +137,34 @@ function renderWithRoutes(initialPath: string, withProbe = false) {
 
 const sampleMessage = makeMessage({ id: 'mt-1', channel: 1, protocol: 'meshtastic' });
 
+const emit = (message: TextMessage) =>
+  act(() => {
+    eventService.emit(WebSocketEventType.MESSAGE_RECEIVED, message);
+  });
+
+const text = (id: string) => screen.getByTestId(id).textContent;
+
+function serverCounts(mt: Record<string, number> = {}, mc: Record<string, number> = {}) {
+  const sum = (o: Record<string, number>) => Object.values(o).reduce((a, b) => a + b, 0);
+  return {
+    meshtastic: { total: sum(mt), channels: mt },
+    meshcore: { total: sum(mc), channels: mc },
+  };
+}
+
+async function renderSeeded(path: string, counts = serverCounts()) {
+  getUnreadCounts.mockResolvedValue(counts);
+  const utils = renderWithRoutes(path, true);
+  await waitFor(() => expect(getUnreadCounts).toHaveBeenCalled());
+  await act(async () => {});
+  return utils;
+}
+
 describe('WebSocketProvider', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    getUnreadCounts.mockResolvedValue(serverCounts());
+    markChannelRead.mockResolvedValue({ channel_id: 1, last_read_at: '2025-01-01T00:00:00Z' });
   });
 
   it('connects once on mount and does not disconnect on route changes', () => {
@@ -146,202 +185,195 @@ describe('WebSocketProvider', () => {
     expect(initialize).toHaveBeenCalledTimes(1);
   });
 
-  it('shows toast for messages when not on the matching messages page', () => {
-    renderWithRoutes('/');
-
-    act(() => {
-      eventService.emit(WebSocketEventType.MESSAGE_RECEIVED, sampleMessage);
-    });
-
+  it('shows toast for messages when not on the matching messages page', async () => {
+    await renderSeeded('/');
+    emit(sampleMessage);
     expect(toastMock).toHaveBeenCalled();
   });
 
-  it('suppresses toast when on the matching messages page', () => {
-    renderWithRoutes('/messages');
-
-    act(() => {
-      eventService.emit(WebSocketEventType.MESSAGE_RECEIVED, sampleMessage);
-    });
-
+  it('suppresses toast when on the matching messages page', async () => {
+    await renderSeeded('/messages');
+    emit(sampleMessage);
     expect(toastMock).not.toHaveBeenCalled();
   });
 
-  it('scopes unread counts by protocol', () => {
-    renderWithRoutes('/', true);
-
-    act(() => {
-      eventService.emit(WebSocketEventType.MESSAGE_RECEIVED, sampleMessage);
-      eventService.emit(
-        WebSocketEventType.MESSAGE_RECEIVED,
-        makeMessage({ id: 'mc-1', channel: 3, protocol: 'meshcore', message_text: 'mc' })
-      );
-    });
-
-    expect(screen.getByTestId('mt-count')).toHaveTextContent('1');
-    expect(screen.getByTestId('mc-count')).toHaveTextContent('1');
+  it('toasts for the other protocol while on a messages page', async () => {
+    await renderSeeded('/messages');
+    emit(makeMessage({ id: 'mc-1', channel: 3, protocol: 'meshcore' }));
+    expect(toastMock).toHaveBeenCalled();
   });
 
-  it('does not count unread for the active channel on the messages page', () => {
-    renderWithRoutes('/messages', true);
-
-    act(() => {
-      screen.getByText('set-active-ch1').click();
-    });
-
-    act(() => {
-      eventService.emit(WebSocketEventType.MESSAGE_RECEIVED, sampleMessage);
-      eventService.emit(
-        WebSocketEventType.MESSAGE_RECEIVED,
-        makeMessage({ id: 'mt-2', channel: 2, protocol: 'meshtastic' })
-      );
-    });
-
-    expect(screen.getByTestId('mt-count')).toHaveTextContent('1');
-    expect(screen.getByTestId('ch1-count')).toHaveTextContent('0');
-    expect(screen.getByTestId('ch2-count')).toHaveTextContent('1');
-    expect(toastMock).not.toHaveBeenCalled();
+  it('seeds per-protocol totals and per-channel counts from the server (survives reload)', async () => {
+    await renderSeeded('/', serverCounts({ '1': 3, '2': 4 }, { '9': 5 }));
+    expect(text('mt-count')).toBe('7');
+    expect(text('mc-count')).toBe('5');
+    expect(text('ch1-count')).toBe('3');
+    expect(text('ch2-count')).toBe('4');
   });
 
-  it('markAsReadForChannel clears only that channel', () => {
-    renderWithRoutes('/', true);
-
-    act(() => {
-      eventService.emit(WebSocketEventType.MESSAGE_RECEIVED, sampleMessage);
-      eventService.emit(
-        WebSocketEventType.MESSAGE_RECEIVED,
-        makeMessage({ id: 'mt-2', channel: 2, protocol: 'meshtastic' })
-      );
-    });
-
-    act(() => {
-      screen.getByText('mark-ch2-read').click();
-    });
-
-    expect(screen.getByTestId('mt-count')).toHaveTextContent('1');
-    expect(screen.getByTestId('ch2-count')).toHaveTextContent('0');
+  it('adds WS frames on top of the server counts, per protocol, deduped by id', async () => {
+    await renderSeeded('/', serverCounts({ '1': 2 }, { '9': 1 }));
+    emit(sampleMessage);
+    emit(sampleMessage);
+    emit(makeMessage({ id: 'mc-1', channel: 9, protocol: 'meshcore' }));
+    expect(text('mt-count')).toBe('3');
+    expect(text('ch1-count')).toBe('3');
+    expect(text('mc-count')).toBe('2');
   });
 
-  it('does not clear unrelated protocol unread when navigating to messages', () => {
-    const { navigate } = renderWithRoutes('/', true);
+  it('counts an unclassifiable frame toward neither protocol', async () => {
+    await renderSeeded('/');
+    emit(makeMessage({ id: 'x-1', channel: 1, protocol: undefined, sender: null }));
+    expect(text('mt-count')).toBe('0');
+    expect(text('mc-count')).toBe('0');
+  });
 
-    act(() => {
-      eventService.emit(
-        WebSocketEventType.MESSAGE_RECEIVED,
-        makeMessage({ id: 'mc-1', channel: 5, protocol: 'meshcore' })
-      );
-    });
+  it('classifies meshcore without protocol using mc provenance fields', async () => {
+    await renderSeeded('/');
+    emit(
+      makeMessage({ id: 'mc-infer', channel: 9, protocol: undefined, original_mc_packet_id: 'deadbeef', sender: null })
+    );
+    expect(text('mt-count')).toBe('0');
+    expect(text('mc-count')).toBe('1');
+  });
 
-    expect(screen.getByTestId('mc-count')).toHaveTextContent('1');
+  it('on a messages page only the viewed channel is read; nav total excludes just that channel', async () => {
+    await renderSeeded('/messages', serverCounts({ '1': 3, '2': 4 }, { '9': 5 }));
+    expect(text('mt-count')).toBe('7');
 
+    act(() => screen.getByText('set-active-ch1').click());
+    expect(text('ch1-count')).toBe('0');
+    expect(text('ch2-count')).toBe('4');
+    expect(text('mt-count')).toBe('4');
+    expect(text('mc-count')).toBe('5');
+  });
+
+  it('acceptance: viewing A, new on A no badge; new on B +1 on MT and B; MC message +1 on MC only', async () => {
+    await renderSeeded('/messages');
+    act(() => screen.getByText('set-active-ch1').click());
+
+    emit(sampleMessage);
+    expect(text('mt-count')).toBe('0');
+    expect(text('ch1-count')).toBe('0');
+
+    emit(makeMessage({ id: 'mt-2', channel: 2, protocol: 'meshtastic' }));
+    expect(text('mt-count')).toBe('1');
+    expect(text('ch2-count')).toBe('1');
+    expect(text('mc-count')).toBe('0');
+
+    emit(makeMessage({ id: 'mc-1', channel: 3, protocol: 'meshcore' }));
+    expect(text('mc-count')).toBe('1');
+    expect(text('mt-count')).toBe('1');
+  });
+
+  it('does not clear anything when navigating onto a messages page', async () => {
+    const { navigate } = await renderSeeded('/', serverCounts({ '1': 2 }, { '5': 1 }));
     navigate('/messages');
-
-    act(() => {
-      eventService.emit(WebSocketEventType.MESSAGE_RECEIVED, sampleMessage);
-    });
-
-    expect(screen.getByTestId('mc-count')).toHaveTextContent('1');
-    expect(screen.getByTestId('mt-count')).toHaveTextContent('1');
+    expect(text('mt-count')).toBe('2');
+    expect(text('mc-count')).toBe('1');
   });
 
-  it('resumes counting unread for active channel after clear-active', () => {
-    renderWithRoutes('/messages', true);
+  it('keeps a channel read after leaving the page, and counts it again for new frames', async () => {
+    const { navigate } = await renderSeeded('/messages', serverCounts({ '1': 3 }));
+    act(() => screen.getByText('set-active-ch1').click());
+    act(() => screen.getByText('shown-ch1').click());
+    navigate('/');
+    expect(text('ch1-count')).toBe('0');
 
-    act(() => {
-      screen.getByText('set-active-ch1').click();
-    });
-
-    act(() => {
-      eventService.emit(WebSocketEventType.MESSAGE_RECEIVED, sampleMessage);
-    });
-
-    expect(screen.getByTestId('ch1-count')).toHaveTextContent('0');
-
-    act(() => {
-      screen.getByText('clear-active').click();
-    });
-
-    act(() => {
-      eventService.emit(
-        WebSocketEventType.MESSAGE_RECEIVED,
-        makeMessage({ id: 'mt-3', channel: 1, protocol: 'meshtastic' })
-      );
-    });
-
-    expect(screen.getByTestId('ch1-count')).toHaveTextContent('1');
+    emit(makeMessage({ id: 'mt-9', channel: 1, protocol: 'meshtastic' }));
+    expect(text('ch1-count')).toBe('1');
   });
 
-  it('toasts for other protocol while on messages page', () => {
-    renderWithRoutes('/messages', true);
+  it('marks the viewed channel read up to the newest message shown', async () => {
+    await renderSeeded('/messages', serverCounts({ '1': 3 }));
+    act(() => screen.getByText('set-active-ch1').click());
+    expect(markChannelRead).not.toHaveBeenCalled();
 
-    act(() => {
-      eventService.emit(
-        WebSocketEventType.MESSAGE_RECEIVED,
-        makeMessage({ id: 'mc-1', channel: 3, protocol: 'meshcore' })
-      );
-    });
-
-    expect(toastMock).toHaveBeenCalled();
+    act(() => screen.getByText('shown-ch1').click());
+    expect(markChannelRead).toHaveBeenCalledTimes(1);
+    expect(markChannelRead).toHaveBeenCalledWith(1, 'newest-1');
+    expect(text('ch1-count')).toBe('0');
   });
 
-  it('takeUnreadForChannel returns and removes only that channel', () => {
-    renderWithRoutes('/', true);
+  it('does not mark read for an auto-selected channel and keeps its count', async () => {
+    await renderSeeded('/messages', serverCounts({ '1': 3 }));
+    act(() => screen.getByText('set-auto-ch1').click());
+    act(() => screen.getByText('shown-ch1').click());
 
-    act(() => {
-      eventService.emit(
-        WebSocketEventType.MESSAGE_RECEIVED,
-        makeMessage({ id: 'mt-1', channel: 1, protocol: 'meshtastic' })
-      );
-      eventService.emit(
-        WebSocketEventType.MESSAGE_RECEIVED,
-        makeMessage({ id: 'mt-2', channel: 2, protocol: 'meshtastic' })
-      );
-    });
-
-    expect(screen.getByTestId('mt-count')).toHaveTextContent('2');
-
-    act(() => {
-      screen.getByText('take-ch2').click();
-    });
-
-    expect(screen.getByTestId('mt-count')).toHaveTextContent('1');
-    expect(screen.getByTestId('ch2-count')).toHaveTextContent('0');
+    expect(markChannelRead).not.toHaveBeenCalled();
+    expect(text('ch1-count')).toBe('3');
+    emit(sampleMessage);
+    expect(text('ch1-count')).toBe('4');
   });
 
-  it('classifies meshcore without protocol using mc provenance fields', () => {
-    renderWithRoutes('/', true);
-
-    act(() => {
-      eventService.emit(
-        WebSocketEventType.MESSAGE_RECEIVED,
-        makeMessage({
-          id: 'mc-infer',
-          channel: 9,
-          protocol: undefined,
-          original_mc_packet_id: 'deadbeef',
-          sender: null,
-        })
-      );
-    });
-
-    expect(screen.getByTestId('mt-count')).toHaveTextContent('0');
-    expect(screen.getByTestId('mc-count')).toHaveTextContent('1');
+  it('does not mark read off the messages pages', async () => {
+    await renderSeeded('/', serverCounts({ '1': 3 }));
+    act(() => screen.getByText('set-active-ch1').click());
+    act(() => screen.getByText('shown-ch1').click());
+    expect(markChannelRead).not.toHaveBeenCalled();
+    expect(text('ch1-count')).toBe('3');
   });
 
-  it('markAsReadForProtocol clears all unread for that protocol', () => {
-    renderWithRoutes('/', true);
+  it('resumes counting the channel after the view is cleared', async () => {
+    await renderSeeded('/messages');
+    act(() => screen.getByText('set-active-ch1').click());
+    emit(sampleMessage);
+    expect(text('ch1-count')).toBe('0');
 
-    act(() => {
-      eventService.emit(WebSocketEventType.MESSAGE_RECEIVED, sampleMessage);
-      eventService.emit(
-        WebSocketEventType.MESSAGE_RECEIVED,
-        makeMessage({ id: 'mt-2', channel: 2, protocol: 'meshtastic' })
-      );
+    act(() => screen.getByText('clear-active').click());
+    emit(makeMessage({ id: 'mt-3', channel: 1, protocol: 'meshtastic' }));
+    expect(text('ch1-count')).toBe('1');
+  });
+
+  it('caps a channel at 99', async () => {
+    await renderSeeded('/', serverCounts({ '1': 99 }));
+    emit(sampleMessage);
+    expect(text('ch1-count')).toBe('99');
+    expect(text('mt-count')).toBe('99');
+  });
+
+  it('refetches on WS reconnect and reconciles (server snapshot replaces local additions)', async () => {
+    await renderSeeded('/', serverCounts({ '1': 1 }));
+    emit(sampleMessage);
+    expect(text('ch1-count')).toBe('2');
+
+    getUnreadCounts.mockResolvedValue(serverCounts({ '1': 2 }));
+    await act(async () => {
+      eventService.emit(WebSocketEventType.CONNECTED);
+    });
+    await waitFor(() => expect(getUnreadCounts).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(text('ch1-count')).toBe('2'));
+    expect(text('mt-count')).toBe('2');
+  });
+
+  describe('API without the unread-counts endpoint (404)', () => {
+    beforeEach(() => {
+      getUnreadCounts.mockRejectedValue(new NotFoundError('Not Found'));
     });
 
-    act(() => {
-      screen.getByText('mark-mt-read').click();
+    it('falls back to counting WS frames only', async () => {
+      renderWithRoutes('/', true);
+      await waitFor(() => expect(getUnreadCounts).toHaveBeenCalled());
+      await act(async () => {});
+
+      emit(sampleMessage);
+      emit(makeMessage({ id: 'mc-1', channel: 3, protocol: 'meshcore' }));
+      expect(text('mt-count')).toBe('1');
+      expect(text('mc-count')).toBe('1');
     });
 
-    expect(screen.getByTestId('mt-count')).toHaveTextContent('0');
+    it('still excludes the viewed channel but never calls mark-read', async () => {
+      renderWithRoutes('/messages', true);
+      await waitFor(() => expect(getUnreadCounts).toHaveBeenCalled());
+      await act(async () => {});
+
+      act(() => screen.getByText('set-active-ch1').click());
+      act(() => screen.getByText('shown-ch1').click());
+      emit(sampleMessage);
+      emit(makeMessage({ id: 'mt-2', channel: 2, protocol: 'meshtastic' }));
+
+      expect(text('mt-count')).toBe('1');
+      expect(markChannelRead).not.toHaveBeenCalled();
+    });
   });
 });
