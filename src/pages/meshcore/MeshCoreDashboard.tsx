@@ -1,14 +1,26 @@
 import { MeshStatsSection } from '@/components/MeshStatsSection';
 import { RightNowBand } from '@/components/stats/RightNowBand';
+import { StatsRangeBar } from '@/components/stats/StatsRangeBar';
+import { DASHBOARDS_AREA, useStatsRange } from '@/hooks/useStatsRange';
 import { Suspense } from 'react';
 
 function MeshCoreDashboardContent() {
+  const range = useStatsRange({ area: DASHBOARDS_AREA });
   return (
-    <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6 px-4 lg:px-6">
-      <div data-testid="meshcore-dashboard-recent-counts">
-        <RightNowBand scope="meshcore" />
+    <div className="flex flex-col gap-4 pb-4 md:gap-6 md:pb-6">
+      <StatsRangeBar
+        value={range.key}
+        options={range.options}
+        onChange={range.setRange}
+        title="MeshCore"
+        className="px-4 lg:px-6"
+      />
+      <div className="flex flex-col gap-4 px-4 md:gap-6 lg:px-6">
+        <div data-testid="meshcore-dashboard-recent-counts">
+          <RightNowBand scope="meshcore" />
+        </div>
+        <MeshStatsSection protocolScope="meshcore" range={range} />
       </div>
-      <MeshStatsSection protocolScope="meshcore" />
     </div>
   );
 }
