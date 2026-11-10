@@ -1,7 +1,7 @@
 import { test as base, expect } from '@playwright/test';
 import { createJsonHandler, installApiMocks } from './api-mock';
 
-function apiNode(i: number, name: string) {
+function apiNode(i: number, name: string, over: Record<string, unknown> = {}) {
   return {
     internal_id: `00000000-0000-0000-0000-00000000000${i}`,
     node_id: i,
@@ -16,12 +16,32 @@ function apiNode(i: number, name: string) {
     protocol: 1,
     latest_position: { latitude: 55.8 + i / 100, longitude: -4.2, altitude: null, reported_time: null },
     latest_device_metrics: { battery_level: i === 2 ? 101 : 60, voltage: 4, channel_utilization: 1, air_util_tx: 1 },
+    ...over,
   };
 }
 
-const NODES = [apiNode(1, 'Alpha Base'), apiNode(2, 'Bravo Relay'), apiNode(3, 'Charlie Hill')];
+const NODES = [
+  apiNode(1, 'Alpha Base'),
+  apiNode(2, 'Bravo Relay'),
+  apiNode(3, 'Charlie Hill', {
+    // A long name and an "about N hours ago" age: the realistic worst case for the narrow layouts.
+    short_name: 'EARL version 2 (replaced 7-2-26)',
+    long_name: 'Paisley Hoose Big Boi with a very long descriptive name',
+    last_heard: new Date(Date.now() - 5.5 * 3_600_000).toISOString(),
+  }),
+];
 
 const requests: string[] = [];
+
+/** The table's scroll wrapper must not scroll sideways (its own box, not the page). */
+async function expectNoSidewaysScroll(table: import('@playwright/test').Locator) {
+  const m = await table.locator('table').evaluate((t) => {
+    const wrap = t.parentElement!;
+    return { scroll: wrap.scrollWidth, client: wrap.clientWidth, table: t.scrollWidth };
+  });
+  expect(m.scroll).toBeLessThanOrEqual(m.client);
+  expect(m.table).toBeLessThanOrEqual(m.client);
+}
 
 const test = base.extend({
   context: async ({ context }, useFixture) => {
@@ -134,7 +154,7 @@ test.describe('Meshtastic node list', () => {
     await expect(page.getByRole('radio', { name: /Sort by/ })).toHaveCount(0);
     await expect(table.getByTestId('node-row').first()).toContainText('Alph');
     await table.getByRole('button', { name: 'Last heard' }).click();
-    await expect(table.getByTestId('node-row').first()).toContainText('Char');
+    await expect(table.getByTestId('node-row').first()).toContainText('EARL');
   });
 
   test('on a phone the table keeps node, battery and last heard', async ({ page }) => {
@@ -142,7 +162,17 @@ test.describe('Meshtastic node list', () => {
     await page.goto('/nodes');
     const table = page.getByTestId('nodes-table');
     await expect(table.getByRole('columnheader')).toHaveText(['Node', 'Battery', 'Last heard']);
-    const box = (await table.boundingBox())!;
-    expect(box.width).toBeLessThanOrEqual(375);
+    await expectNoSidewaysScroll(table);
+    await expect(table.getByTestId('node-row').nth(2)).toContainText('5h ago');
+  });
+
+  test('the table does not scroll sideways at 360px, 375px or 768px (sidebar open)', async ({ page }) => {
+    for (const width of [360, 375, 768]) {
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto('/nodes');
+      const table = page.getByTestId('nodes-table');
+      await expect(table.getByTestId('node-row')).toHaveCount(3);
+      await expectNoSidewaysScroll(table);
+    }
   });
 });
