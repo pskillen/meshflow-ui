@@ -11,7 +11,7 @@ export interface ChartCardProps {
   measure?: ReactNode;
   /** Controls for this chart only (a Total / By type toggle). Sits beside the measure pill. */
   actions?: ReactNode;
-  /** Small print under the chart: partial-bucket and snapshot-lag notes. */
+  /** Small print under the chart: partial-bucket and latest-point notes. */
   note?: ReactNode;
   children: ReactNode;
   className?: string;
