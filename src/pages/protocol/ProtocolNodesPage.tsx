@@ -150,7 +150,12 @@ function ProtocolNodesPageContent({
       <div className="space-y-4">
         <h2 className="text-xl font-semibold">Recent Nodes</h2>
         {countLine}
-        <NodesTable nodes={displayedNodes} config={config} />
+        <NodesTable
+          nodes={displayedNodes}
+          config={config}
+          aria-label="Recent nodes"
+          emptyMessage={searchQuery ? 'No nodes match your search' : undefined}
+        />
         {hasNextPage && (
           <div className="flex justify-center pt-4">
             <Button variant="outline" onClick={() => fetchNextPage()}>

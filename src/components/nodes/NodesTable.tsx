@@ -40,7 +40,8 @@ function sortValue(n: ObservedNode, key: NodesTableSortKey): string | number | n
     case 'prefix':
       return n.mc_pubkey_prefix || null;
     case 'position':
-      return hasPosition(n) ? 1 : 0;
+      // "None" is missing, like a missing battery reading: last in either direction.
+      return hasPosition(n) ? 1 : null;
     case 'heard':
       return n.last_heard ? n.last_heard.getTime() : null;
   }
@@ -63,13 +64,20 @@ type NodesTableProps = {
   nodes: ObservedNode[];
   config: ProtocolPageConfig;
   emptyMessage?: string;
+  /** Accessible name for the table. */
+  'aria-label'?: string;
 };
 
 /**
  * Sortable table of observed nodes. Meshtastic: name, ID, role, hardware, battery, last heard.
  * MeshCore: name, ID, prefix, position, last heard. Name is the primary label; ID is supporting detail.
  */
-export function NodesTable({ nodes, config, emptyMessage = 'No nodes in this range.' }: NodesTableProps) {
+export function NodesTable({
+  nodes,
+  config,
+  emptyMessage = 'No nodes in this range.',
+  'aria-label': ariaLabel,
+}: NodesTableProps) {
   const [sort, setSort] = useState<NodesTableSort>(DEFAULT_SORT);
   const isMeshtastic = config.slug === 'meshtastic';
   const rows = useMemo(() => sortObservedNodes(nodes, sort), [nodes, sort]);
@@ -111,20 +119,20 @@ export function NodesTable({ nodes, config, emptyMessage = 'No nodes in this ran
 
   return (
     <div className="overflow-hidden rounded-lg border bg-card" data-testid="nodes-table">
-      <Table className="text-sm">
+      <Table className="text-sm" aria-label={ariaLabel}>
         <TableHeader>
           <TableRow>
             {head('name', 'Node')}
-            {head('id', 'ID', 'hidden md:table-cell')}
+            {head('id', 'ID', 'hidden lg:table-cell')}
             {isMeshtastic ? (
               <>
-                {head('role', 'Role', 'hidden md:table-cell')}
+                {head('role', 'Role', 'hidden lg:table-cell')}
                 {head('hardware', 'Hardware', 'hidden lg:table-cell')}
                 {head('battery', 'Battery', 'text-right')}
               </>
             ) : (
               <>
-                {head('prefix', 'Prefix', 'hidden md:table-cell')}
+                {head('prefix', 'Prefix', 'hidden lg:table-cell')}
                 {head('position', 'Position')}
               </>
             )}
@@ -161,20 +169,19 @@ function NodeRow({ node, config }: { node: ObservedNode; config: ProtocolPageCon
   const primary = node.short_name || node.long_name || node.node_id_str || '—';
   return (
     <TableRow data-testid="node-row">
-      <TableCell className="py-1.5">
+      {/* w-full + max-w-0: the Node column takes the remaining width and truncates. */}
+      <TableCell className="w-full max-w-0 py-1.5">
         <Link to={to} className="block min-w-0 hover:underline">
-          <div className="max-w-[190px] truncate font-medium md:max-w-none">{primary}</div>
+          <div className="truncate font-medium md:max-w-[320px]">{primary}</div>
           {node.long_name && node.long_name !== primary && (
-            <div className="max-w-[190px] truncate text-xs text-muted-foreground md:max-w-[320px]">
-              {node.long_name}
-            </div>
+            <div className="truncate text-xs text-muted-foreground md:max-w-[320px]">{node.long_name}</div>
           )}
         </Link>
       </TableCell>
-      <TableCell className="hidden py-1.5 font-mono text-xs md:table-cell">{node.node_id_str}</TableCell>
+      <TableCell className="hidden py-1.5 font-mono text-xs lg:table-cell">{node.node_id_str}</TableCell>
       {isMeshtastic ? (
         <>
-          <TableCell className="hidden py-1.5 md:table-cell">{getRoleLabel(node.meshtastic_role) ?? '—'}</TableCell>
+          <TableCell className="hidden py-1.5 lg:table-cell">{getRoleLabel(node.meshtastic_role) ?? '—'}</TableCell>
           <TableCell className="hidden py-1.5 text-xs lg:table-cell">{node.meshtastic_hw_model || '—'}</TableCell>
           <TableCell className="py-1.5 text-right tabular-nums">
             <BatteryCell raw={node.latest_device_metrics?.battery_level} />
@@ -182,7 +189,7 @@ function NodeRow({ node, config }: { node: ObservedNode; config: ProtocolPageCon
         </>
       ) : (
         <>
-          <TableCell className="hidden py-1.5 font-mono text-xs md:table-cell">
+          <TableCell className="hidden py-1.5 font-mono text-xs lg:table-cell">
             {node.mc_pubkey_prefix || '—'}
           </TableCell>
           <TableCell className="py-1.5">
@@ -191,7 +198,7 @@ function NodeRow({ node, config }: { node: ObservedNode; config: ProtocolPageCon
         </>
       )}
       <TableCell className="whitespace-nowrap py-1.5 text-right tabular-nums">
-        <StaleReportedTime at={node.last_heard ?? null} fallback="Never" className="text-inherit" />
+        <StaleReportedTime at={node.last_heard ?? null} fallback="Never" className="text-inherit" compact />
       </TableCell>
     </TableRow>
   );
