@@ -25,4 +25,4 @@ Routed from `App.tsx`. Data: `useProtocolObservedNodesSuspense`, `useManagedNode
 ## Related
 
 - [`useStatsRange`](../../hooks/useStatsRange.md), [`StatsRangeBar`](../../components/stats/StatsRangeBar.md), [`MapMarkerLegend`](../../components/nodes/MapMarkerLegend.md).
-- Tests: `ProtocolNodesPage.test.tsx`, `tests/browser/nodes-list.spec.ts`.
+- Tests: `ProtocolNodesPage.range.test.tsx`, `tests/browser/nodes-list.spec.ts`.
