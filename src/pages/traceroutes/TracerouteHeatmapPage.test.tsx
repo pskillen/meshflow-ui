@@ -81,6 +81,10 @@ describe('TracerouteHeatmapPage URL → API', () => {
     expect(screen.getByRole('radio', { name: '7d' })).toHaveAttribute('aria-checked', 'true');
     expect(arg?.triggeredAtAfter).toBeInstanceOf(Date);
     expect(arg!.triggeredAtAfter!.getTime() % 3600000).toBe(0);
+    // 7d uses 6h buckets: the start is floored to a UTC 6h boundary, so 168h to 174h back plus the hour in progress
+    const hours = (Date.now() - arg!.triggeredAtAfter!.getTime()) / 3600000;
+    expect(hours).toBeGreaterThanOrEqual(168);
+    expect(hours).toBeLessThan(175);
   });
 
   it('offers 90d and sends a window of at least 90 x 24h, starting on a UTC day boundary', () => {
@@ -97,7 +101,7 @@ describe('TracerouteHeatmapPage URL → API', () => {
   it('custom since date overrides the preset and clears the selection; a preset click drops it', () => {
     renderPage('/traceroutes/map/heat?since=2026-01-05');
     const arg = mockUseHeatmap.mock.calls.at(-1)![0]!;
-    expect(arg.triggeredAtAfter).toEqual(new Date(2026, 0, 5));
+    expect(arg.triggeredAtAfter).toEqual(new Date(Date.UTC(2026, 0, 5)));
     expect(screen.getByTestId('map-since-button')).toHaveTextContent('Since 5 Jan 2026');
     for (const r of screen.getAllByRole('radio')) expect(r).toHaveAttribute('aria-checked', 'false');
     fireEvent.click(screen.getByRole('radio', { name: '30d' }));
