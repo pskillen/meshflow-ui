@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { useLatestSearchParams } from '@/hooks/useLatestSearchParams';
 import {
   STATS_PRESET_KEYS,
   STATS_RANGES,
@@ -84,6 +85,7 @@ export function useStatsRange({
   now,
 }: UseStatsRangeOptions = {}): StatsRange {
   const [searchParams, setSearchParams] = useSearchParams();
+  const getLatestParams = useLatestSearchParams();
   const fallback = defaultStatsRange(options);
   const [localKey, setLocalKey] = useState<StatsRangeKey | null>(null);
 
@@ -127,16 +129,12 @@ export function useStatsRange({
         return;
       }
       writeStored(area, next);
-      setSearchParams(
-        (prev) => {
-          const params = new URLSearchParams(prev);
-          params.set(STATS_RANGE_PARAM, next);
-          return params;
-        },
-        { replace: true }
-      );
+      // The latest URL, not the last render's `prev`: a tab click just before this must not be overwritten.
+      const params = getLatestParams();
+      params.set(STATS_RANGE_PARAM, next);
+      setSearchParams(params, { replace: true });
     },
-    [area, local, options, setSearchParams]
+    [area, local, options, setSearchParams, getLatestParams]
   );
 
   const def = STATS_RANGES[key];
