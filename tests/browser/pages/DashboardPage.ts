@@ -15,7 +15,7 @@ export class DashboardPage extends BasePage {
   }
 
   get meshStatsHeading() {
-    return this.page.getByText('Mesh stats');
+    return this.page.getByText('Over the last 7 days');
   }
 
   get nodesPageLink() {

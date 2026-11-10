@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { TimeRangeSelect, TimeRangeOption } from '@/components/TimeRangeSelect';
 import { usePacketStatsSuspense } from '@/hooks/api/usePacketStats';
+import { niceAxisMax } from '@/lib/axis-ticks';
 import { windowForTimeRangeKey } from '@/lib/time-range';
 import { Payload, ValueType, NameType } from 'recharts/types/component/DefaultTooltipContent';
 
@@ -71,23 +72,11 @@ export function PacketStatsChart({
     });
   }, [packetStats]);
 
-  // Calculate y-axis domain with 5 std dev clamp
-  const yAxisDomain = React.useMemo(() => {
-    if (!chartData.length) return [0, 'auto'] as [number, 'auto'];
-
-    // Calculate mean and standard deviation
-    const values = chartData.map((item) => item.value);
-    const mean = values.reduce((sum, val) => sum + val, 0) / values.length;
-
-    const squaredDiffs = values.map((val) => Math.pow(val - mean, 2));
-    const variance = squaredDiffs.reduce((sum, val) => sum + val, 0) / values.length;
-    const stdDev = Math.sqrt(variance);
-
-    // Set max to mean + 5*stdDev, but not less than the actual max
-    const maxValue = Math.max(mean + 5 * stdDev, Math.max(...values));
-
-    return [0, maxValue] as [number, number];
-  }, [chartData]);
+  // Whole-number ticks up to a round maximum with headroom (the largest value is never clipped).
+  const yAxis = React.useMemo(
+    () => niceAxisMax(Math.max(0, ...chartData.flatMap((item) => [item.value, item.movingAverage]))),
+    [chartData]
+  );
 
   return (
     <Card className="@container/card">
@@ -136,7 +125,14 @@ export function PacketStatsChart({
                 });
               }}
             />
-            <YAxis domain={yAxisDomain} tickLine={false} axisLine={false} tickMargin={8} />
+            <YAxis
+              domain={[0, yAxis.max]}
+              ticks={yAxis.ticks}
+              allowDecimals={false}
+              tickLine={false}
+              axisLine={false}
+              tickMargin={8}
+            />
             <ChartTooltip
               cursor={false}
               content={
