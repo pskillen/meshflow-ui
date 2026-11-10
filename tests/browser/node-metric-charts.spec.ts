@@ -60,6 +60,13 @@ const test = base.extend({
         nodes: [],
         snr_history: [],
       }),
+      // Packet charts on the same tab: empty stats, so the page doesn't hit a 404.
+      '**/api/stats/nodes/**': createJsonHandler({
+        start_date: new Date(Date.now() - 7 * 86400_000).toISOString(),
+        end_date: new Date().toISOString(),
+        intervals: [],
+        summary: { total_packets: 0, time_range: { start: '', end: '' } },
+      }),
     });
     // eslint-disable-next-line react-hooks/rules-of-hooks -- Playwright fixture callback
     await useFixture(context);
