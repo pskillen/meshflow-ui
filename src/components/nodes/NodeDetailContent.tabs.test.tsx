@@ -152,6 +152,17 @@ describe('NodeDetailContent tabbed layout', () => {
     expect(screen.getByTestId('url-search')).toHaveTextContent('');
   });
 
+  it('has a back link named "Back to nodes" in the header', () => {
+    render(
+      <MemoryRouter initialEntries={[`/nodes/${TEST_OBSERVED_INTERNAL_ID}`]}>
+        <Routes>
+          <Route path="/nodes/:id" element={<PageWithSearchEcho />} />
+        </Routes>
+      </MemoryRouter>
+    );
+    expect(screen.getByRole('link', { name: 'Back to nodes' })).toHaveAttribute('href', '/nodes');
+  });
+
   it('hides traceroutes and monitoring tabs for MeshCore nodes', () => {
     mockedUseNodeSuspense.mockReturnValue({
       ...minimalNode,
@@ -240,6 +251,27 @@ describe('NodeDetailContent tabbed layout', () => {
       );
       expect(screen.queryByTestId('stats-range-bar')).not.toBeInTheDocument();
       expect(screen.getByTestId('url-echo')).toHaveTextContent('?foo=1');
+    });
+
+    it('the compact sheet leaves garbage range and tab params alone', () => {
+      render(
+        <MemoryRouter initialEntries={['/nodes?foo=1&range=garbage&tab=bogus']}>
+          <Routes>
+            <Route
+              path="/nodes"
+              element={
+                <>
+                  <Suspense fallback={null}>
+                    <NodeDetailContent internalId={TEST_OBSERVED_INTERNAL_ID} compact />
+                  </Suspense>
+                  <UrlEcho />
+                </>
+              }
+            />
+          </Routes>
+        </MemoryRouter>
+      );
+      expect(screen.getByTestId('url-echo')).toHaveTextContent('?foo=1&range=garbage&tab=bogus');
     });
   });
 
