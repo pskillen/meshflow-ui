@@ -3,8 +3,8 @@ import { cn } from '@/lib/utils';
 import { STATS_RANGES, type StatsRangeKey } from '@/lib/stats-range';
 
 export interface StatsRangeBarProps {
-  /** Currently selected range (`useStatsRange().key`). */
-  value: StatsRangeKey;
+  /** Currently selected range (`useStatsRange().key`). `null` while a screen's custom range is active: no preset is selected. */
+  value: StatsRangeKey | null;
   /** Ranges to offer, in order (`useStatsRange().options`). Online (2h) shows only if it is in here. */
   options: readonly StatsRangeKey[];
   onChange: (key: StatsRangeKey) => void;
@@ -14,6 +14,13 @@ export interface StatsRangeBarProps {
   children?: ReactNode;
   /** Stick to the top of the scroll area. Default true. */
   sticky?: boolean;
+  /**
+   * Map-page layout: the presets are pinned to the right edge, `rangeExtras` (a custom range) sits on the same row as
+   * the presets, and `children` become a two-column grid on narrow screens (give a full-width child `col-span-2`).
+   */
+  compact?: boolean;
+  /** Control placed right after the presets, on the same row (a custom range button). */
+  rangeExtras?: ReactNode;
   className?: string;
 }
 
@@ -25,20 +32,23 @@ export function StatsRangeBar({
   title,
   children,
   sticky = true,
+  compact = false,
+  rangeExtras,
   className,
 }: StatsRangeBarProps) {
   const buttons = useRef(new Map<StatsRangeKey, HTMLButtonElement>());
 
   // Radio-group keyboard model: one tab stop (the selected radio), arrows move and select, Home/End jump.
+  // With no selection (`value` null) the first option takes the tab stop and arrows select from the start.
   function onKeyDown(event: KeyboardEvent<HTMLDivElement>) {
-    const index = options.indexOf(value);
+    const index = value === null ? -1 : options.indexOf(value);
     let next: number;
     switch (event.key) {
       case 'ArrowRight':
         next = (index + 1) % options.length;
         break;
       case 'ArrowLeft':
-        next = (index - 1 + options.length) % options.length;
+        next = index < 0 ? options.length - 1 : (index - 1 + options.length) % options.length;
         break;
       case 'Home':
         next = 0;
@@ -66,39 +76,53 @@ export function StatsRangeBar({
       )}
     >
       {title ? <div className="mr-auto min-w-0 text-lg font-semibold">{title}</div> : null}
-      {children ? <div className="flex flex-wrap items-center gap-2">{children}</div> : null}
-      <div
-        role="radiogroup"
-        aria-label="Time range"
-        onKeyDown={onKeyDown}
-        className={cn(
-          'inline-flex max-w-full overflow-x-auto rounded-md border bg-muted/40 p-0.5',
-          !title && !children && 'ml-auto'
-        )}
-      >
-        {options.map((key) => {
-          const selected = key === value;
-          return (
-            <button
-              key={key}
-              type="button"
-              role="radio"
-              aria-checked={selected}
-              tabIndex={selected ? 0 : -1}
-              ref={(el) => {
-                if (el) buttons.current.set(key, el);
-                else buttons.current.delete(key);
-              }}
-              onClick={() => onChange(key)}
-              className={cn(
-                'h-8 whitespace-nowrap rounded px-3 text-sm md:h-7 md:px-3',
-                selected ? 'bg-background font-medium shadow-sm' : 'text-muted-foreground hover:text-foreground'
-              )}
-            >
-              {STATS_RANGES[key].label}
-            </button>
-          );
-        })}
+      {children ? (
+        <div
+          className={
+            compact
+              ? 'grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:items-center'
+              : 'flex flex-wrap items-center gap-2'
+          }
+        >
+          {children}
+        </div>
+      ) : null}
+      <div className={compact ? 'ml-auto flex max-w-full items-center gap-2' : 'contents'}>
+        <div
+          role="radiogroup"
+          aria-label="Time range"
+          onKeyDown={onKeyDown}
+          className={cn(
+            'inline-flex max-w-full overflow-x-auto rounded-md border bg-muted/40 p-0.5',
+            !compact && !title && !children && 'ml-auto'
+          )}
+        >
+          {options.map((key, i) => {
+            const selected = key === value;
+            const tabStop = selected || (value === null && i === 0);
+            return (
+              <button
+                key={key}
+                type="button"
+                role="radio"
+                aria-checked={selected}
+                tabIndex={tabStop ? 0 : -1}
+                ref={(el) => {
+                  if (el) buttons.current.set(key, el);
+                  else buttons.current.delete(key);
+                }}
+                onClick={() => onChange(key)}
+                className={cn(
+                  'h-8 whitespace-nowrap rounded px-3 text-sm md:h-7 md:px-3',
+                  selected ? 'bg-background font-medium shadow-sm' : 'text-muted-foreground hover:text-foreground'
+                )}
+              >
+                {STATS_RANGES[key].label}
+              </button>
+            );
+          })}
+        </div>
+        {rangeExtras}
       </div>
     </div>
   );

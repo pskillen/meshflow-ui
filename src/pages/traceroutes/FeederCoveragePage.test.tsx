@@ -202,4 +202,16 @@ describe('FeederCoveragePage', () => {
     const mapEl = screen.getByTestId('feeder-coverage-map-mock');
     expect(mapEl.dataset.enabledLayers?.split(',').sort()).toEqual(['dots', 'hex', 'polygon']);
   });
+
+  it('uses the shared range bar with 90d and keeps the description behind the info button', () => {
+    setupHooks({ managedNodes: [makeManagedNode({ meshtastic_node_id: 200, short_name: 'BBB' })], data: undefined });
+    renderAt('/traceroutes/map/coverage?feeder=200&range=90d');
+    expect(screen.getByRole('radio', { name: '90d' })).toHaveAttribute('aria-checked', 'true');
+    expect(screen.queryByRole('combobox', { name: 'Time window' })).not.toBeInTheDocument();
+    const after = mockedUseFeederReach.mock.calls.at(-1)![0].triggeredAtAfter!;
+    expect((Date.now() - after.getTime()) / 3600000).toBeGreaterThanOrEqual(2160);
+    expect(screen.queryByText(/Maps completed and failed/)).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'About this map' }));
+    expect(screen.getByText(/Maps completed and failed/)).toBeInTheDocument();
+  });
 });

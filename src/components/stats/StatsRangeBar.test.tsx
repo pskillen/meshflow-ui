@@ -36,6 +36,26 @@ describe('StatsRangeBar', () => {
     expect(screen.getByTestId('stats-range-bar').className).toContain('sticky');
   });
 
+  it('compact: puts rangeExtras on the presets row and pins both right', () => {
+    render(
+      <StatsRangeBar
+        value="7d"
+        options={STATS_PRESET_KEYS}
+        onChange={() => {}}
+        compact
+        rangeExtras={<button type="button">Custom</button>}
+      >
+        <span>filter</span>
+      </StatsRangeBar>
+    );
+    const presets = screen.getByRole('radiogroup');
+    const custom = screen.getByRole('button', { name: 'Custom' });
+    expect(presets.parentElement).toBe(custom.parentElement);
+    expect(presets.parentElement!.className).toContain('ml-auto');
+    // filters sit in a two-column grid on narrow screens
+    expect(screen.getByText('filter').parentElement!.className).toContain('grid-cols-2');
+  });
+
   describe('keyboard', () => {
     function setup(value: StatsRangeKey = '7d') {
       const onChange = vi.fn();
@@ -66,6 +86,19 @@ describe('StatsRangeBar', () => {
       expect(onChange).toHaveBeenLastCalledWith('90d');
       fireEvent.keyDown(radio('24h'), { key: 'Home' });
       expect(onChange).toHaveBeenLastCalledWith('24h');
+    });
+
+    it('with no selection (custom range active) the first radio is the tab stop and arrows select from the start', () => {
+      const onChange = vi.fn();
+      render(<StatsRangeBar value={null} options={STATS_PRESET_KEYS} onChange={onChange} />);
+      const radio = (name: string) => screen.getByRole('radio', { name });
+      expect(radio('24h').tabIndex).toBe(0);
+      for (const name of ['7d', '30d', '90d']) expect(radio(name).tabIndex).toBe(-1);
+      for (const name of ['24h', '7d', '30d', '90d']) expect(radio(name).getAttribute('aria-checked')).toBe('false');
+      fireEvent.keyDown(radio('24h'), { key: 'ArrowRight' });
+      expect(onChange).toHaveBeenLastCalledWith('24h');
+      fireEvent.keyDown(radio('24h'), { key: 'ArrowLeft' });
+      expect(onChange).toHaveBeenLastCalledWith('90d');
     });
 
     it('ignores other keys', () => {

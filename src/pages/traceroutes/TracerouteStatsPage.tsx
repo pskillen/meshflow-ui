@@ -7,13 +7,12 @@ import { toast } from 'sonner';
 import { ListIcon, RouteIcon } from 'lucide-react';
 import { StatsRangeBar } from '@/components/stats/StatsRangeBar';
 import { useStatsRange } from '@/hooks/useStatsRange';
+import { TRACEROUTE_RANGE_AREA } from '@/hooks/useMapRange';
 import { TracerouteStatsSection } from '@/components/traceroutes/TracerouteStatsSection';
 import { useTracerouteTriggerableNodesSuspense, useTriggerTraceroute } from '@/hooks/api/useTraceroutes';
 import { useManagedNodesSuspense, useNodesSuspense } from '@/hooks/api/useNodes';
 import { TriggerTracerouteModal, TriggerMode } from './TriggerTracerouteModal';
 import { getTracerouteErrorMessage } from './tracerouteErrors';
-
-const TRACEROUTE_STATS_AREA = 'traceroutes';
 
 function parseNumberParam(raw: string | null): number | null {
   if (!raw) return null;
@@ -24,7 +23,7 @@ function parseNumberParam(raw: string | null): number | null {
 export function TracerouteStatsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const sourceNodeId = parseNumberParam(searchParams.get('source_node'));
-  const range = useStatsRange({ area: TRACEROUTE_STATS_AREA });
+  const range = useStatsRange({ area: TRACEROUTE_RANGE_AREA });
 
   const setSourceNode = (id: number | null) => {
     const next = new URLSearchParams(searchParams);
