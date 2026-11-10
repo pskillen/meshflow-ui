@@ -64,18 +64,22 @@ export interface UseTracerouteStatsParams {
   triggeredAtAfter?: Date;
   /** Meshtastic node id of source managed node; same as traceroute list ``source_node``. */
   sourceNodeId?: number | null;
+  /** `1h` asks for hourly `success_over_time` (24h only; the API rejects it beyond 7 days). */
+  bucket?: '1h';
 }
 
 export function useTracerouteStats(params?: UseTracerouteStatsParams) {
   const api = useMeshtasticApi();
   const triggeredAtAfter = params?.triggeredAtAfter?.toISOString();
   const sourceNode = params?.sourceNodeId ?? undefined;
+  const bucket = params?.bucket;
   return useQuery({
-    queryKey: ['traceroutes', 'stats', { triggeredAtAfter, sourceNode }],
+    queryKey: ['traceroutes', 'stats', { triggeredAtAfter, sourceNode, bucket }],
     queryFn: () =>
       api.getTracerouteStats({
         triggered_at_after: triggeredAtAfter,
         source_node: sourceNode,
+        bucket,
       }),
   });
 }

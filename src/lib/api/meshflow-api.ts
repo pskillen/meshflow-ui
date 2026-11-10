@@ -1004,7 +1004,12 @@ export class MeshflowApi extends BaseApi {
   /**
    * Get traceroute statistics (sources, success/failure, top routers, by source, success over time)
    */
-  async getTracerouteStats(params?: { triggered_at_after?: string; source_node?: number }): Promise<{
+  async getTracerouteStats(params?: {
+    triggered_at_after?: string;
+    source_node?: number;
+    /** `1h` for hourly `success_over_time` (API allows up to 7 days); omitted means UTC days. */
+    bucket?: '1h';
+  }): Promise<{
     sources: Array<{ trigger_type: number; count: number }>;
     success_failure: Array<{ status: string; count: number }>;
     top_routers: Array<{ meshtastic_node_id: number; node_id_str: string; short_name: string; count: number }>;
@@ -1029,7 +1034,8 @@ export class MeshflowApi extends BaseApi {
       failed: number;
       success_rate: number | null;
     }>;
-    success_over_time: Array<{ date: string; completed: number; failed: number }>;
+    /** `bucket_start` (ISO, UTC hour) is only on hourly rows from an API that supports `bucket=1h`. */
+    success_over_time: Array<{ date: string; bucket_start?: string; completed: number; failed: number }>;
     by_strategy: Record<string, { completed: number; failed: number; pending: number; sent: number }>;
     by_strategy_excluding_external: Record<
       string,
@@ -1042,6 +1048,9 @@ export class MeshflowApi extends BaseApi {
     }
     if (params?.source_node != null) {
       searchParams.append('source_node', String(params.source_node));
+    }
+    if (params?.bucket) {
+      searchParams.append('bucket', params.bucket);
     }
     return this.get('/traceroutes/stats/', searchParams);
   }
