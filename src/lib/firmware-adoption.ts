@@ -2,7 +2,8 @@ import type { StatsSnapshot } from '@/lib/models';
 
 export const UNKNOWN_KEY = 'unknown';
 export const UNKNOWN_LABEL = 'Unknown';
-export const ADOPTION_HISTORY_DAYS = 90;
+/** The split reads the newest snapshot, so the query always reaches back at least this far, whatever the range. */
+export const ADOPTION_SPLIT_LOOKBACK_DAYS = 3;
 
 const PALETTE_SIZE = 5;
 
@@ -19,6 +20,8 @@ export interface FirmwareSeries {
 
 export interface FirmwarePieSlice {
   id: string;
+  /** Unknown: the bar stripes it, as the trend dashes it. */
+  dashed: boolean;
   key: string;
   label: string;
   color: string;
@@ -47,6 +50,13 @@ function compareParts(a: number[], b: number[]): number {
     if (d !== 0) return d;
   }
   return 0;
+}
+
+/** The split's window as a whole phrase: "nodes heard in the last 7d", "... last 24h", "nodes heard recently". */
+export function describeWindow(windowHours: number | null): string {
+  if (!windowHours) return 'nodes heard recently';
+  const span = windowHours > 24 && windowHours % 24 === 0 ? `${windowHours / 24}d` : `${windowHours}h`;
+  return `nodes heard in the last ${span}`;
 }
 
 export function buildFirmwareAdoption(rows: StatsSnapshot[]): FirmwareAdoption {
@@ -87,6 +97,7 @@ export function buildFirmwareAdoption(rows: StatsSnapshot[]): FirmwareAdoption {
           key: s.key,
           label: s.label,
           color: s.color,
+          dashed: s.dashed,
           count: newest.value.by_type![s.key] ?? 0,
           percent: 0,
         }))
@@ -101,4 +112,32 @@ export function buildFirmwareAdoption(rows: StatsSnapshot[]): FirmwareAdoption {
   });
 
   return { series, pie, line, windowHours: newest?.value.window_hours ?? null, total };
+}
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+export interface FirmwareTrend {
+  /** One row per UTC day that has a snapshot (the newest that day), keyed by series id. */
+  rows: FirmwareLinePoint[];
+  /** The day grid to draw: the range start floored to its UTC day, to the range end. */
+  window: { start: Date; end: Date };
+}
+
+/**
+ * The trend over a range. `node_firmware` is one snapshot a day, so the grid is always daily whatever the range's
+ * bucket is; a 24h range holds one or two days. Snapshots before the window's first day are dropped.
+ */
+export function buildFirmwareTrend(
+  adoption: Pick<FirmwareAdoption, 'line'>,
+  window: { start: Date; end: Date }
+): FirmwareTrend {
+  const startDay = Math.floor(window.start.getTime() / DAY_MS) * DAY_MS;
+  const byDay = new Map<number, FirmwareLinePoint>();
+  for (const point of adoption.line) {
+    const day = Math.floor(point.timestamp / DAY_MS) * DAY_MS;
+    if (day < startDay || day >= window.end.getTime()) continue;
+    byDay.set(day, { ...point, timestamp: day }); // line is oldest first, so the newest of a day wins
+  }
+  const rows = [...byDay.values()].sort((a, b) => a.timestamp - b.timestamp);
+  return { rows, window: { start: new Date(startDay), end: window.end } };
 }

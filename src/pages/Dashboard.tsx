@@ -1,88 +1,95 @@
 import { NodesAndConstellationsMap } from '@/components/nodes/NodesAndConstellationsMap';
-import { useManagedNodesSuspense, useRecentNodeCountsSuspense } from '@/hooks/api/useNodes';
+import { useManagedNodesSuspense } from '@/hooks/api/useNodes';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Suspense, useMemo } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
+import { Button } from '@/components/ui/button';
 import { filterManagedNodesForMapDisplay } from '@/lib/managed-node-status';
 import { MeshStatsSection } from '@/components/MeshStatsSection';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { RightNowBand } from '@/components/stats/RightNowBand';
+import { StatsRangeBar } from '@/components/stats/StatsRangeBar';
+import { DASHBOARDS_AREA, useStatsRange } from '@/hooks/useStatsRange';
 import { Link } from 'react-router-dom';
 
-const COUNT_COLUMNS = [
-  { key: '2', label: '2 hours' },
-  { key: '24', label: '24h' },
-  { key: '168', label: '7 days' },
-  { key: '720', label: '30 days' },
-  { key: '2160', label: '90 days' },
-  { key: 'all', label: 'All time' },
-] as const;
+const PHONE_QUERY = '(max-width: 767px)';
 
-function RecentCountsRow({ label, protocol }: { label: string; protocol: 'meshtastic' | 'meshcore' }) {
-  const counts = useRecentNodeCountsSuspense(protocol);
-  return (
-    <TableRow>
-      <TableCell className="font-medium">{label}</TableCell>
-      {COUNT_COLUMNS.map((col) => (
-        <TableCell key={col.key} className="text-center font-mono tabular-nums">
-          {counts[col.key] ?? '—'}
-        </TableCell>
-      ))}
-    </TableRow>
-  );
+/** True below the `md` breakpoint. Reads the media query on first render, so a phone never mounts the map first. */
+function usePhone(): boolean {
+  const [phone, setPhone] = useState(() => window.matchMedia?.(PHONE_QUERY).matches ?? false);
+  useEffect(() => {
+    const mql = window.matchMedia?.(PHONE_QUERY);
+    if (!mql) return;
+    const onChange = () => setPhone(mql.matches);
+    mql.addEventListener('change', onChange);
+    return () => mql.removeEventListener('change', onChange);
+  }, []);
+  return phone;
 }
 
 function DashboardContent() {
+  const phone = usePhone();
+  const [mapOpen, setMapOpen] = useState(false);
+  // The map sits below the stats. On phones it starts collapsed, so it neither pushes nor loads tiles until asked.
+  const showMap = !phone || mapOpen;
   const { managedNodes } = useManagedNodesSuspense({ includeStatus: true });
   const managedNodesForMap = useMemo(() => filterManagedNodesForMapDisplay(managedNodes), [managedNodes]);
 
+  const range = useStatsRange({ area: DASHBOARDS_AREA });
+
   return (
-    <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
+    <div className="flex flex-col gap-4 pb-4 md:gap-6 md:pb-6">
+      <StatsRangeBar
+        value={range.key}
+        options={range.options}
+        onChange={range.setRange}
+        title="Dashboard"
+        className="px-4 lg:px-6"
+      />
       <div className="px-4 lg:px-6" data-testid="dashboard-recently-active-nodes">
-        <Card>
-          <CardHeader>
-            <CardTitle>Recently Active Nodes</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Protocol</TableHead>
-                  {COUNT_COLUMNS.map((col) => (
-                    <TableHead key={col.key} className="text-center">
-                      {col.label}
-                    </TableHead>
-                  ))}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                <RecentCountsRow label="Meshtastic" protocol="meshtastic" />
-                <RecentCountsRow label="MeshCore" protocol="meshcore" />
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
+        <RightNowBand scope="both" />
+      </div>
+      <div className="px-4 lg:px-6">
+        <MeshStatsSection protocolScope="both" range={range} />
       </div>
       <div className="px-4 lg:px-6" data-testid="dashboard-meshflow-map">
         <Card>
           <CardHeader>
-            <CardTitle>Meshflow Map</CardTitle>
+            <div className="flex items-center justify-between gap-2">
+              <CardTitle>Meshflow Map</CardTitle>
+              {phone && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setMapOpen((open) => !open)}
+                  aria-expanded={showMap}
+                  aria-controls={showMap ? 'dashboard-map-body' : undefined}
+                  data-testid="dashboard-map-toggle"
+                >
+                  {showMap ? 'Hide map' : 'Show map'}
+                </Button>
+              )}
+            </div>
             <p className="text-sm text-muted-foreground">
-              Constellations represent local regions on the mesh. Below is a map of nodes which report into Meshflow.
-              Click on a node to view more information. View the <Link to="nodes">Nodes page</Link> for a list.
+              {showMap && (
+                <>
+                  Constellations represent local regions on the mesh. Below is a map of nodes which report into
+                  Meshflow. Click on a node to view more information.{' '}
+                </>
+              )}
+              View the <Link to="nodes">Nodes page</Link> for a list.
             </p>
           </CardHeader>
-          <CardContent>
-            <div className="h-[600px] w-full">
-              <NodesAndConstellationsMap
-                managedNodes={managedNodesForMap}
-                showConstellation={true}
-                showUnmanagedNodes={false}
-              />
-            </div>
-          </CardContent>
+          {showMap && (
+            <CardContent id="dashboard-map-body">
+              <div className="h-[600px] w-full">
+                <NodesAndConstellationsMap
+                  managedNodes={managedNodesForMap}
+                  showConstellation={true}
+                  showUnmanagedNodes={false}
+                />
+              </div>
+            </CardContent>
+          )}
         </Card>
-      </div>
-      <div className="px-4 lg:px-6">
-        <MeshStatsSection protocolScope="both" />
       </div>
     </div>
   );

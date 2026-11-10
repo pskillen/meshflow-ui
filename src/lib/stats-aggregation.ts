@@ -1,46 +1,38 @@
-import { startOfDay } from 'date-fns';
+import type { PaginatedResponse, StatsSnapshot } from '@/lib/models';
 
 export type AggregationWindow = 'hourly' | '6h' | 'daily';
 
-/**
- * Determine aggregation window based on time range span.
- * - <= 2 days: hourly (no aggregation)
- * - > 2 days and <= 8 days: 6-hour windows (covers "7 days" which can span up to ~8 days)
- * - > 8 days: daily (local midnight)
- */
-export function getAggregationWindow(startDate: Date, endDate: Date): AggregationWindow {
-  const spanHours = (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60);
-  if (spanHours <= 48) return 'hourly';
-  if (spanHours <= 192) return '6h'; // 8 days = 192h; ensures "7 days" uses 6h bins
-  return 'daily';
-}
+const HOUR_MS = 3_600_000;
 
 /**
- * Get the bucket start (local midnight or 6h boundary) for a given date.
- * For 6h: 00:00, 06:00, 12:00, 18:00
- * For daily: 00:00 (start of day)
+ * Get the bucket start for a timestamp, in UTC: 6h buckets start at 00/06/12/18 UTC, daily at UTC midnight.
+ * The API rolls up by UTC hour, 6h and UTC day, and the range windows (`statsRangeWindow`) are UTC too, so buckets
+ * line up whatever the browser's time zone.
  */
 export function getBucketStart(date: Date, window: '6h' | 'daily'): Date {
-  const d = new Date(date);
-  if (window === 'daily') {
-    return startOfDay(d);
-  }
-  // 6h: floor hour to 0, 6, 12, 18
-  const hours = d.getHours();
-  const bucketHour = Math.floor(hours / 6) * 6;
-  d.setHours(bucketHour, 0, 0, 0);
-  return d;
+  const size = (window === 'daily' ? 24 : 6) * HOUR_MS;
+  return new Date(Math.floor(date.getTime() / size) * size);
 }
 
 export interface RawDataPoint {
   timestamp: number;
   value: number;
+  /**
+   * How many hourly samples the value covers. Absent on raw hourly rows (counts as 1); present on rows the API
+   * already rolled up (`bucket=1d`) and on the output of `aggregateStats`.
+   */
+  samples?: number;
+}
+
+function bucketKeyFor(window: AggregationWindow) {
+  return (ts: number) => getBucketStart(new Date(ts), window === '6h' ? '6h' : 'daily').getTime();
 }
 
 /**
- * Aggregate raw hourly data into larger windows.
- * - packet_volume: SUM (cumulative over window)
- * - online_nodes: AVERAGE (point-in-time counts)
+ * Aggregate hourly data (or rows the API already rolled up) into larger UTC buckets.
+ * - packet_volume, new_nodes: SUM (cumulative over the bucket)
+ * - online_nodes: AVERAGE (point-in-time counts), weighted by `samples` so rolled-up days merge correctly
+ * Output points carry `samples`, so callers can tell a partial bucket from a whole one. Hourly input is returned as is.
  */
 export function aggregateStats(
   points: RawDataPoint[],
@@ -49,24 +41,23 @@ export function aggregateStats(
 ): RawDataPoint[] {
   if (window === 'hourly' || points.length === 0) return points;
 
-  const bucketKey = (ts: number) => {
-    const d = getBucketStart(new Date(ts), window === '6h' ? '6h' : 'daily');
-    return d.getTime();
-  };
-
-  const buckets = new Map<number, { sum: number; count: number }>();
+  const bucketKey = bucketKeyFor(window);
+  const buckets = new Map<number, { sum: number; weighted: number; samples: number }>();
   for (const p of points) {
     const key = bucketKey(p.timestamp);
-    const existing = buckets.get(key) ?? { sum: 0, count: 0 };
+    const weight = p.samples ?? 1;
+    const existing = buckets.get(key) ?? { sum: 0, weighted: 0, samples: 0 };
     existing.sum += p.value;
-    existing.count += 1;
+    existing.weighted += p.value * weight;
+    existing.samples += weight;
     buckets.set(key, existing);
   }
 
   return Array.from(buckets.entries())
-    .map(([ts, { sum, count }]) => ({
+    .map(([ts, { sum, weighted, samples }]) => ({
       timestamp: ts,
-      value: mode === 'sum' ? sum : sum / count,
+      value: mode === 'sum' ? sum : samples > 0 ? weighted / samples : 0,
+      samples,
     }))
     .sort((a, b) => a.timestamp - b.timestamp);
 }
@@ -74,72 +65,50 @@ export function aggregateStats(
 export interface ByTypeDataPoint {
   timestamp: number;
   byType: Record<string, number>;
+  /** Hourly samples covered, as on `RawDataPoint`. */
+  samples?: number;
 }
 
 /**
- * Aggregate by_type data into larger windows. Sums each type per bucket.
+ * Aggregate by_type data into larger UTC buckets. Sums each type per bucket.
  */
 export function aggregateStatsByType(points: ByTypeDataPoint[], window: AggregationWindow): ByTypeDataPoint[] {
   if (window === 'hourly' || points.length === 0) return points;
 
-  const bucketKey = (ts: number) => {
-    const d = getBucketStart(new Date(ts), window === '6h' ? '6h' : 'daily');
-    return d.getTime();
-  };
-
-  const buckets = new Map<number, Record<string, number>>();
+  const bucketKey = bucketKeyFor(window);
+  const buckets = new Map<number, { byType: Record<string, number>; samples: number }>();
   for (const p of points) {
     const key = bucketKey(p.timestamp);
-    const existing = buckets.get(key) ?? {};
+    const existing = buckets.get(key) ?? { byType: {}, samples: 0 };
     for (const [k, v] of Object.entries(p.byType)) {
-      existing[k] = (existing[k] ?? 0) + v;
+      existing.byType[k] = (existing.byType[k] ?? 0) + v;
     }
+    existing.samples += p.samples ?? 1;
     buckets.set(key, existing);
   }
 
   return Array.from(buckets.entries())
-    .map(([ts, byType]) => ({ timestamp: ts, byType }))
+    .map(([ts, { byType, samples }]) => ({ timestamp: ts, byType, samples }))
     .sort((a, b) => a.timestamp - b.timestamp);
 }
-
-/** Display names for packet types in charts */
-import type { PaginatedResponse, StatsSnapshot } from '@/lib/models';
 
 export function globalSnapshotRows(snapshots: PaginatedResponse<StatsSnapshot> | undefined): StatsSnapshot[] {
   if (!snapshots?.results) return [];
   return snapshots.results.filter((s) => s.constellation_id === null);
 }
 
-export function snapshotsToCountSeries(rows: StatsSnapshot[]): { timestamp: number; value: number }[] {
+export function snapshotsToCountSeries(rows: StatsSnapshot[]): RawDataPoint[] {
   return [...rows]
     .sort((a, b) => new Date(a.recorded_at).getTime() - new Date(b.recorded_at).getTime())
     .map((s) => ({
       timestamp: new Date(s.recorded_at).getTime(),
       value: s.value?.count ?? 0,
+      // Present only on rolled-up rows (bucket=1d): how many hourly samples the day covers.
+      ...(typeof s.value?.samples === 'number' ? { samples: s.value.samples } : {}),
     }));
 }
 
-/** Merge MT and MC count series on timestamp for overlaid bar charts. */
-export function mergeMeshtasticMeshcoreSeries(
-  mt: { timestamp: number; value: number }[],
-  mc: { timestamp: number; value: number }[]
-): { timestamp: number; meshtastic: number; meshcore: number }[] {
-  const byTs = new Map<number, { meshtastic: number; meshcore: number }>();
-  for (const p of mt) {
-    const row = byTs.get(p.timestamp) ?? { meshtastic: 0, meshcore: 0 };
-    row.meshtastic = p.value;
-    byTs.set(p.timestamp, row);
-  }
-  for (const p of mc) {
-    const row = byTs.get(p.timestamp) ?? { meshtastic: 0, meshcore: 0 };
-    row.meshcore = p.value;
-    byTs.set(p.timestamp, row);
-  }
-  return Array.from(byTs.entries())
-    .map(([timestamp, vals]) => ({ timestamp, ...vals }))
-    .sort((a, b) => a.timestamp - b.timestamp);
-}
-
+/** Display names for packet types in charts */
 export const PACKET_TYPE_DISPLAY_NAMES: Record<string, string> = {
   text_message: 'Messages',
   position: 'Position',

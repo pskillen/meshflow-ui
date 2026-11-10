@@ -25,6 +25,11 @@ export interface StatsSnapshotsParams {
   constellationId?: number;
   recordedAtAfter?: Date;
   recordedAtBefore?: Date;
+  /**
+   * Ask the API to roll hourly rows up to UTC days (`1d`). Requires `recordedAtAfter` and a `statType`. Rolled rows
+   * carry `value.samples`. An API without rollups ignores it and returns hourly rows.
+   */
+  bucket?: '1d';
   page?: number;
   page_size?: number;
 }

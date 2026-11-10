@@ -4,38 +4,37 @@ import { StaleReportedTime } from '@/components/nodes/StaleReportedTime';
 import { ObservedNode } from '@/lib/models';
 import { observedNodeDetailPath } from '@/lib/node-detail-routes';
 import { getRoleLabel } from '@/lib/meshtastic';
+import { describeBattery } from '@/lib/battery';
 import { cn } from '@/lib/utils';
 
 interface NodeCardProps {
   node: ObservedNode;
 }
 
-function getBatteryColor(level: number): string {
-  if (level > 60) return 'text-emerald-500';
-  if (level > 20) return 'text-amber-500';
-  return 'text-red-500';
-}
+const TEXT_TONE = { good: 'text-emerald-500', warn: 'text-amber-500', low: 'text-red-500' } as const;
+const BAR_TONE = { good: 'bg-emerald-500', warn: 'bg-amber-500', low: 'bg-red-500' } as const;
 
-function getBatteryBarColor(level: number): string {
-  if (level > 60) return 'bg-emerald-500';
-  if (level > 20) return 'bg-amber-500';
-  return 'bg-red-500';
-}
-
-function BatteryIndicator({ level }: { level: number }) {
-  const pct = Math.min(100, Math.max(0, level));
+/** Raw device-metrics battery level; 101 is shown as "Powered" (see `describeBattery`). */
+export function BatteryIndicator({ level }: { level: number }) {
+  const d = describeBattery(level);
+  if (d.kind === 'none') return null;
+  if (d.kind === 'powered') {
+    return (
+      <div className="flex items-center gap-2 ml-auto">
+        <span className="text-xs text-muted-foreground">Powered</span>
+        <Battery className="h-4 w-4 shrink-0 text-emerald-500" aria-hidden />
+      </div>
+    );
+  }
   return (
     <div className="flex items-center gap-2 ml-auto">
       <div className="flex items-center gap-2 w-20">
         <div className="flex-1 min-w-0 h-1.5 rounded-full bg-slate-200 dark:bg-slate-600 overflow-hidden">
-          <div
-            className={cn('h-full rounded-full transition-all', getBatteryBarColor(pct))}
-            style={{ width: `${pct}%` }}
-          />
+          <div className={cn('h-full rounded-full transition-all', BAR_TONE[d.tone])} style={{ width: `${d.pct}%` }} />
         </div>
-        <span className="text-xs tabular-nums text-muted-foreground shrink-0">{pct}%</span>
+        <span className="text-xs tabular-nums text-muted-foreground shrink-0">{d.pct}%</span>
       </div>
-      <Battery className={cn('h-4 w-4 shrink-0', getBatteryColor(pct))} aria-hidden />
+      <Battery className={cn('h-4 w-4 shrink-0', TEXT_TONE[d.tone])} aria-hidden />
     </div>
   );
 }

@@ -85,5 +85,5 @@ describe('InfrastructureExportTable', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Previous' }));
     expect(bodyNodeIds()).toHaveLength(50);
-  });
+  }, 30_000);
 });

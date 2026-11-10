@@ -7,6 +7,7 @@ import {
   useInfiniteQuery,
   useSuspenseInfiniteQuery,
   useSuspenseQuery,
+  useSuspenseQueries,
 } from '@tanstack/react-query';
 import { useMeshflowApi } from './useApi';
 import {
@@ -151,12 +152,28 @@ export type RecentNodeCounts = Record<string, number>;
  */
 export function useRecentNodeCountsSuspense(protocol?: 'meshtastic' | 'meshcore') {
   const api = useMeshflowApi();
-  const query = useSuspenseQuery<RecentNodeCounts, Error>({
+  const query = useSuspenseQuery<RecentNodeCounts, Error>(recentNodeCountsQuery(api, protocol));
+  return query.data;
+}
+
+/**
+ * Suspense-enabled counts for both protocols, fetched in parallel (one round trip, not two).
+ * Uses the same query keys as {@link useRecentNodeCountsSuspense}, so the cache is shared.
+ */
+export function useRecentNodeCountsBothSuspense(): { meshtastic: RecentNodeCounts; meshcore: RecentNodeCounts } {
+  const api = useMeshflowApi();
+  const [meshtastic, meshcore] = useSuspenseQueries({
+    queries: [recentNodeCountsQuery(api, 'meshtastic'), recentNodeCountsQuery(api, 'meshcore')],
+  });
+  return { meshtastic: meshtastic.data, meshcore: meshcore.data };
+}
+
+function recentNodeCountsQuery(api: ReturnType<typeof useMeshflowApi>, protocol?: 'meshtastic' | 'meshcore') {
+  return {
     refetchInterval: 1000 * 60, // 1 minute
     queryKey: ['nodes', 'recent-counts', protocol ?? 'all'],
     queryFn: () => api.getRecentNodeCounts(protocol),
-  });
-  return query.data;
+  };
 }
 
 /** Round timestamp to 5-minute window for stable query keys across Suspense remounts */
