@@ -98,7 +98,7 @@ describe('NodesAndConstellationsMap', () => {
         />
       </div>
     );
-    const legend = await screen.findByRole('region', { name: /Map marker colours/i });
+    const legend = await screen.findByRole('region', { name: /Map key/i });
     expect(legend).toHaveTextContent('Test Constellation');
     expect(legend).not.toHaveTextContent('Unpinned Constellation');
 
