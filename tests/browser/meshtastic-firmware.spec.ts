@@ -1,5 +1,5 @@
 import { test as base, expect, type Route } from '@playwright/test';
-import { installApiMocks } from './api-mock';
+import { installApiMocks, utcMidnightDaysAgo } from './api-mock';
 
 const SNAPSHOTS = '**/api/stats/snapshots/**';
 
@@ -20,7 +20,7 @@ function firmwareOverride(results: unknown[]) {
 const oneRow = [
   {
     id: 1,
-    recorded_at: '2026-11-08T00:00:00Z',
+    recorded_at: utcMidnightDaysAgo(1),
     stat_type: 'node_firmware',
     constellation_id: null,
     value: { count: 10, window_hours: 168, by_type: { '2.7': 6, unknown: 4 } },
@@ -63,11 +63,18 @@ test.describe('Meshtastic dashboard firmware adoption', () => {
   });
 
   test('the trend follows the range and the split does not', async ({ page }) => {
-    await page.goto('/meshtastic/dashboard?range=24h');
-    const card = page.getByTestId('firmware-adoption-card');
-    await expect(card.getByText(/Split: nodes heard in the last 7d/)).toBeVisible();
-    await expect(card.getByText(/daily snapshots? in this range/)).toBeVisible();
-    await expect(card.getByRole('img', { name: /Firmware adoption, last 24 hours/ })).toBeVisible();
+    // Fixture: snapshots 1, 2 and 3 days ago. 24h reaches back to yesterday's snapshot only; 7d holds all three.
+    const dots = (range: string) =>
+      page.goto(`/meshtastic/dashboard?range=${range}`).then(async () => {
+        const card = page.getByTestId('firmware-adoption-card');
+        await expect(card.getByText(/Split: nodes heard in the last 7d/)).toBeVisible();
+        await expect(card.locator('.recharts-line-dot').first()).toBeVisible();
+        return card.locator('.recharts-line-dot').count();
+      });
+    const short = await dots('24h');
+    const long = await dots('7d');
+    expect(long).toBeGreaterThan(short);
+    await expect(page.getByTestId('firmware-adoption-card').getByText(/Only \d daily snapshots/)).toHaveCount(0);
   });
 
   test('a single snapshot still draws the line dots', async ({ context, page }) => {
