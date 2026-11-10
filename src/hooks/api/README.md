@@ -71,6 +71,9 @@ function NodesList() {
 Hooks must not walk every page of a list automatically: a list of observed nodes runs to thousands of rows, and a
 refetch interval re-requests every loaded page. Fetch the next page on demand.
 
+`useObservedNodesHeard` follows this: it fetches one page of 1000 (the API maximum) and returns `total` and
+`truncated`, so a map overlay can say when it shows only part of the list.
+
 ### Fetching a Single Node
 
 ```tsx

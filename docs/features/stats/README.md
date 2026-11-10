@@ -51,7 +51,7 @@ Each was decided in https://github.com/pskillen/meshflow-ui/issues/407.
 ## Known gaps
 
 - No change against the previous period on dashboard tiles: https://github.com/pskillen/meshflow-ui/issues/445
-- `useMeshCore.ts` and `useObservedNodesHeard.ts` still walk every page; the trigger-traceroute map shows feeders of both protocols; several battery displays still format the raw level: https://github.com/pskillen/meshflow-ui/issues/446
+- Several battery displays still format the raw level: https://github.com/pskillen/meshflow-ui/issues/446
 - The node Traceroutes tab's Peers tile always equals Links, and link SNR shows bucket means only: https://github.com/pskillen/meshflow-ui/issues/447
 - The API stores missing device metrics as 0, so the battery chart drops 0 voltage, and drops 0 level when voltage is missing: https://github.com/pskillen/meshflow-api/issues/524 (bot follow-up: https://github.com/pskillen/meshflow-bot/issues/170)
 

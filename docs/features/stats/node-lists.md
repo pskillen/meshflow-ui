@@ -41,7 +41,7 @@ Each was decided in https://github.com/pskillen/meshflow-ui/issues/407.
 
 ## Known gaps
 
-- `useMeshCore.ts` and `useObservedNodesHeard.ts` still walk every page; the trigger-traceroute map shows feeders of both protocols; several battery displays still format the raw level: https://github.com/pskillen/meshflow-ui/issues/446
+- Several battery displays still format the raw level: https://github.com/pskillen/meshflow-ui/issues/446
 
 ## Related
 
