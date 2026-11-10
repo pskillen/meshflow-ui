@@ -54,9 +54,12 @@ export interface TrendChartProps {
   legend?: boolean;
   /**
    * Y axis. `zero` (default): 0 to a nice top, whole-number ticks, for counts. `fit`: hug the data, with decimals, for
-   * readings in a narrow band (volts). `[min, max]`: fixed (percent, 0 to 100).
+   * readings in a narrow band (volts). `[min, max]`: fixed (percent, 0 to 100); values outside it are clipped to the
+   * plot, so every chart on that scale compares.
    */
   yRange?: 'zero' | 'fit' | [number, number];
+  /** `[min, max]` only: put a tick every this many units from `min` (default: four even steps). */
+  yTickStep?: number;
   /** Format values on the y axis and in the accessible name and table. Default: compact whole numbers. */
   formatValue?: (value: number) => string;
   /** Pixel height. Default 190. */
@@ -117,6 +120,7 @@ export function TrendChart({
   dots = false,
   legend: showLegend = true,
   yRange = 'zero',
+  yTickStep,
   formatValue,
   label,
   headline,
@@ -147,15 +151,18 @@ export function TrendChart({
         : Math.max(0, ...numeric.flatMap((r) => keys.map((k) => r[k] ?? 0)));
     if (Array.isArray(yRange)) {
       const [lo, hi] = yRange;
-      const step = (hi - lo) / 4;
-      return { min: lo, max: hi, ticks: [0, 1, 2, 3, 4].map((i) => lo + step * i) };
+      const step = yTickStep && yTickStep > 0 ? yTickStep : (hi - lo) / 4;
+      const count = Math.floor((hi - lo) / step + 1e-9);
+      const ticks = Array.from({ length: count + 1 }, (_, i) => lo + step * i);
+      if (ticks[ticks.length - 1]! < hi - 1e-9) ticks.push(hi);
+      return { min: lo, max: hi, ticks };
     }
     if (yRange === 'fit') {
       const values = numericValues(dense, keys);
       return values.length ? fitAxis(Math.min(...values), Math.max(...values)) : { min: 0, max: 1, ticks: [0, 1] };
     }
     return { min: 0, ...niceAxisMax(max) };
-  }, [dense, keys, kind, stacked, yRange]);
+  }, [dense, keys, kind, stacked, yRange, yTickStep]);
 
   // Fewer x labels on a narrow chart (a phone, a card in a column) so they do not run into each other.
   const boxRef = useRef<HTMLDivElement>(null);
@@ -209,6 +216,7 @@ export function TrendChart({
       tickLine={false}
       axisLine={false}
       domain={[axis.min, axis.max]}
+      allowDataOverflow={Array.isArray(yRange)}
       ticks={axis.ticks}
       allowDecimals={yRange !== 'zero'}
       tickFormatter={formatValue ?? formatCompact}
@@ -272,7 +280,7 @@ export function TrendChart({
                 stroke={`var(--color-${s.key})`}
                 strokeWidth={2}
                 strokeDasharray="4 3"
-                dot={false}
+                dot={dots ? { r: 2.5, fill: `var(--color-${s.key})`, strokeWidth: 0 } : false}
                 legendType="none"
                 tooltipType="none"
                 isAnimationActive={false}

@@ -16,6 +16,7 @@ export interface MetricTrendCardProps {
   rows: TrendChartProps['rows'];
   series: TrendChartProps['series'];
   yRange?: TrendChartProps['yRange'];
+  yTickStep?: TrendChartProps['yTickStep'];
   formatValue?: TrendChartProps['formatValue'];
   legend?: boolean;
   /** A dot on every point, for sparse data where a lone point would not show (traceroute SNR). */
@@ -43,6 +44,7 @@ export function MetricTrendCard({
   rows,
   series,
   yRange,
+  yTickStep,
   formatValue,
   legend,
   dots,
@@ -96,6 +98,7 @@ export function MetricTrendCard({
           bucket={range.bucket}
           syncId={NODE_METRICS_SYNC_ID}
           yRange={yRange}
+          yTickStep={yTickStep}
           formatValue={formatValue}
           legend={legend}
           dots={dots}

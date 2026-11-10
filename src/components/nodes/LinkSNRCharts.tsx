@@ -4,11 +4,20 @@ import { Button } from '@/components/ui/button';
 import { MetricTrendCard } from '@/components/nodes/MetricTrendCard';
 import type { StatsRange } from '@/hooks/useStatsRange';
 import type { NodeTracerouteLinkSnrHistory } from '@/hooks/api/useNodeTracerouteLinks';
-import { SNR_IN, SNR_OUT, bucketLinkSnr, meanOfDrawn, peerLabel, sortLinksByActivity } from '@/lib/node-traceroute-snr';
+import {
+  SNR_IN,
+  SNR_OUT,
+  bucketLinkSnr,
+  countOffScale,
+  meanOfDrawn,
+  peerLabel,
+  sortLinksByActivity,
+} from '@/lib/node-traceroute-snr';
 import { markPartialBuckets, bucketPhrase } from '@/lib/stats-trend';
 
-/** Meshtastic LoRa typical SNR range (dB), the same on every link so the charts compare. */
+/** Meshtastic LoRa typical SNR range (dB), the same on every link so the charts compare. Points outside are clipped. */
 const SNR_Y_RANGE: [number, number] = [-20, 10];
+const SNR_TICK_STEP = 10;
 
 const SNR_SERIES = [
   { key: SNR_IN, label: 'SNR in (dB)', color: 'hsl(var(--chart-1))' },
@@ -43,6 +52,7 @@ function LinkCard({ link, range }: { link: NodeTracerouteLinkSnrHistory; range: 
   );
   const label = peerLabel(link);
   const series = SNR_SERIES.filter((s) => rows.some((r) => typeof r[s.key] === 'number'));
+  const offScale = countOffScale(rows, [SNR_IN, SNR_OUT], SNR_Y_RANGE);
   return (
     <MetricTrendCard
       title={`SNR with ${label}`}
@@ -52,6 +62,8 @@ function LinkCard({ link, range }: { link: NodeTracerouteLinkSnrHistory; range: 
       rows={rows}
       series={series.length ? series : SNR_SERIES}
       yRange={SNR_Y_RANGE}
+      yTickStep={SNR_TICK_STEP}
+      note={offScale > 0 ? `${offScale} ${offScale === 1 ? 'point' : 'points'} off the scale.` : undefined}
       formatValue={formatDb}
       dots
       empty={series.length === 0 ? 'No SNR samples from traceroutes in this range.' : undefined}
