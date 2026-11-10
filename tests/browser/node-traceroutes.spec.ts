@@ -182,6 +182,40 @@ test.describe('Node Traceroutes tab', () => {
     });
   }
 
+  test('90d: Raw draws one mark per sample, spread across the window', async ({ page }) => {
+    const DAY = 24 * HOUR;
+    const now = Date.now();
+    const IN = 60;
+    const OUT = 25;
+    await page.route(`**/api/nodes/observed-nodes/${NODE_ID}/traceroute-links/**`, (route) =>
+      route.fulfill({
+        json: {
+          ...LINKS,
+          edges: LINKS.edges.slice(0, 1),
+          snr_history: [
+            {
+              peer_node_id: 1001,
+              peer_short_name: 'SPREAD',
+              inbound: Array.from({ length: IN }, (_, k) => ({
+                triggered_at: new Date(now - (k * 85 * DAY) / IN - HOUR).toISOString(),
+                snr: -15 + (k % 20),
+              })),
+              outbound: Array.from({ length: OUT }, (_, k) => ({
+                triggered_at: new Date(now - (k * 85 * DAY) / OUT - 2 * HOUR).toISOString(),
+                snr: -10 + (k % 15),
+              })),
+            },
+          ],
+        },
+      })
+    );
+    await page.goto(`/nodes/${NODE_ID}?tab=traceroutes&range=90d`);
+    await page.getByRole('radio', { name: 'Raw samples' }).click();
+    const card = page.getByTestId('chart-link-snr-1001');
+    await expect(card.locator('.recharts-scatter circle')).toHaveCount(IN);
+    await expect(card.locator('.recharts-scatter polygon')).toHaveCount(OUT);
+  });
+
   test('a link whose only sample is in the bucket in progress still draws its point (30d)', async ({ page }) => {
     await page.route(`**/api/nodes/observed-nodes/${NODE_ID}/traceroute-links/**`, (route) =>
       route.fulfill({
