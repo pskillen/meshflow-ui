@@ -16,8 +16,8 @@ vi.mock('recharts', async (importOriginal) => {
 
 import { TrendChart } from '@/components/stats/TrendChart';
 import { ChartCard } from '@/components/stats/ChartCard';
-import { statsRangeWindow } from '@/lib/stats-range';
-import { markPartialBuckets } from '@/lib/stats-trend';
+import { statsRangeBucket, statsRangeWindow } from '@/lib/stats-range';
+import { buildBucketGrid, evenTrendTicks, markPartialBuckets } from '@/lib/stats-trend';
 
 const NOW = new Date('2026-11-09T14:30:00Z');
 const series = [{ key: 'v', label: 'Packets', color: 'hsl(var(--chart-1))' }];
@@ -65,7 +65,77 @@ describe('TrendChart', () => {
   });
 });
 
+describe('TrendChart accessibility and ticks', () => {
+  it('names the chart from its data and follows it with a table of every bucket', () => {
+    const { w, rows } = rowsFor('30d');
+    const { getByTestId } = render(
+      <TrendChart
+        kind="bar"
+        rows={rows}
+        series={series}
+        window={w}
+        bucket="daily"
+        label="Packet volume, last 30 days"
+        headline="155"
+      />
+    );
+    const name = getByTestId('trend-chart').getAttribute('aria-label') ?? '';
+    expect(name).toContain('Packet volume, last 30 days.');
+    expect(name).toContain('One value per UTC day.');
+    expect(name).toContain('155.');
+    expect(name).toContain('Latest, Mon 9 Nov (UTC day): Packets 5.');
+    expect(name).toContain('The last bucket is in progress.');
+    const table = getByTestId('trend-chart-table');
+    expect(table.querySelectorAll('tbody tr')).toHaveLength(31);
+    expect(table.querySelector('tbody tr:last-child')).toHaveTextContent('Mon 9 Nov (UTC day) (partial)5');
+  });
+
+  it('points aria-describedby at the card headline', () => {
+    const { w, rows } = rowsFor('30d');
+    const { getByTestId } = render(
+      <ChartCard title="Packet volume" headline="155" data-testid="c">
+        <TrendChart kind="bar" rows={rows} series={series} window={w} bucket="daily" />
+      </ChartCard>
+    );
+    const id = getByTestId('trend-chart').getAttribute('aria-describedby');
+    expect(id).toBeTruthy();
+    expect(document.getElementById(id!)).toHaveTextContent('155');
+  });
+
+  it('draws evenly spaced x ticks at 24h, 7d and 90d', () => {
+    for (const range of ['24h', '7d', '30d', '90d'] as const) {
+      const w = statsRangeWindow(range, NOW);
+      const bucket = statsRangeBucket(range);
+      const ts = buildBucketGrid(w, bucket);
+      const ticks = evenTrendTicks(ts);
+      expect(ticks.length).toBeGreaterThanOrEqual(4);
+      expect(ticks.length).toBeLessThanOrEqual(7);
+      expect(new Set(ticks.slice(1).map((t, i) => t - ticks[i]!)).size).toBe(1);
+      expect(ticks[0]).toBe(ts[0]);
+    }
+    const { container } = render(
+      <TrendChart
+        kind="bar"
+        rows={[]}
+        series={series}
+        window={statsRangeWindow('24h', NOW)}
+        bucket="hourly"
+      />
+    );
+    expect(container.querySelectorAll('.recharts-xAxis .recharts-cartesian-axis-tick')).toHaveLength(6);
+  });
+});
+
 describe('ChartCard', () => {
+  it('titles the card with a heading', () => {
+    const { getByRole } = render(
+      <ChartCard title="Online nodes">
+        <div />
+      </ChartCard>
+    );
+    expect(getByRole('heading', { level: 3, name: 'Online nodes' })).toBeInTheDocument();
+  });
+
   it('shows title, headline, measure pill and slot', () => {
     const { getByText, getByTestId } = render(
       <ChartCard title="Packet volume" headline="16,867" measure="Packets per 6-hour bucket" data-testid="c">

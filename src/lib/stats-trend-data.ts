@@ -9,7 +9,7 @@ import {
 import type { StatsSnapshotStatType, MeshStatsProtocolScope } from '@/lib/stats-snapshot-types';
 import type { StatsBucket, StatsRangeWindow } from '@/lib/stats-range';
 import type { StatsSnapshotsParams } from '@/lib/types';
-import { markPartialBuckets, type TrendInputRow, type TrendRow } from '@/lib/stats-trend';
+import { bucketPhrase, markPartialBuckets, type TrendInputRow, type TrendRow } from '@/lib/stats-trend';
 
 type SnapshotPage = PaginatedResponse<StatsSnapshot> | undefined;
 export type SnapshotPages = Partial<Record<StatsSnapshotStatType, SnapshotPage>>;
@@ -45,12 +45,7 @@ export function snapshotParamsForRange(
   };
 }
 
-/** What a bucket is, in words, for "per ..." captions. */
-export function bucketPhrase(bucket: StatsBucket): string {
-  if (bucket === 'hourly') return 'hour';
-  if (bucket === '6h') return '6-hour bucket';
-  return 'UTC day';
-}
+export { bucketPhrase };
 
 export interface CountTrend {
   rows: TrendRow[];

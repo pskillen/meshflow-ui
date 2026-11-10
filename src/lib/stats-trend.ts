@@ -2,6 +2,13 @@ import type { StatsBucket, StatsRangeWindow } from '@/lib/stats-range';
 
 const HOUR_MS = 3_600_000;
 
+/** What a bucket is, in words, for "per ..." captions. */
+export function bucketPhrase(bucket: StatsBucket): string {
+  if (bucket === 'hourly') return 'hour';
+  if (bucket === '6h') return '6-hour bucket';
+  return 'UTC day';
+}
+
 /** Bucket length in ms. */
 export const TREND_BUCKET_MS: Record<StatsBucket, number> = {
   hourly: HOUR_MS,
@@ -125,4 +132,55 @@ export function splitPartialLine(rows: TrendRow[], keys: readonly string[]): Rec
     }
     return out;
   });
+}
+
+const countFormat = new Intl.NumberFormat('en-GB');
+
+/**
+ * Words for a screen reader. `name` is the chart's accessible name: the title and range (`label`), one value per
+ * bucket size, the headline, the latest bucket's values and whether the last bucket is still in progress. `table`
+ * has one row per bucket on the grid, with "no data" for gaps.
+ */
+export function describeTrend(args: {
+  label?: string;
+  headline?: string;
+  bucket: StatsBucket;
+  rows: TrendRow[];
+  series: { key: string; label: string }[];
+}): { name: string; table: { timestamp: number; label: string; cells: string[] }[] } {
+  const { label, headline, bucket, rows, series } = args;
+  const valueOf = (row: TrendRow, key: string) => (typeof row[key] === 'number' ? (row[key] as number) : null);
+  const withData = (row: TrendRow) => series.some((s) => valueOf(row, s.key) != null);
+
+  const parts = [`${label ?? 'Chart'}.`, `One value per ${bucketPhrase(bucket)}.`];
+  if (headline) parts.push(`${headline}.`);
+  const latest = [...rows].reverse().find(withData);
+  if (latest) {
+    const values = series
+      .map((s) => ({ s, v: valueOf(latest, s.key) }))
+      .filter((x) => x.v != null)
+      .map((x) => `${x.s.label} ${countFormat.format(x.v!)}`)
+      .join(', ');
+    parts.push(`Latest, ${formatTrendLabel(latest.timestamp, bucket)}: ${values}.`);
+  }
+  if (rows[rows.length - 1]?.partial) parts.push('The last bucket is in progress.');
+
+  const table = rows.map((row) => ({
+    timestamp: row.timestamp,
+    label: `${formatTrendLabel(row.timestamp, bucket)}${row.partial ? ' (partial)' : ''}`,
+    cells: series.map((s) => {
+      const v = valueOf(row, s.key);
+      return v == null ? 'no data' : countFormat.format(v);
+    }),
+  }));
+  return { name: parts.join(' '), table };
+}
+
+/**
+ * X ticks for a bucket grid: at most about six, a whole number of buckets apart starting at the first, so the labels
+ * are evenly spaced (a "preserve start and end" tick on a grid that does not divide evenly leaves an odd last gap).
+ */
+export function evenTrendTicks(timestamps: number[]): number[] {
+  const stride = Math.max(1, Math.ceil(timestamps.length / 6));
+  return timestamps.filter((_, i) => i % stride === 0);
 }

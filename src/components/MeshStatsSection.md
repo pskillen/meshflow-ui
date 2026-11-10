@@ -19,6 +19,7 @@ The "Over the range" block of the three dashboards (Home, Meshtastic, MeshCore):
 - 30d and 90d request `bucket=1d` from `GET /api/stats/snapshots/` (rolled-up days, `value.samples` says how many hours each covers) and always send `recorded_at_after`, as the API requires. Other ranges read hourly rows and aggregate here (UTC buckets). An API that ignores `bucket` returns hourly rows; they are rolled up here the same way, and a note appears if the API returned only part of the range.
 - The bucket in progress (and a first bucket with too few samples) is drawn faded/dashed and labelled "partial bucket" in the tooltip.
 - A note under each chart says what the dashes mean and, on hourly and 6-hour charts, which bucket is the latest point. An Online nodes point at hour H counts the nodes heard in the 2h around it, [H-1h, H+1h].
+- When the API ignored `bucket` and returned only part of the range, the note says so and the headline reads "(partial)": the total or mean covers only the rows returned, not the whole range.
 - Each chart has its own Suspense skeleton, so changing the range does not blank the page.
 
 ## Wiring
