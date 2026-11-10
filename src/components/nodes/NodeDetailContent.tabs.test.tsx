@@ -16,7 +16,11 @@ vi.mock('@/components/nodes/RfPropagationSection', () => ({
 }));
 
 vi.mock('@/components/nodes/NodeStatsSection', () => ({
-  NodeStatsSection: () => <div data-testid="node-stats-mock">Node Statistics</div>,
+  NodeStatsSection: ({ range }: { range: { key: string } }) => (
+    <div data-testid="node-stats-mock" data-range={range.key}>
+      Node Statistics
+    </div>
+  ),
 }));
 
 vi.mock('@/components/nodes/NodeMeshMonitoringSection', () => ({
@@ -89,6 +93,11 @@ function NodeDetailTabbedPage() {
   );
 }
 
+function UrlEcho() {
+  const { search } = useLocation();
+  return <span data-testid="url-echo">{search}</span>;
+}
+
 function PageWithSearchEcho() {
   const { search } = useLocation();
   return (
@@ -143,6 +152,17 @@ describe('NodeDetailContent tabbed layout', () => {
     expect(screen.getByTestId('url-search')).toHaveTextContent('');
   });
 
+  it('has a back link named "Back to nodes" in the header', () => {
+    render(
+      <MemoryRouter initialEntries={[`/nodes/${TEST_OBSERVED_INTERNAL_ID}`]}>
+        <Routes>
+          <Route path="/nodes/:id" element={<PageWithSearchEcho />} />
+        </Routes>
+      </MemoryRouter>
+    );
+    expect(screen.getByRole('link', { name: 'Back to nodes' })).toHaveAttribute('href', '/nodes');
+  });
+
   it('hides traceroutes and monitoring tabs for MeshCore nodes', () => {
     mockedUseNodeSuspense.mockReturnValue({
       ...minimalNode,
@@ -161,6 +181,149 @@ describe('NodeDetailContent tabbed layout', () => {
     expect(screen.queryByTestId('node-detail-tab-monitoring')).not.toBeInTheDocument();
     expect(screen.getByTestId('node-detail-panel-overview')).toBeInTheDocument();
     expect(screen.getByTestId('url-search')).toHaveTextContent('');
+  });
+
+  describe('shared range', () => {
+    const renderAt = (entry: string) =>
+      render(
+        <MemoryRouter initialEntries={[entry]}>
+          <Routes>
+            <Route path="/nodes/:id" element={<PageWithSearchEcho />} />
+          </Routes>
+        </MemoryRouter>
+      );
+    const base = `/nodes/${TEST_OBSERVED_INTERNAL_ID}`;
+
+    it('keeps ?range= when switching between Statistics and Traceroutes', async () => {
+      const user = userEvent.setup();
+      renderAt(`${base}?tab=statistics&range=30d`);
+      expect(screen.getByTestId('node-stats-mock')).toHaveAttribute('data-range', '30d');
+
+      await user.click(screen.getByTestId('node-detail-tab-traceroutes'));
+      expect(screen.getByTestId('url-search')).toHaveTextContent('tab=traceroutes');
+      expect(screen.getByTestId('url-search')).toHaveTextContent('range=30d');
+      expect(screen.getByRole('radio', { name: '30d' })).toBeChecked();
+
+      await user.click(screen.getByTestId('node-detail-tab-statistics'));
+      expect(screen.getByTestId('url-search')).toHaveTextContent('range=30d');
+      expect(screen.getByTestId('node-stats-mock')).toHaveAttribute('data-range', '30d');
+    });
+
+    it('changing the range on Statistics writes ?range= and keeps ?tab=', async () => {
+      const user = userEvent.setup();
+      renderAt(`${base}?tab=statistics`);
+      expect(screen.getByRole('radio', { name: '7d' })).toBeChecked();
+      await user.click(screen.getByRole('radio', { name: '90d' }));
+      expect(screen.getByTestId('url-search')).toHaveTextContent('tab=statistics');
+      expect(screen.getByTestId('url-search')).toHaveTextContent('range=90d');
+      expect(screen.getByTestId('node-stats-mock')).toHaveAttribute('data-range', '90d');
+    });
+
+    it('has no range bar on Overview', () => {
+      renderAt(`${base}?range=30d`);
+      expect(screen.getByTestId('node-detail-panel-overview')).toBeInTheDocument();
+      expect(screen.queryByTestId('stats-range-bar')).not.toBeInTheDocument();
+    });
+
+    it('shows the bar on Statistics without an Online (2h) option', () => {
+      renderAt(`${base}?tab=statistics`);
+      expect(screen.getByTestId('stats-range-bar')).toBeInTheDocument();
+      expect(screen.getAllByRole('radio').map((r) => r.textContent)).toEqual(['24h', '7d', '30d', '90d']);
+    });
+
+    it('the compact sheet has no bar and never touches the URL', () => {
+      render(
+        <MemoryRouter initialEntries={['/nodes?foo=1']}>
+          <Routes>
+            <Route
+              path="/nodes"
+              element={
+                <>
+                  <Suspense fallback={null}>
+                    <NodeDetailContent internalId={TEST_OBSERVED_INTERNAL_ID} compact />
+                  </Suspense>
+                  <UrlEcho />
+                </>
+              }
+            />
+          </Routes>
+        </MemoryRouter>
+      );
+      expect(screen.queryByTestId('stats-range-bar')).not.toBeInTheDocument();
+      expect(screen.getByTestId('url-echo')).toHaveTextContent('?foo=1');
+    });
+
+    it('the compact sheet leaves garbage range and tab params alone', () => {
+      render(
+        <MemoryRouter initialEntries={['/nodes?foo=1&range=garbage&tab=bogus']}>
+          <Routes>
+            <Route
+              path="/nodes"
+              element={
+                <>
+                  <Suspense fallback={null}>
+                    <NodeDetailContent internalId={TEST_OBSERVED_INTERNAL_ID} compact />
+                  </Suspense>
+                  <UrlEcho />
+                </>
+              }
+            />
+          </Routes>
+        </MemoryRouter>
+      );
+      expect(screen.getByTestId('url-echo')).toHaveTextContent('?foo=1&range=garbage&tab=bogus');
+    });
+  });
+
+  describe('Right now', () => {
+    const withMetrics = (battery: number) => ({
+      ...minimalNode,
+      latest_device_metrics: {
+        reported_time: new Date(),
+        logged_time: new Date(),
+        battery_level: battery,
+        voltage: 4.08,
+        meshtastic_channel_utilization: 12.74,
+        meshtastic_air_util_tx: 2.6,
+        uptime_seconds: 14 * 86400 + 5,
+      },
+    });
+    const renderAt = (entry: string) =>
+      render(
+        <MemoryRouter initialEntries={[entry]}>
+          <Routes>
+            <Route path="/nodes/:id" element={<PageWithSearchEcho />} />
+          </Routes>
+        </MemoryRouter>
+      );
+
+    it('shows the latest readings on Overview', () => {
+      mockedUseNodeSuspense.mockReturnValue(withMetrics(93));
+      renderAt(`/nodes/${TEST_OBSERVED_INTERNAL_ID}`);
+      expect(screen.getByTestId('node-right-now-tile-battery')).toHaveTextContent('93%');
+      expect(screen.getByTestId('node-right-now-tile-channel')).toHaveTextContent('12.7%');
+      expect(screen.getByTestId('node-right-now-tile-uptime')).toHaveTextContent('14d');
+      expect(screen.getByTestId('node-right-now-table')).toBeInTheDocument();
+    });
+
+    it('shows it on Statistics too, and shows Powered for raw 101', () => {
+      mockedUseNodeSuspense.mockReturnValue(withMetrics(101));
+      renderAt(`/nodes/${TEST_OBSERVED_INTERNAL_ID}?tab=statistics`);
+      expect(screen.getByTestId('node-right-now-tile-battery')).toHaveTextContent('Powered');
+      expect(screen.getByTestId('node-right-now-tile-battery')).not.toHaveTextContent('101');
+    });
+
+    it('is not on the Map tab', () => {
+      mockedUseNodeSuspense.mockReturnValue(withMetrics(50));
+      renderAt(`/nodes/${TEST_OBSERVED_INTERNAL_ID}?tab=map`);
+      expect(screen.queryByTestId('node-right-now')).not.toBeInTheDocument();
+    });
+
+    it('falls back to Last heard alone when the node has no device metrics', () => {
+      renderAt(`/nodes/${TEST_OBSERVED_INTERNAL_ID}`);
+      expect(screen.getByTestId('node-right-now-tile-heard')).toBeInTheDocument();
+      expect(screen.queryByTestId('node-right-now-tile-battery')).not.toBeInTheDocument();
+    });
   });
 
   describe('Firmware row', () => {

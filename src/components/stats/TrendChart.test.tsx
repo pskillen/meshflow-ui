@@ -30,6 +30,104 @@ function rowsFor(range: '7d' | '30d') {
   return { w, rows: markPartialBuckets(rows, w, range === '7d' ? '6h' : 'daily') };
 }
 
+describe('TrendChart options for node metrics', () => {
+  const w = statsRangeWindow('30d', NOW);
+  const rows = [0, 1, 2].map((i) => ({ timestamp: w.start.getTime() + i * 86_400_000, a: 3.6 + i / 10, b: 1 + i }));
+
+  it('draws a dashed series, and hides the legend when asked', () => {
+    const two = [
+      { key: 'a', label: 'A', color: 'hsl(var(--chart-1))' },
+      { key: 'b', label: 'B', color: 'hsl(var(--chart-2))', dashed: true },
+    ];
+    const { container, rerender } = render(
+      <TrendChart kind="line" rows={rows} series={two} window={w} bucket="daily" />
+    );
+    expect(
+      Array.from(container.querySelectorAll('.recharts-line-curve')).filter(
+        (c) => c.getAttribute('stroke-dasharray') === '5 3'
+      )
+    ).toHaveLength(1);
+    expect(container.querySelector('.recharts-legend-wrapper')).not.toBeNull();
+    rerender(<TrendChart kind="line" rows={rows} series={two} window={w} bucket="daily" legend={false} />);
+    expect(container.querySelector('.recharts-legend-wrapper')).toBeNull();
+  });
+
+  it('fits the y axis to the data and formats values for the screen-reader table', () => {
+    const { container, getByTestId } = render(
+      <TrendChart
+        kind="line"
+        rows={rows}
+        series={[{ key: 'a', label: 'Volts', color: 'hsl(var(--chart-1))' }]}
+        window={w}
+        bucket="daily"
+        yRange="fit"
+        formatValue={(v) => `${v.toFixed(1)}V`}
+      />
+    );
+    const ticks = Array.from(container.querySelectorAll('.recharts-yAxis-tick-labels .recharts-cartesian-axis-tick-value')).map(
+      (t) => t.textContent
+    );
+    expect(ticks.length).toBeGreaterThan(1);
+    expect(ticks.some((t) => t === '0.0V')).toBe(false);
+    expect(getByTestId('trend-chart-table').textContent).toContain('3.7V');
+  });
+
+  it('uses a fixed range when given one', () => {
+    const { container } = render(
+      <TrendChart
+        kind="line"
+        rows={rows}
+        series={[{ key: 'a', label: 'Percent', color: 'hsl(var(--chart-1))' }]}
+        window={w}
+        bucket="daily"
+        yRange={[0, 100]}
+      />
+    );
+    const ticks = Array.from(container.querySelectorAll('.recharts-yAxis-tick-labels .recharts-cartesian-axis-tick-value')).map(
+      (t) => t.textContent
+    );
+    expect(ticks).toEqual(['0', '25', '50', '75', '100']);
+  });
+
+  it('puts ticks every yTickStep on a fixed range, and clips what lies outside it', () => {
+    const { container } = render(
+      <TrendChart
+        kind="line"
+        rows={[{ timestamp: w.start.getTime(), a: 15 }]}
+        series={[{ key: 'a', label: 'SNR', color: 'hsl(var(--chart-1))' }]}
+        window={w}
+        bucket="daily"
+        yRange={[-20, 10]}
+        yTickStep={10}
+        dots
+      />
+    );
+    const ticks = Array.from(container.querySelectorAll('.recharts-yAxis-tick-labels .recharts-cartesian-axis-tick-value')).map(
+      (t) => t.textContent
+    );
+    expect(ticks).toEqual(['-20', '-10', '0', '10']);
+    // Fixed domain is kept: recharts only clips (rather than widens) with allowDataOverflow.
+    expect(container.querySelector('.recharts-line [clip-path], .recharts-line-dots')).not.toBeNull();
+  });
+
+  it('draws a dot for a lone sample in the bucket in progress', () => {
+    const w7 = statsRangeWindow('7d', NOW);
+    const rows = markPartialBuckets([{ timestamp: w7.lastBucketStart.getTime(), a: -7 }], w7, '6h');
+    const { container } = render(
+      <TrendChart
+        kind="line"
+        rows={rows}
+        series={[{ key: 'a', label: 'SNR', color: 'hsl(var(--chart-1))' }]}
+        window={w7}
+        bucket="6h"
+        yRange={[-20, 10]}
+        dots
+      />
+    );
+    expect(container.querySelectorAll('.recharts-line-dots circle, .recharts-dot')).toHaveLength(1);
+  });
+});
+
 describe('TrendChart', () => {
   it('renders bars, with the in-progress bucket drawn as a faded dashed rectangle', () => {
     const { w, rows } = rowsFor('30d');

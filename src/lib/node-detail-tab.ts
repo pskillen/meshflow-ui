@@ -13,3 +13,10 @@ export function parseNodeDetailTab(param: string | null): NodeDetailTab {
   if (isValidNodeDetailTab(param)) return param;
   return 'overview';
 }
+
+/** Tabs whose content follows the shared `?range=`; the shell shows the range bar only on these. */
+const RANGED_TABS: ReadonlySet<NodeDetailTab> = new Set<NodeDetailTab>(['traceroutes', 'statistics']);
+
+export function isRangedNodeDetailTab(tab: NodeDetailTab): boolean {
+  return RANGED_TABS.has(tab);
+}

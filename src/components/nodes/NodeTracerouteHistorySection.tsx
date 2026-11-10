@@ -34,14 +34,24 @@ function routeSummary(tr: AutoTraceRoute): string {
 interface NodeTracerouteHistorySectionProps {
   nodeId: number;
   observedNode: ObservedNode;
+  /** Only traceroutes triggered at or after this time (the page's range window start). */
+  since?: Date;
+  /** The range in words ("last 7 days"), for the card text. */
+  rangeLabel?: string;
 }
 
-export function NodeTracerouteHistorySection({ nodeId, observedNode }: NodeTracerouteHistorySectionProps) {
+export function NodeTracerouteHistorySection({
+  nodeId,
+  observedNode,
+  since,
+  rangeLabel,
+}: NodeTracerouteHistorySectionProps) {
   const [selectedTracerouteId, setSelectedTracerouteId] = useState<number | null>(null);
   const [triggerModalOpen, setTriggerModalOpen] = useState(false);
 
   const { data, isLoading, error } = useTraceroutesWithWebSocket({
     target_node: nodeId,
+    triggered_after: since?.toISOString(),
     page_size: PAGE_SIZE,
   });
   const { triggerableNodes } = useTracerouteTriggerableNodesSuspense();
@@ -96,7 +106,8 @@ export function NodeTracerouteHistorySection({ nodeId, observedNode }: NodeTrace
               Traceroutes to this node
             </CardTitle>
             <CardDescription>
-              Traceroutes where this node is the target. Click a row for the full path and map.
+              Traceroutes where this node is the target{rangeLabel ? ` in the ${rangeLabel}` : ''}. Click a row for the
+              full path and map.
             </CardDescription>
           </div>
           {canTrigger && (
@@ -114,7 +125,7 @@ export function NodeTracerouteHistorySection({ nodeId, observedNode }: NodeTrace
           )}
           {!isLoading && !error && traceroutes.length === 0 && (
             <div className="py-8 text-center text-muted-foreground">
-              <p>No traceroutes to this node yet.</p>
+              <p>No traceroutes to this node{rangeLabel ? ` in the ${rangeLabel}` : ' yet'}.</p>
               {canTrigger && <p className="mt-1 text-sm">Trigger one above to populate this list.</p>}
             </div>
           )}
