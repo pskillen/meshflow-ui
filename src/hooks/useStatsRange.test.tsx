@@ -161,4 +161,20 @@ describe('useStatsRange', () => {
     const { result } = setup('/x?range=2h', { options: ['2h', '24h', '7d'] });
     expect(result.current.range.window.end).toEqual(new Date(Date.UTC(2026, 10, 9, 14, 35)));
   });
+
+  it('clearOnChange: choosing a range drops the named params and keeps the rest', () => {
+    const clear = ['since'] as const;
+    const { result } = setup('/x?since=2026-01-05&source=9&range=24h', { clearOnChange: clear });
+    act(() => result.current.range.setRange('30d'));
+    const params = new URLSearchParams(result.current.search);
+    expect(params.get('range')).toBe('30d');
+    expect(params.has('since')).toBe(false);
+    expect(params.get('source')).toBe('9');
+  });
+
+  it('without clearOnChange every other param survives a range change', () => {
+    const { result } = setup('/x?since=2026-01-05');
+    act(() => result.current.range.setRange('30d'));
+    expect(new URLSearchParams(result.current.search).get('since')).toBe('2026-01-05');
+  });
 });
