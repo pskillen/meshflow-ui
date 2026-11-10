@@ -577,7 +577,7 @@ export function NodeDetailContent({ internalId, compact = false, activeTab, onTa
     !node.owner || hasPendingClaim ? (
       <Link
         to={`/nodes/${internalId}/claim`}
-        className="whitespace-nowrap rounded-md bg-teal-600 px-4 py-2 text-sm text-white transition-colors hover:bg-teal-700 dark:bg-teal-500 dark:hover:bg-teal-600"
+        className="whitespace-nowrap rounded-md bg-teal-600 px-3 py-1 text-xs text-white transition-colors hover:bg-teal-700 dark:bg-teal-500 dark:hover:bg-teal-600"
       >
         {hasPendingClaim ? 'View Claim' : 'Claim Node'}
       </Link>
