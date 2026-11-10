@@ -97,6 +97,8 @@ Examples: [`src/components/messages/HeardPathMap.md`](src/components/messages/He
 When asked to create a pull request description, follow the template at
 .github/pull_request_template.md, and output a markdown file named `tmp/PR.md`
 
+PR CI runs on every pull request whatever its base, so stacked PRs get unit, browser and Docker build checks. Required checks are enforced only for PRs into `main`.
+
 ## Plan mode
 
 When creating a plan, Include that we should branch from the latest origin/main, do the work, commit, push, and open a PR. Use the `gh` CLI for all GitHub work (issues, PRs, checks).
