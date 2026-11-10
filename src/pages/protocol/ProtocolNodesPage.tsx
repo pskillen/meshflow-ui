@@ -143,6 +143,7 @@ function ProtocolNodesPageContent({
                 managedNodes={managedNodesForMap}
                 observedNodes={mapNodes}
                 showConstellation={true}
+                legendLayout="role"
                 showUnmanagedNodes={true}
                 minHeightClassName={MAP_MIN_HEIGHT}
               />

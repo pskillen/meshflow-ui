@@ -114,4 +114,38 @@ describe('NodesAndConstellationsMap', () => {
     expect(swatches).toContain('rgb(255, 0, 0)');
     expect(swatches).not.toContain('rgb(0, 255, 0)');
   });
+
+  it('legendLayout="role" shows one key by role with a single Monitoring node row', async () => {
+    render(
+      <div style={{ height: 500 }}>
+        <NodesAndConstellationsMap
+          managedNodes={[managedWithConstellation()]}
+          observedNodes={[]}
+          showConstellation={true}
+          legendLayout="role"
+        />
+      </div>
+    );
+    const legend = await screen.findByRole('region', { name: /Map key/i });
+    expect(legend).toHaveTextContent('Node role');
+    expect(legend).toHaveTextContent('Monitoring node');
+    expect(legend).not.toHaveTextContent('Test Constellation');
+    expect(legend).not.toHaveTextContent('Monitoring (constellation)');
+    expect(legend).not.toHaveTextContent('Other mesh nodes');
+    expect(legend).toHaveTextContent('ROUTER_CLIENT');
+    // Managed pins keep their constellation colour.
+    const pinHtml = vi.mocked(L.divIcon).mock.calls.map((c) => (c[0] as { html: string }).html);
+    expect(pinHtml[0]).toContain('background: #ff0000;');
+  });
+
+  it('legendLayout="role" has no Monitoring node row when no constellation pin is drawn', async () => {
+    render(
+      <div style={{ height: 500 }}>
+        <NodesAndConstellationsMap managedNodes={[]} observedNodes={[]} showConstellation={true} legendLayout="role" />
+      </div>
+    );
+    const legend = await screen.findByRole('region', { name: /Map key/i });
+    expect(legend).toHaveTextContent('Node role');
+    expect(legend).not.toHaveTextContent('Monitoring node');
+  });
 });

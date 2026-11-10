@@ -22,7 +22,7 @@ function SwatchRow({ label, color }: { label: string; color: string }) {
     <div className="flex items-center gap-2 min-w-0">
       <span
         className="h-3 w-3 shrink-0 rounded-full border border-border/80 shadow-sm"
-        style={{ backgroundColor: color }}
+        style={{ background: color }}
         aria-hidden
       />
       <span className="truncate">{label}</span>

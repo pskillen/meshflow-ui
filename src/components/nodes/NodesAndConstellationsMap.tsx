@@ -52,6 +52,11 @@ export interface NodesAndConstellationsMapProps {
   managedNodes?: ManagedNode[];
   observedNodes?: ObservedNode[];
   showConstellation?: boolean;
+  /**
+   * Key layout. 'constellation' (default): a constellation column plus a role column. 'role': one key by role,
+   * like the MeshCore list, with a single "Monitoring node" row when constellation pins are drawn.
+   */
+  legendLayout?: 'constellation' | 'role';
   showUnmanagedNodes?: boolean;
   drawBoundingBox?: boolean;
   constellationNodeRadiusKm?: number;
@@ -89,10 +94,14 @@ export interface NodesAndConstellationsMapProps {
   minHeightClassName?: string;
 }
 
+/** Monitoring pins take their constellation's colour, so the key shows a spectrum swatch. */
+const MONITORING_SWATCH = 'conic-gradient(#ef4444, #eab308, #22c55e, #3b82f6, #a855f7, #ef4444)';
+
 export function NodesAndConstellationsMap({
   managedNodes = [],
   observedNodes = [],
   showConstellation = true,
+  legendLayout = 'constellation',
   showUnmanagedNodes = true,
   drawBoundingBox = true,
   constellationNodeRadiusKm = 2,
@@ -138,6 +147,15 @@ export function NodesAndConstellationsMap({
   const legendConstellationItems = useMemo(
     () => drawnConstellationLegendItems(constellationGroups),
     [constellationGroups]
+  );
+
+  const byRoleLegend = legendLayout === 'role';
+  const roleLegendRows = useMemo(
+    () =>
+      byRoleLegend && showConstellation && legendConstellationItems.length > 0
+        ? [{ key: 'monitoring', label: 'Monitoring node', color: MONITORING_SWATCH }, ...roleLegendData]
+        : roleLegendData,
+    [byRoleLegend, showConstellation, legendConstellationItems, roleLegendData]
   );
 
   const showLegendResolved =
@@ -533,10 +551,10 @@ export function NodesAndConstellationsMap({
     <div className={cn('relative h-full w-full', minHeightClassName)}>
       {showLegendResolved ? (
         <MapMarkerLegend
-          constellationItems={showConstellation ? legendConstellationItems : []}
+          constellationItems={showConstellation && !byRoleLegend ? legendConstellationItems : []}
           showRoleSwatches={showRoleLegendSwatches && getMarkerColor == null}
-          roleSwatches={roleLegendData}
-          roleSectionTitle={showConstellation ? 'Other mesh nodes (by role)' : 'Node role'}
+          roleSwatches={roleLegendRows}
+          roleSectionTitle={showConstellation && !byRoleLegend ? 'Other mesh nodes (by role)' : 'Node role'}
         />
       ) : null}
       <div

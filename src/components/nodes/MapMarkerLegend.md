@@ -2,7 +2,7 @@
 
 ## Purpose
 
-The colour key drawn over a map: constellation colours, optional watch-status colours, and role colours for other nodes. Shared by `NodesAndConstellationsMap` and `NodesMap`.
+The colour key drawn over a map: constellation colours, optional watch-status colours, and role colours for other nodes. Shared by `NodesAndConstellationsMap` and `NodesMap`. The Meshtastic node list uses the same single "Node role" layout as the MeshCore list (no constellation column); a swatch colour may be any CSS background, e.g. the spectrum swatch of its "Monitoring node" row.
 
 ## Props
 

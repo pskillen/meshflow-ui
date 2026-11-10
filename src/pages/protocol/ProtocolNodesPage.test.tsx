@@ -82,12 +82,12 @@ function pinColours(): string[] {
     .mock.calls.map((c) => String((c[0] as { html: string }).html.match(/background: ([^;]+);/)?.[1]));
 }
 
-describe('ProtocolNodesPage (Meshtastic) constellation key', () => {
+describe('ProtocolNodesPage (Meshtastic) map key', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it('keeps Meshtastic and unset-protocol feeders, drops MeshCore ones, and the key matches the pins', async () => {
+  it('keeps Meshtastic and unset-protocol feeders, drops MeshCore ones, and the pins stay constellation-coloured', async () => {
     const mesh = { id: 1, name: 'Mesh Constellation', map_color: '#ff0000' };
     const unset = { id: 2, name: 'Unset Protocol Constellation', map_color: '#00ff00' };
     const core = { id: 3, name: 'MeshCore By Protocol', map_color: '#0000ff' };
@@ -107,12 +107,17 @@ describe('ProtocolNodesPage (Meshtastic) constellation key', () => {
     );
 
     const legend = await screen.findByRole('region', { name: /Map key/i });
-    expect(legend).toHaveTextContent('Mesh Constellation');
-    expect(legend).toHaveTextContent('Unset Protocol Constellation');
+    // One key by role, like MeshCore's: no constellation column, one "Monitoring node" row.
+    expect(legend).toHaveTextContent('Node role');
+    expect(legend).toHaveTextContent('Monitoring node');
+    expect(legend).not.toHaveTextContent('Monitoring (constellation)');
+    expect(legend).not.toHaveTextContent('Other mesh nodes');
+    expect(legend).not.toHaveTextContent('Mesh Constellation');
+    expect(legend).not.toHaveTextContent('Unset Protocol Constellation');
     expect(legend).not.toHaveTextContent('MeshCore By Protocol');
     expect(legend).not.toHaveTextContent('MeshCore By Id');
 
-    // Two pins drawn, in the colours the key shows.
+    // Two pins drawn, in their constellation colours (the key's "Monitoring node" row stands for them).
     expect(vi.mocked(L.marker)).toHaveBeenCalledTimes(2);
     expect(pinColours().sort()).toEqual(['#00ff00', '#ff0000']);
   });
