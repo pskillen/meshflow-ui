@@ -9,14 +9,17 @@ export interface StatTileProps {
   /** Emphasised border for the headline tile of a band. */
   hero?: boolean;
   className?: string;
+  /** ARIA role, e.g. `listitem` when tiles sit in a `role="list"` group. */
+  role?: string;
   'data-testid'?: string;
 }
 
 /** A generic stat tile: label, big value, optional subtext. Knows nothing about node counts. */
-export function StatTile({ label, value, sub, hero = false, className, 'data-testid': testId }: StatTileProps) {
+export function StatTile({ label, value, sub, hero = false, className, role, 'data-testid': testId }: StatTileProps) {
   return (
     <div
       data-testid={testId}
+      role={role}
       className={cn('rounded-lg border bg-card p-3.5', hero && 'border-foreground/30', className)}
     >
       <div className="text-xs text-muted-foreground">{label}</div>
