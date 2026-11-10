@@ -12,7 +12,7 @@ The one place that interprets a raw device-metrics `battery_level`. Meshtastic r
 
 ## Wiring
 
-Only `BatteryIndicator` in `NodeCard.tsx` uses it today. Other battery displays still format the raw level themselves (`MonitoredNodesTable` and `NodeSelector` hide a real 0): `InfrastructureNodeCard`, `MonitoredNodesTable`, `NodeSelector`, `MyNodeCard`, `WatchedNodesTable`, `NodeActivityTable`, `NodeDetailContent`, `MeshInfrastructure` and `infrastructure-export-rows`; `BatteryGauge` and the chart components clamp locally. They should move onto this helper.
+`BatteryIndicator` in `NodeCard.tsx` and the `NodesTable` battery cell and sort rank use it. Other battery displays still format the raw level themselves (`MonitoredNodesTable` and `NodeSelector` hide a real 0): `InfrastructureNodeCard`, `MonitoredNodesTable`, `NodeSelector`, `MyNodeCard`, `WatchedNodesTable`, `NodeActivityTable`, `NodeDetailContent`, `MeshInfrastructure` and `infrastructure-export-rows`; `BatteryGauge` and the chart components clamp locally. They should move onto this helper.
 
 ## Related
 
