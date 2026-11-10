@@ -8,15 +8,16 @@ import { NodeStatsSection } from './NodeStatsSection';
 const chartMock = vi.hoisted(
   () =>
     (testId: string) =>
-    ({ controlledDateRange }: { controlledDateRange: { startDate: Date; endDate: Date } }) => (
+    ({ controlledDateRange }: { controlledDateRange?: { startDate: Date; endDate: Date } }) => (
       <div
         data-testid={testId}
-        data-start={controlledDateRange.startDate.toISOString()}
-        data-end={controlledDateRange.endDate.toISOString()}
+        data-start={controlledDateRange?.startDate.toISOString()}
+        data-end={controlledDateRange?.endDate.toISOString()}
       />
     )
 );
 
+vi.mock('@/components/nodes/ChannelAirChart', () => ({ ChannelAirChart: chartMock('channel-air-chart') }));
 vi.mock('@/components/BatteryChartShadcn', () => ({ BatteryChartShadcn: chartMock('battery-chart') }));
 vi.mock('@/components/nodes/EnvironmentMetricsChart', () => ({ EnvironmentMetricsChart: chartMock('env-chart') }));
 vi.mock('@/components/nodes/PowerMetricsChart', () => ({ PowerMetricsChart: chartMock('power-chart') }));
@@ -31,18 +32,18 @@ function rangeAt(now: Date): StatsRange {
 }
 
 describe('NodeStatsSection', () => {
-  it('asks the old charts for data up to at least now, not just the top of the hour', () => {
+  it('asks the old packet charts for data up to at least now, not just the top of the hour', () => {
     const now = new Date('2026-11-10T09:37:00Z');
-    render(<NodeStatsSection internalId="x" node={node} isManagedNode={false} range={rangeAt(now)} />);
-    const end = new Date(screen.getByTestId('battery-chart').getAttribute('data-end')!);
+    render(<NodeStatsSection internalId="x" node={node} isManagedNode range={rangeAt(now)} />);
+    const end = new Date(screen.getByTestId('packet-chart').getAttribute('data-end')!);
     expect(end.getTime()).toBeGreaterThanOrEqual(now.getTime());
-    expect(screen.getByTestId('packet-chart').getAttribute('data-end')).toBe(end.toISOString());
+    expect(screen.getByTestId('received-chart').getAttribute('data-end')).toBe(end.toISOString());
   });
 
   it('keeps the start of the window unchanged', () => {
     const now = new Date('2026-11-10T09:37:00Z');
     const range = rangeAt(now);
     render(<NodeStatsSection internalId="x" node={node} isManagedNode={false} range={range} />);
-    expect(screen.getByTestId('battery-chart').getAttribute('data-start')).toBe(range.window.start.toISOString());
+    expect(screen.getByTestId('packet-chart').getAttribute('data-start')).toBe(range.window.start.toISOString());
   });
 });
