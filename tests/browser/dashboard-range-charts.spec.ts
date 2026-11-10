@@ -5,6 +5,8 @@ import { installApiMocks } from './api-mock';
 const HOUR = 3_600_000;
 const DAY = 24 * HOUR;
 const requests: URL[] = [];
+/** Set per test: an API that has not deployed `bucket=1d` ignores it and returns hourly rows. */
+let ignoreBucket = false;
 
 /** Snapshots for any request: hourly rows, or UTC-day rollups when `bucket=1d` is asked for. */
 function snapshots(route: Route) {
@@ -16,7 +18,7 @@ function snapshots(route: Route) {
   const flow = /packet_volume|new_nodes/.test(stat);
   const base = stat.startsWith('mc_') ? 20 : 80;
   const results = [];
-  if (url.searchParams.get('bucket') === '1d') {
+  if (url.searchParams.get('bucket') === '1d' && !ignoreBucket) {
     for (let t = Math.ceil(after / DAY) * DAY; t < before; t += DAY) {
       const samples = Math.min(24, Math.floor((before - t) / HOUR));
       const hourly = base + Math.round(10 * Math.sin(t / DAY));
@@ -53,6 +55,7 @@ function snapshots(route: Route) {
 const test = base.extend({
   context: async ({ context }, useFixture) => {
     requests.length = 0;
+    ignoreBucket = false;
     await installApiMocks(context, { '**/api/stats/snapshots/**': snapshots });
     // eslint-disable-next-line react-hooks/rules-of-hooks -- Playwright fixture callback
     await useFixture(context);
@@ -101,6 +104,22 @@ test.describe('Dashboard range charts', () => {
     await expect(page.getByTestId('chart-packet_volume-measure')).toContainText('by packet type');
   });
 
+  test('90d still renders when the API ignores bucket and returns hourly rows', async ({ page }) => {
+    ignoreBucket = true;
+    await page.goto('/meshtastic/dashboard?range=90d');
+    await expect(page.getByText('Over the last 90 days')).toBeVisible();
+    await expect.poll(() => requests.some((u) => u.searchParams.get('bucket') === '1d')).toBe(true);
+    // The hourly rows are rolled up here: still one bar slot per UTC day, the day in progress dashed.
+    await expect(page.getByTestId('chart-new_nodes').locator('.recharts-bar-rectangle')).toHaveCount(91);
+    await expect(page.getByTestId('chart-new_nodes').locator('[stroke-dasharray="3 2"]')).toHaveCount(1);
+    await expect(page.getByTestId('chart-packet_volume').locator('.recharts-bar-rectangle')).toHaveCount(91);
+    await expect(page.getByTestId('chart-online_nodes').locator('.recharts-line-curve').first()).toBeVisible();
+    await expect(page.getByTestId('chart-new_nodes-headline')).not.toContainText('partial');
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+    expect(overflow).toBeLessThanOrEqual(0);
+    await page.screenshot({ path: 'test-results/dash-90d-ignored-bucket.png', fullPage: true });
+  });
+
   test('fits a phone', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 800 });
     await page.goto('/meshtastic/dashboard?range=30d');
@@ -113,7 +132,7 @@ test.describe('Dashboard range charts', () => {
   test('home overlays both protocols', async ({ page }) => {
     await page.goto('/');
     await expect(page.getByTestId('trend-chart')).toHaveCount(3);
-    await expect(page.getByTestId('chart-online_nodes').getByText('MeshCore')).toBeVisible();
+    await expect(page.getByTestId('chart-online_nodes').getByTestId('trend-chart').getByText('MeshCore')).toBeVisible();
     await page.screenshot({ path: 'test-results/dash-home.png', fullPage: true });
   });
 });
