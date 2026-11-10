@@ -106,7 +106,7 @@ describe('ProtocolNodesPage (Meshtastic) constellation key', () => {
       </MemoryRouter>
     );
 
-    const legend = await screen.findByRole('region', { name: /Map marker colours/i });
+    const legend = await screen.findByRole('region', { name: /Map key/i });
     expect(legend).toHaveTextContent('Mesh Constellation');
     expect(legend).toHaveTextContent('Unset Protocol Constellation');
     expect(legend).not.toHaveTextContent('MeshCore By Protocol');
