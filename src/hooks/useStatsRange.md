@@ -49,6 +49,6 @@ Each stat on a screen is one of four classes; the range applies differently:
 
 ## Related
 
-- `src/lib/stats-range.ts` – presets, windows, buckets (`statsRangeWindow`, `previousStatsWindow`).
+- `src/lib/stats-range.ts` – presets, windows, buckets (`statsRangeWindow`, `comparisonWindows`).
 - `src/lib/time-range.ts` – `windowForTimeRangeKey`, the older now-anchored window the heatmap/topology custom range still uses.
 - First adopter: `TracerouteStatsPage`.
