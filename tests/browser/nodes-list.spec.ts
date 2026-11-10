@@ -59,17 +59,17 @@ test.describe('Meshtastic node list', () => {
     await expect.poll(ageHours).toBeLessThan(2.2);
     expect(ageHours()).toBeGreaterThanOrEqual(2);
 
-    // Search sits below the map and above the cards, and filters both.
+    // Search shares the sticky wrapper with the range bar, above the map and the cards, and filters both.
     const search = page.getByRole('textbox', { name: 'Search nodes', exact: true });
     const map = page.locator('.map-container').first();
     const firstCard = page.getByRole('link', { name: /Alpha Base/ }).first();
     const mapBox = (await map.boundingBox())!;
     const searchBox = (await search.boundingBox())!;
     const cardBox = (await firstCard.boundingBox())!;
-    expect(searchBox.y).toBeGreaterThanOrEqual(mapBox.y + mapBox.height - 1);
-    expect(cardBox.y).toBeGreaterThan(searchBox.y);
+    expect(mapBox.y).toBeGreaterThanOrEqual(searchBox.y + searchBox.height - 1);
+    expect(cardBox.y).toBeGreaterThan(mapBox.y);
     await search.fill('bravo');
-    await expect(page.getByTestId('nodes-count')).toContainText('1 of 3 heard in last 2 hours');
+    await expect(page.getByTestId('nodes-count')).toContainText('Showing 1 of 3 nodes heard in last 2 hours');
   });
 
   test('on a phone the map key is a button, closed by default', async ({ page }) => {
@@ -83,6 +83,38 @@ test.describe('Meshtastic node list', () => {
     await expect(key).toBeVisible();
     await page.keyboard.press('Escape');
     await expect(key).toBeHidden();
+  });
+
+  test('on a phone the sticky chrome is short and the search is in the first screen', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 812 });
+    await page.goto('/nodes');
+    const chrome = page.getByTestId('nodes-chrome');
+    const search = page.getByRole('textbox', { name: 'Search nodes', exact: true });
+    await expect(search).toBeVisible();
+    const chromeBox = (await chrome.boundingBox())!;
+    const searchBox = (await search.boundingBox())!;
+    const mapBox = (await page.locator('.map-container').first().boundingBox())!;
+    expect(chromeBox.height).toBeLessThanOrEqual(100);
+    expect(mapBox.height).toBeLessThanOrEqual(270);
+    expect(searchBox.y + searchBox.height).toBeLessThan(400);
+    // Search and sort share one row.
+    const sort = page.getByRole('radio', { name: 'Sort by name' });
+    const sortBox = (await sort.boundingBox())!;
+    expect(Math.abs(sortBox.y + sortBox.height / 2 - (searchBox.y + searchBox.height / 2))).toBeLessThan(12);
+    // The chrome stays put while the page scrolls.
+    await page.mouse.wheel(0, 400);
+    await expect.poll(async () => (await chrome.boundingBox())!.y).toBeLessThan(60);
+  });
+
+  test('on a phone the open key leaves the zoom control clear', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 812 });
+    await page.goto('/nodes');
+    await page.getByRole('button', { name: 'Map key' }).click();
+    const panel = (await page.getByRole('region', { name: 'Map key' }).boundingBox())!;
+    const zoom = (await page.locator('.leaflet-control-zoom').boundingBox())!;
+    expect(panel.x).toBeGreaterThanOrEqual(zoom.x + zoom.width);
+    const button = (await page.getByRole('button', { name: 'Map key' }).boundingBox())!;
+    expect(button.height).toBeGreaterThanOrEqual(32);
   });
 
   test('on a desktop the key is always shown and there is no button', async ({ page }) => {

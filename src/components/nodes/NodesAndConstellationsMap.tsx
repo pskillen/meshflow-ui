@@ -1,3 +1,4 @@
+import { cn } from '@/lib/utils';
 import { ObservedNode, ManagedNode } from '@/lib/models';
 import L from 'leaflet';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -84,6 +85,8 @@ export interface NodesAndConstellationsMapProps {
   showRoleLegendSwatches?: boolean;
   /** Optional alert ring around standard pins (e.g. Mesh Infra ops); constellation fill colour unchanged. */
   getNodeAlertRing?: (nodeId: number) => 'diamond' | 'rounded-square' | null | undefined;
+  /** Tailwind min-height class for the map (outer box and map pane). Default `min-h-[400px]`. */
+  minHeightClassName?: string;
 }
 
 export function NodesAndConstellationsMap({
@@ -109,6 +112,7 @@ export function NodesAndConstellationsMap({
   showMapLegend,
   showRoleLegendSwatches = true,
   getNodeAlertRing,
+  minHeightClassName = 'min-h-[400px]',
 }: NodesAndConstellationsMapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
@@ -526,7 +530,7 @@ export function NodesAndConstellationsMap({
   ]);
 
   return (
-    <div className="relative h-full w-full min-h-[400px]">
+    <div className={cn('relative h-full w-full', minHeightClassName)}>
       {showLegendResolved ? (
         <MapMarkerLegend
           constellationItems={showConstellation ? legendConstellationItems : []}
@@ -537,8 +541,8 @@ export function NodesAndConstellationsMap({
       ) : null}
       <div
         ref={mapRef}
-        style={{ height: '100%', minHeight: '400px', position: 'relative', zIndex: 1 }}
-        className="map-container"
+        style={{ height: '100%', position: 'relative', zIndex: 1 }}
+        className={cn('map-container', minHeightClassName)}
       />
     </div>
   );

@@ -106,25 +106,37 @@ describe('ProtocolNodesPage', () => {
     expect(screen.getByRole('radio', { name: '30d' })).toBeChecked();
   });
 
-  it('falls back to 7d for ?range=all', () => {
+  it('falls back to 7d for ?range=all when no range is remembered for the node lists', () => {
     renderPage(MESHTASTIC_CONFIG, '/nodes?range=all');
     expect(screen.getByRole('radio', { name: '7d' })).toBeChecked();
   });
 
-  it('puts the search between the map and the list, and filters both', async () => {
+  it('puts range bar and search in one sticky wrapper above the map, and the search filters both map and list', async () => {
     const user = userEvent.setup();
     renderPage();
     const map = screen.getByTestId('map-stub');
     const search = screen.getByRole('textbox', { name: /search nodes/i });
     const firstCard = screen.getAllByTestId('node-card')[0]!;
-    expect(map.compareDocumentPosition(search) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(search.compareDocumentPosition(firstCard) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    const chrome = screen.getByTestId('nodes-chrome');
+    expect(chrome).toHaveClass('sticky');
+    expect(within(chrome).getByTestId('stats-range-bar')).toBeInTheDocument();
+    expect(chrome).toContainElement(search);
+    // The bar inside the wrapper is not sticky on its own.
+    expect(within(chrome).getByTestId('stats-range-bar')).not.toHaveClass('sticky');
+    expect(search.compareDocumentPosition(map) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(map.compareDocumentPosition(firstCard) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 
     expect(map).toHaveTextContent('3');
     await user.type(search, 'brav');
     expect(screen.getAllByTestId('node-card')).toHaveLength(1);
     expect(screen.getByTestId('map-stub')).toHaveTextContent('1');
-    expect(screen.getByTestId('nodes-count')).toHaveTextContent('1 of 3 heard in last 7 days');
+    expect(screen.getByTestId('nodes-count')).toHaveTextContent('Showing 1 of 3 nodes heard in last 7 days');
+  });
+
+  it('shows the count once, not also in the list heading', () => {
+    renderPage();
+    expect(screen.getAllByText(/Showing 3 of 3/)).toHaveLength(1);
+    expect(screen.getByRole('heading', { name: 'Recent Nodes' })).toBeInTheDocument();
   });
 
   it('MeshCore: filters the identity-only table and the map from the same search box', async () => {
