@@ -4,9 +4,9 @@ import { CircleDashedIcon, RouteIcon } from 'lucide-react';
 
 import { StatsRangeBar } from '@/components/stats/StatsRangeBar';
 import { MapInfoButton } from '@/components/traceroutes/MapInfoButton';
+import { CoverageStrategyMenu } from '@/components/traceroutes/CoverageStrategyMenu';
 import { useMapRange } from '@/hooks/useMapRange';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -18,8 +18,6 @@ import { useObservedNodesHeard } from '@/hooks/api/useObservedNodesHeard';
 import { observedNodesToCoverageGhosts } from '@/lib/coverageHeardGhosts';
 import { FeederCoverageMap, type CoverageLayerKey } from '@/components/traceroutes/FeederCoverageMap';
 import {
-  TRACEROUTE_STRATEGIES,
-  STRATEGY_META,
   createCoverageStrategiesAllSelected,
   coverageTargetStrategyQueryParam,
   coverageTargetStrategySummary,
@@ -209,15 +207,27 @@ export function FeederCoveragePage() {
         options={range.options}
         onChange={setPreset}
         sticky={false}
+        compact
         title={
           <span className="flex items-center gap-2">
             <CircleDashedIcon className="h-6 w-6 shrink-0" />
-            <h1 className="text-xl font-semibold sm:text-2xl">Managed node coverage</h1>
+            <h1 className="text-xl font-semibold">Managed node coverage</h1>
+            <MapInfoButton title="Managed node coverage">
+              <p>
+                Maps completed and failed auto-traceroutes from one managed node to each probed target over the selected
+                time range. Dots show per-target reliability; hex bins summarise nearby targets; the polygon outlines
+                where at least one successful route was observed (not a guarantee of RF coverage).
+              </p>
+              <p>
+                The selected managed node appears as an orange tower marker (distinct from the heatmap dots). Use the
+                strategies menu to include only traceroutes recorded under specific target-selection hypotheses.
+              </p>
+            </MapInfoButton>
           </span>
         }
       >
-        <div className="flex w-full items-center gap-2 sm:w-auto">
-          <Label className="text-xs text-muted-foreground" htmlFor="feeder-coverage-feeder">
+        <div className="col-span-2 flex items-center gap-2 sm:col-auto">
+          <Label className="whitespace-nowrap text-xs text-muted-foreground" htmlFor="feeder-coverage-feeder">
             Feeder
           </Label>
           <Select
@@ -225,7 +235,11 @@ export function FeederCoveragePage() {
             onValueChange={(v) => setSelectedFeederId(Number.parseInt(v, 10))}
             disabled={feedersLoading || feederOptions.length === 0}
           >
-            <SelectTrigger id="feeder-coverage-feeder" className="min-w-[200px]" aria-label="Select feeder">
+            <SelectTrigger
+              id="feeder-coverage-feeder"
+              className="min-w-0 flex-1 sm:min-w-[150px] sm:flex-none"
+              aria-label="Select feeder"
+            >
               <SelectValue placeholder="Select feeder" />
             </SelectTrigger>
             <SelectContent>
@@ -238,7 +252,7 @@ export function FeederCoveragePage() {
           </Select>
         </div>
         <div className="flex items-center gap-2">
-          <Label className="text-xs text-muted-foreground" htmlFor="feeder-coverage-min-attempts">
+          <Label className="whitespace-nowrap text-xs text-muted-foreground" htmlFor="feeder-coverage-min-attempts">
             Min attempts
           </Label>
           <Input
@@ -253,19 +267,8 @@ export function FeederCoveragePage() {
             className="w-20"
           />
         </div>
-        <MapInfoButton title="Managed node coverage">
-          <p>
-            Maps completed and failed auto-traceroutes from one managed node to each probed target over the selected
-            time range. Dots show per-target reliability; hex bins summarise nearby targets; the polygon outlines where
-            at least one successful route was observed (not a guarantee of RF coverage).
-          </p>
-          <p>
-            The selected managed node appears as an orange tower marker (distinct from the heatmap dots). Use the
-            strategy checkboxes to include only traceroutes recorded under specific target-selection hypotheses.
-          </p>
-        </MapInfoButton>
       </StatsRangeBar>
-      <div className="flex flex-wrap items-start gap-3" data-testid="coverage-filters">
+      <div className="flex flex-wrap items-center gap-3" data-testid="coverage-filters">
         <div className="flex rounded-md border border-input bg-muted/50 p-0.5" data-testid="layer-pills">
           {ALL_LAYERS.map((key) => (
             <button
@@ -283,25 +286,7 @@ export function FeederCoveragePage() {
             </button>
           ))}
         </div>
-        <div className="flex flex-col gap-2 rounded-md border border-border bg-muted/30 px-3 py-2">
-          <span className="text-xs font-medium text-muted-foreground">Target selection strategies</span>
-          <div className="flex flex-wrap gap-x-4 gap-y-2">
-            {TRACEROUTE_STRATEGIES.map((opt) => (
-              <label
-                key={opt}
-                htmlFor={`feeder-coverage-strategy-${opt}`}
-                className="flex cursor-pointer items-center gap-2 text-sm"
-              >
-                <Checkbox
-                  id={`feeder-coverage-strategy-${opt}`}
-                  checked={strategies[opt] ?? false}
-                  onCheckedChange={(c) => setStrategies((s) => ({ ...s, [opt]: c === true }))}
-                />
-                <span className="leading-none">{STRATEGY_META[opt].label}</span>
-              </label>
-            ))}
-          </div>
-        </div>
+        <CoverageStrategyMenu value={strategies} onChange={setStrategies} />
       </div>
 
       <div className="block md:hidden">

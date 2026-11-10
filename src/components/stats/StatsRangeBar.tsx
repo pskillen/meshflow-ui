@@ -14,6 +14,13 @@ export interface StatsRangeBarProps {
   children?: ReactNode;
   /** Stick to the top of the scroll area. Default true. */
   sticky?: boolean;
+  /**
+   * Map-page layout: the presets are pinned to the right edge, `rangeExtras` (a custom range) sits on the same row as
+   * the presets, and `children` become a two-column grid on narrow screens (give a full-width child `col-span-2`).
+   */
+  compact?: boolean;
+  /** Control placed right after the presets, on the same row (a custom range button). */
+  rangeExtras?: ReactNode;
   className?: string;
 }
 
@@ -25,6 +32,8 @@ export function StatsRangeBar({
   title,
   children,
   sticky = true,
+  compact = false,
+  rangeExtras,
   className,
 }: StatsRangeBarProps) {
   const buttons = useRef(new Map<StatsRangeKey, HTMLButtonElement>());
@@ -67,40 +76,53 @@ export function StatsRangeBar({
       )}
     >
       {title ? <div className="mr-auto min-w-0 text-lg font-semibold">{title}</div> : null}
-      {children ? <div className="flex flex-wrap items-center gap-2">{children}</div> : null}
-      <div
-        role="radiogroup"
-        aria-label="Time range"
-        onKeyDown={onKeyDown}
-        className={cn(
-          'inline-flex max-w-full overflow-x-auto rounded-md border bg-muted/40 p-0.5',
-          !title && !children && 'ml-auto'
-        )}
-      >
-        {options.map((key, i) => {
-          const selected = key === value;
-          const tabStop = selected || (value === null && i === 0);
-          return (
-            <button
-              key={key}
-              type="button"
-              role="radio"
-              aria-checked={selected}
-              tabIndex={tabStop ? 0 : -1}
-              ref={(el) => {
-                if (el) buttons.current.set(key, el);
-                else buttons.current.delete(key);
-              }}
-              onClick={() => onChange(key)}
-              className={cn(
-                'h-8 whitespace-nowrap rounded px-3 text-sm md:h-7 md:px-3',
-                selected ? 'bg-background font-medium shadow-sm' : 'text-muted-foreground hover:text-foreground'
-              )}
-            >
-              {STATS_RANGES[key].label}
-            </button>
-          );
-        })}
+      {children ? (
+        <div
+          className={
+            compact
+              ? 'grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:items-center'
+              : 'flex flex-wrap items-center gap-2'
+          }
+        >
+          {children}
+        </div>
+      ) : null}
+      <div className={compact ? 'ml-auto flex max-w-full items-center gap-2' : 'contents'}>
+        <div
+          role="radiogroup"
+          aria-label="Time range"
+          onKeyDown={onKeyDown}
+          className={cn(
+            'inline-flex max-w-full overflow-x-auto rounded-md border bg-muted/40 p-0.5',
+            !compact && !title && !children && 'ml-auto'
+          )}
+        >
+          {options.map((key, i) => {
+            const selected = key === value;
+            const tabStop = selected || (value === null && i === 0);
+            return (
+              <button
+                key={key}
+                type="button"
+                role="radio"
+                aria-checked={selected}
+                tabIndex={tabStop ? 0 : -1}
+                ref={(el) => {
+                  if (el) buttons.current.set(key, el);
+                  else buttons.current.delete(key);
+                }}
+                onClick={() => onChange(key)}
+                className={cn(
+                  'h-8 whitespace-nowrap rounded px-3 text-sm md:h-7 md:px-3',
+                  selected ? 'bg-background font-medium shadow-sm' : 'text-muted-foreground hover:text-foreground'
+                )}
+              >
+                {STATS_RANGES[key].label}
+              </button>
+            );
+          })}
+        </div>
+        {rangeExtras}
       </div>
     </div>
   );
