@@ -239,29 +239,31 @@ export function TrendChart({
           </BarChart>
         )}
       </ChartContainer>
-      <table className="sr-only" data-testid="trend-chart-table">
-        <caption>{description.name}</caption>
-        <thead>
-          <tr>
-            <th scope="col">Bucket</th>
-            {series.map((s) => (
-              <th key={s.key} scope="col">
-                {s.label}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {description.table.map((row) => (
-            <tr key={row.timestamp}>
-              <th scope="row">{row.label}</th>
-              {row.cells.map((cell, i) => (
-                <td key={series[i]!.key}>{cell}</td>
+      <div className="sr-only">
+        <table data-testid="trend-chart-table">
+          <caption>{description.name}</caption>
+          <thead>
+            <tr>
+              <th scope="col">Bucket</th>
+              {series.map((s) => (
+                <th key={s.key} scope="col">
+                  {s.label}
+                </th>
               ))}
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {description.table.map((row) => (
+              <tr key={row.timestamp}>
+                <th scope="row">{row.label}</th>
+                {row.cells.map((cell, i) => (
+                  <td key={series[i]!.key}>{cell}</td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </>
   );
 }
