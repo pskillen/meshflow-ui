@@ -26,6 +26,9 @@ type SortOption = 'last_heard' | 'name';
 /** Node lists offer Online (2h) on top of the shared presets. Module-level so the hook sees a stable array. */
 const NODE_LIST_RANGE_OPTIONS = [STATS_ONLINE_KEY, ...STATS_PRESET_KEYS] as const;
 
+/** A short map on phones so the list starts in the first screen; the desktop default is unchanged. */
+const MAP_MIN_HEIGHT = 'min-h-[260px] sm:min-h-[400px]';
+
 function IdentityOnlyTable({ nodes, config }: { nodes: ObservedNode[]; config: ProtocolPageConfig }) {
   return (
     <Card>
@@ -152,6 +155,13 @@ function ProtocolNodesPageContent({
     return { withLocation: withLoc, identityOnly: noLoc };
   }, [displayedNodes, config.slug]);
 
+  // The one place the count is shown. ui#419 adds a separate "Showing the first X of Y" notice for the server cap.
+  const countLine = (
+    <p className="text-sm tabular-nums text-muted-foreground" data-testid="nodes-count">
+      Showing {displayedNodes.length} of {totalNodes} nodes heard in {range.longLabel}
+    </p>
+  );
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-4">
@@ -163,7 +173,46 @@ function ProtocolNodesPageContent({
         )}
       </div>
 
-      <StatsRangeBar value={range.key} options={range.options} onChange={range.setRange} className="mb-4" />
+      {/* One sticky wrapper for the range bar and the search row: no offset to keep in step with the bar's height. */}
+      <div
+        className="sticky top-0 z-30 -mx-4 mb-4 border-b bg-background/95 px-4 backdrop-blur"
+        data-testid="nodes-chrome"
+      >
+        <StatsRangeBar
+          value={range.key}
+          options={range.options}
+          onChange={range.setRange}
+          sticky={false}
+          className="border-b-0 py-1.5"
+        />
+        <div className="flex items-center gap-2 pb-2">
+          <div className="relative min-w-0 flex-1">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 transform text-muted-foreground" />
+            <Input
+              type="text"
+              aria-label="Search nodes"
+              placeholder="Search name or ID"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          <ToggleGroup
+            type="single"
+            size="sm"
+            value={sortBy}
+            onValueChange={(value) => value && setSortBy(value as SortOption)}
+            className="shrink-0"
+          >
+            <ToggleGroupItem value="last_heard" aria-label="Sort by last heard">
+              Last heard
+            </ToggleGroupItem>
+            <ToggleGroupItem value="name" aria-label="Sort by name">
+              Name
+            </ToggleGroupItem>
+          </ToggleGroup>
+        </div>
+      </div>
 
       <Card className="mb-8">
         <CardHeader>
@@ -176,54 +225,30 @@ function ProtocolNodesPageContent({
               API; observed nodes appear after ADVERT packets with coordinates.
             </p>
           ) : null}
-          <div className="h-[600px] w-full">
+          <div className="h-[260px] w-full sm:h-[600px]">
             {config.features.constellationsOnMap ? (
               <NodesAndConstellationsMap
                 managedNodes={managedNodesForMap}
                 observedNodes={mapNodes}
                 showConstellation={true}
                 showUnmanagedNodes={true}
+                minHeightClassName={MAP_MIN_HEIGHT}
               />
             ) : (
-              <NodesMap nodes={mapNodesWithPosition} roleLegend={config.features.roleLegend} />
+              <NodesMap
+                nodes={mapNodesWithPosition}
+                roleLegend={config.features.roleLegend}
+                minHeightClassName={MAP_MIN_HEIGHT}
+              />
             )}
           </div>
         </CardContent>
       </Card>
 
-      <div className="sticky top-[3.4rem] z-20 -mx-1 mb-6 flex flex-wrap items-center gap-x-3 gap-y-2 bg-background/95 px-1 py-2 backdrop-blur">
-        <div className="relative min-w-[12rem] flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-          <Input
-            type="text"
-            aria-label="Search nodes"
-            placeholder="Search nodes by name or ID"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-        <span className="hidden text-sm tabular-nums text-muted-foreground md:inline" data-testid="nodes-count">
-          {displayedNodes.length} of {totalNodes} heard in {range.longLabel}
-        </span>
-        <ToggleGroup type="single" value={sortBy} onValueChange={(value) => value && setSortBy(value as SortOption)}>
-          <ToggleGroupItem value="last_heard" aria-label="Sort by last heard">
-            Last Heard
-          </ToggleGroupItem>
-          <ToggleGroupItem value="name" aria-label="Sort by name">
-            Name
-          </ToggleGroupItem>
-        </ToggleGroup>
-      </div>
-
       {config.slug === 'meshtastic' ? (
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold">
-              Recent Nodes ({displayedNodes.length}
-              {totalNodes > displayedNodes.length ? ` of ${totalNodes}` : ''})
-            </h2>
-          </div>
+          <h2 className="text-xl font-semibold">Recent Nodes</h2>
+          {countLine}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {displayedNodes.map((node) => (
               <NodeCard key={node.internal_id} node={node} />
@@ -239,6 +264,7 @@ function ProtocolNodesPageContent({
         </div>
       ) : (
         <div className="space-y-6">
+          {countLine}
           <Card>
             <CardHeader>
               <CardTitle>With location ({withLocation.length})</CardTitle>

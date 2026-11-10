@@ -1,3 +1,4 @@
+import { cn } from '@/lib/utils';
 import { ObservedNode } from '@/lib/models';
 import L from 'leaflet';
 import { useEffect, useMemo, useRef } from 'react';
@@ -20,6 +21,8 @@ interface NodesMapProps {
   /** Legend rows when using `markerColorsByNodeId` (e.g. watch monitoring status). */
   mapLegendStatusSwatches?: RoleLegendSwatch[];
   mapLegendStatusTitle?: string;
+  /** Tailwind min-height class for the map (outer box and map pane). Default `min-h-[400px]`. */
+  minHeightClassName?: string;
 }
 
 // Default center only used if no nodes are present
@@ -41,6 +44,7 @@ export function NodesMap({
   markerColorsByNodeId,
   mapLegendStatusSwatches,
   mapLegendStatusTitle,
+  minHeightClassName = 'min-h-[400px]',
 }: NodesMapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
@@ -198,7 +202,7 @@ export function NodesMap({
   }, [nodes, colorByNodeId, roleLegend]);
 
   return (
-    <div className="relative h-full w-full min-h-[400px]">
+    <div className={cn('relative h-full w-full', minHeightClassName)}>
       {showMapLegend ? (
         <MapMarkerLegend
           constellationItems={[]}
@@ -213,11 +217,10 @@ export function NodesMap({
         ref={mapRef}
         style={{
           height: '100%',
-          minHeight: '400px',
           position: 'relative',
           zIndex: 1,
         }}
-        className="map-container"
+        className={cn('map-container', minHeightClassName)}
       />
     </div>
   );
