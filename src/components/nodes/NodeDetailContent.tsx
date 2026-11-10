@@ -170,7 +170,8 @@ function TracerouteLinksSection({
 
   const { data, isLoading, error } = useNodeTracerouteLinks(internalId, { triggeredAtAfter });
 
-  const hasData = data && (data.edges.length > 0 || data.nodes.length > 0);
+  // The API always lists the focus node in `nodes`, so a node with no peers in the range has nodes but no edges: that is no data.
+  const hasData = data && data.edges.length > 0;
 
   const bestSnr = data ? bestEdgeSnr(data.edges) : null;
 

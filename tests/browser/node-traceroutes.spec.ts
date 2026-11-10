@@ -135,8 +135,81 @@ test.describe('Node Traceroutes tab', () => {
     await expect(page.getByTestId('chart-link-snr-1001').locator('.recharts-legend-wrapper')).toContainText(
       'SNR out (dB)'
     );
+    // Points are actually drawn, not only counted in the headline.
+    await expect(page.getByTestId('chart-link-snr-1001').locator('.recharts-dot').first()).toBeVisible();
     await page.getByRole('button', { name: /show all links \(2 more\)/i }).click();
     await expect(page.getByTestId('link-snr-charts').getByRole('heading', { level: 3 })).toHaveCount(6);
+  });
+
+  test('a link whose only sample is in the bucket in progress still draws its point (30d)', async ({ page }) => {
+    await page.route(`**/api/nodes/observed-nodes/${NODE_ID}/traceroute-links/**`, (route) =>
+      route.fulfill({
+        json: {
+          ...LINKS,
+          edges: LINKS.edges.slice(0, 1),
+          snr_history: [
+            {
+              peer_node_id: 1001,
+              peer_short_name: 'ONE',
+              inbound: [{ triggered_at: new Date(Date.now() - 10 * 60_000).toISOString(), snr: -7 }],
+              outbound: [],
+            },
+          ],
+        },
+      })
+    );
+    await page.goto(`/nodes/${NODE_ID}?tab=traceroutes&range=30d`);
+    const card = page.getByTestId('chart-link-snr-1001');
+    await expect(card.getByTestId('chart-link-snr-1001-headline')).toContainText('avg in -7.0');
+    await expect(card.locator('.recharts-dot')).toHaveCount(1);
+  });
+
+  test('a value outside -20..10 is clipped, ticks stay -20 to 10, and the card says so', async ({ page }) => {
+    await page.route(`**/api/nodes/observed-nodes/${NODE_ID}/traceroute-links/**`, (route) =>
+      route.fulfill({
+        json: {
+          ...LINKS,
+          edges: LINKS.edges.slice(0, 1),
+          snr_history: [
+            {
+              peer_node_id: 1001,
+              peer_short_name: 'WILD',
+              inbound: [
+                { triggered_at: new Date(Date.now() - 5 * HOUR).toISOString(), snr: 15 },
+                { triggered_at: new Date(Date.now() - 9 * HOUR).toISOString(), snr: -30 },
+                { triggered_at: new Date(Date.now() - 12 * HOUR).toISOString(), snr: 2 },
+              ],
+              outbound: [],
+            },
+          ],
+        },
+      })
+    );
+    await page.goto(`/nodes/${NODE_ID}?tab=traceroutes&range=24h`);
+    const card = page.getByTestId('chart-link-snr-1001');
+    await expect(card).toContainText('2 points off the scale.');
+    await expect(card.locator('.recharts-yAxis-tick-labels .recharts-cartesian-axis-tick-value')).toHaveText([
+      '-20',
+      '-10',
+      '0',
+      '10',
+    ]);
+  });
+
+  test('the focus node alone, with no links, is no data: message, no tiles', async ({ page }) => {
+    await page.route(`**/api/nodes/observed-nodes/${NODE_ID}/traceroute-links/**`, (route) =>
+      route.fulfill({
+        json: {
+          edges: [],
+          nodes: [{ meshtastic_node_id: MESH_ID, lat: 55.9, lng: -4.2, short_name: 'PDYl' }],
+          snr_history: [],
+        },
+      })
+    );
+    await page.goto(`/nodes/${NODE_ID}?tab=traceroutes&range=7d`);
+    await expect(page.getByText('No traceroute data for this node')).toBeVisible();
+    await expect(page.getByTestId('node-traceroute-tiles')).toHaveCount(0);
+    await expect(page.getByTestId('link-snr-charts')).toHaveCount(0);
   });
 
   test('phone: tiles and cards fit with long peer names, no horizontal page scroll', async ({ page }) => {
