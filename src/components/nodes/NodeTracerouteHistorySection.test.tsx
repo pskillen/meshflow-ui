@@ -177,6 +177,26 @@ describe('NodeTracerouteHistorySection', () => {
     expect(screen.getByText(/no traceroutes to this node yet/i)).toBeInTheDocument();
   });
 
+  it('asks only for traceroutes since the range start and says so', () => {
+    setupHooks({ traceroutes: [], triggerableNodes: [] });
+    const observedNode = makeObservedNode();
+    const since = new Date('2026-11-03T00:00:00Z');
+    render(
+      <MemoryRouter>
+        <NodeTracerouteHistorySection
+          nodeId={observedNode.meshtastic_node_id}
+          observedNode={observedNode}
+          since={since}
+          rangeLabel="last 7 days"
+        />
+      </MemoryRouter>
+    );
+    expect(mockedUseTraceroutesWithWebSocket).toHaveBeenCalledWith(
+      expect.objectContaining({ triggered_after: since.toISOString() })
+    );
+    expect(screen.getByText(/no traceroutes to this node in the last 7 days/i)).toBeInTheDocument();
+  });
+
   it('hides the trigger button and repeat column when the user has no triggerable nodes', () => {
     setupHooks({ traceroutes: [makeTraceroute()], triggerableNodes: [] });
     renderSection();

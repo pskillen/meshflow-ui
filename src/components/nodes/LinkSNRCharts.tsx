@@ -15,7 +15,8 @@ const SNR_SERIES = [
   { key: SNR_OUT, label: 'SNR out (dB)', color: 'hsl(var(--chart-4))', dashed: true },
 ];
 
-const formatDb = (v: number) => `${Number.isInteger(v) ? v : v.toFixed(1)} dB`;
+/** No unit on the axis (the measure pill says dB): "2.5 dB" wraps in the 44px axis on a phone. */
+const formatDb = (v: number) => (Number.isInteger(v) ? String(v) : v.toFixed(1));
 
 export interface LinkSNRChartsProps {
   snrHistory: NodeTracerouteLinkSnrHistory[];
