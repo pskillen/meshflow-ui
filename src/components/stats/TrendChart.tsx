@@ -9,7 +9,7 @@ import {
   type ChartConfig,
 } from '@/components/ui/chart';
 import { ChartCardContext } from '@/components/stats/chart-card-context';
-import { maxStackTotal, niceAxisMax } from '@/lib/axis-ticks';
+import { fitAxis, maxStackTotal, niceAxisMax } from '@/lib/axis-ticks';
 import type { StatsBucket, StatsRangeWindow } from '@/lib/stats-range';
 import {
   PARTIAL_LINE_SUFFIX,
@@ -51,6 +51,13 @@ export interface TrendChartProps {
   dots?: boolean;
   /** Show the legend (default true; only drawn with more than one series). Hide it where the card lists the series. */
   legend?: boolean;
+  /**
+   * Y axis. `zero` (default): 0 to a nice top, whole-number ticks, for counts. `fit`: hug the data, with decimals, for
+   * readings in a narrow band (volts). `[min, max]`: fixed (percent, 0 to 100).
+   */
+  yRange?: 'zero' | 'fit' | [number, number];
+  /** Format values on the y axis and in the accessible name and table. Default: compact whole numbers. */
+  formatValue?: (value: number) => string;
   /** Pixel height. Default 190. */
   height?: number;
   /**
@@ -62,6 +69,10 @@ export interface TrendChartProps {
   /** The card's headline ("avg 88"), repeated in the accessible name. */
   headline?: string;
   className?: string;
+}
+
+function numericValues(rows: TrendRow[], keys: string[]): number[] {
+  return rows.flatMap((r) => keys.map((k) => r[k]).filter((v): v is number => typeof v === 'number'));
 }
 
 /** Marker on a bucket that is in progress or only partly covered. */
@@ -100,6 +111,8 @@ export function TrendChart({
   height = 190,
   dots = false,
   legend: showLegend = true,
+  yRange = 'zero',
+  formatValue,
   label,
   headline,
   className,
@@ -127,13 +140,22 @@ export function TrendChart({
       kind === 'bar' && stacked
         ? maxStackTotal(numeric)
         : Math.max(0, ...numeric.flatMap((r) => keys.map((k) => r[k] ?? 0)));
-    return niceAxisMax(max);
-  }, [dense, keys, kind, stacked]);
+    if (Array.isArray(yRange)) {
+      const [lo, hi] = yRange;
+      const step = (hi - lo) / 4;
+      return { min: lo, max: hi, ticks: [0, 1, 2, 3, 4].map((i) => lo + step * i) };
+    }
+    if (yRange === 'fit') {
+      const values = numericValues(dense, keys);
+      return values.length ? fitAxis(Math.min(...values), Math.max(...values)) : { min: 0, max: 1, ticks: [0, 1] };
+    }
+    return { min: 0, ...niceAxisMax(max) };
+  }, [dense, keys, kind, stacked, yRange]);
 
   const ticks = useMemo(() => evenTrendTicks(dense.map((r) => r.timestamp)), [dense]);
   const description = useMemo(
-    () => describeTrend({ label, headline, bucket, rows: dense, series }),
-    [label, headline, bucket, dense, series]
+    () => describeTrend({ label, headline, bucket, rows: dense, series, format: formatValue }),
+    [label, headline, bucket, dense, series, formatValue]
   );
 
   const common = {
@@ -157,10 +179,10 @@ export function TrendChart({
       width={44}
       tickLine={false}
       axisLine={false}
-      domain={[0, axis.max]}
+      domain={[axis.min, axis.max]}
       ticks={axis.ticks}
-      allowDecimals={false}
-      tickFormatter={formatCompact}
+      allowDecimals={yRange !== 'zero'}
+      tickFormatter={formatValue ?? formatCompact}
     />
   );
   const tooltip = (

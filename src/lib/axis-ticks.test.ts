@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { maxStackTotal, niceAxisMax } from '@/lib/axis-ticks';
+import { fitAxis, maxStackTotal, niceAxisMax } from '@/lib/axis-ticks';
 
 describe('niceAxisMax', () => {
   const inputs = [0, -3, NaN, 0.4, 1, 2, 3, 7, 18, 21, 22.4, 99, 101, 640, 1234.56, 98765, 1_234_567];
@@ -47,5 +47,23 @@ describe('maxStackTotal', () => {
     // The stack exceeds every single value, so a single-value max would stop the axis at about half.
     expect(niceAxisMax(maxStackTotal(rows)).max).toBeGreaterThan(100);
     expect(maxStackTotal([])).toBe(0);
+  });
+});
+
+describe('fitAxis', () => {
+  it('hugs a narrow band instead of starting at 0, with decimal ticks', () => {
+    const a = fitAxis(3.62, 4.1);
+    expect(a.min).toBeGreaterThan(3);
+    expect(a.max).toBeLessThan(4.5);
+    expect(a.min).toBeLessThanOrEqual(3.62);
+    expect(a.max).toBeGreaterThanOrEqual(4.1);
+    expect(a.ticks[0]).toBe(a.min);
+    expect(a.ticks.at(-1)).toBe(a.max);
+  });
+
+  it('gives a flat series a visible span', () => {
+    const a = fitAxis(3.9, 3.9);
+    expect(a.max).toBeGreaterThan(a.min);
+    expect(a.ticks.length).toBeGreaterThanOrEqual(2);
   });
 });
