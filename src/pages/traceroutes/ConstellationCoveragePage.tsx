@@ -19,6 +19,7 @@ import type { FeederIconDatum } from '@/components/map/FeederIconLayer';
 import { useConstellations } from '@/hooks/api/useConstellations';
 import { useConstellationCoverage } from '@/hooks/api/useConstellationCoverage';
 import { useManagedNodes } from '@/hooks/api/useNodes';
+import { HeardTruncatedNotice } from './HeardTruncatedNotice';
 import { useObservedNodesHeard } from '@/hooks/api/useObservedNodesHeard';
 import { observedNodesToCoverageGhosts } from '@/lib/coverageHeardGhosts';
 import { cn } from '@/lib/utils';
@@ -157,9 +158,12 @@ export function ConstellationCoveragePage() {
     targetStrategy: targetStrategyParam,
   });
 
-  const { nodes: heardObservedNodes } = useObservedNodesHeard({
+  const {
+    nodes: heardObservedNodes,
+    total: heardTotal,
+    truncated: heardTruncated,
+  } = useObservedNodesHeard({
     lastHeardAfter: triggeredAtAfter,
-    pageSize: 500,
     enabled: mapLayers.heard && Number.isFinite(constellationIdNum),
   });
 
@@ -321,6 +325,10 @@ export function ConstellationCoveragePage() {
         </div>
         <CoverageStrategyMenu value={strategies} onChange={setStrategies} />
       </div>
+
+      {mapLayers.heard && heardTruncated && (
+        <HeardTruncatedNotice shown={heardObservedNodes.length} total={heardTotal} since={triggeredAtAfter} />
+      )}
 
       <div className="block md:hidden">
         <StatsCard

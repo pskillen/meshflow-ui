@@ -12,7 +12,7 @@ vi.mock('@/hooks/api/useFeederReach', () => ({
 }));
 
 vi.mock('@/hooks/api/useObservedNodesHeard', () => ({
-  useObservedNodesHeard: vi.fn(() => ({ nodes: [], isLoading: false, isFetching: false })),
+  useObservedNodesHeard: vi.fn(() => ({ nodes: [], total: 0, truncated: false, isLoading: false, isFetching: false })),
 }));
 
 vi.mock('@/components/traceroutes/FeederCoverageMap', () => ({
