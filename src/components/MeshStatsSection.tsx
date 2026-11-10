@@ -58,17 +58,15 @@ const SECTION_LINKS: Partial<Record<MeshStatsProtocolScope, { href: string; labe
 
 const SYNC_ID = 'mesh-stats';
 
-/** The note under a chart: what the dashes mean, what is truncated, and the snapshot lag. */
-function chartNote(trend: CountTrend, range: StatsRange): string {
+/** The note under a chart: what the dashes mean, what is truncated, and the latest point. */
+function chartNote(trend: CountTrend, range: StatsRange): string | undefined {
   const parts: string[] = [];
   if (trend.hasPartial) parts.push('Faded or dashed: still in progress, or only partly covered.');
   if (trend.truncated) parts.push('The API returned only part of this range; the oldest days are missing.');
-  parts.push(
-    trend.latest != null && range.bucket !== 'daily'
-      ? `Latest point ${formatTrendLabel(trend.latest, range.bucket)}. Snapshots trail real time by about an hour.`
-      : 'Snapshots trail real time by about an hour.'
-  );
-  return parts.join(' ');
+  if (trend.latest != null && range.bucket !== 'daily') {
+    parts.push(`Latest point ${formatTrendLabel(trend.latest, range.bucket)}.`);
+  }
+  return parts.length ? parts.join(' ') : undefined;
 }
 
 function ChartSkeleton({ title }: { title: string }) {
@@ -115,7 +113,7 @@ function NodesChart({
     metric === 'online_nodes' ? `avg ${nf.format(meanOf(trend.rows, keys))}` : nf.format(totalOf(trend.rows, keys));
   const measure =
     metric === 'online_nodes'
-      ? `Each point: nodes heard in the 2h before it${range.bucket === 'hourly' ? '' : ` · ${range.bucketLabel} mean`}`
+      ? `Each point: nodes heard in the 2h around it${range.bucket === 'hourly' ? '' : ` · ${range.bucketLabel} mean`}`
       : `First seen, per ${bucketPhrase(range.bucket)}`;
 
   return (

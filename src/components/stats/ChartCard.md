@@ -8,9 +8,9 @@ The frame every stats chart sits in: title, a headline number for the range, a p
 
 - `title: string`
 - `headline?: ReactNode` – the one number for the range ("avg 88", "16,867"), right of the title.
-- `measure?: ReactNode` – pill text: "Packets per 6-hour bucket", "Each point: nodes heard in the 2h before it".
+- `measure?: ReactNode` – pill text: "Packets per 6-hour bucket", "Each point: nodes heard in the 2h around it".
 - `actions?: ReactNode` – controls for this chart only (the Packet volume Total / By type toggle).
-- `note?: ReactNode` – small print under the chart (partial-bucket and snapshot-lag notes).
+- `note?: ReactNode` – small print under the chart (partial-bucket and latest-point notes).
 - `children` – the chart.
 - `className?`, `data-testid?` (also sets `<id>-headline` and `<id>-measure`).
 
