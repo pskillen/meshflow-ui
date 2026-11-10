@@ -59,6 +59,8 @@ test.describe('Node page shell', () => {
     await expect(page.getByTestId('stats-range-bar')).toBeVisible();
     await page.getByRole('radio', { name: '30d' }).click();
     await expect(page).toHaveURL(/range=30d/);
+    // Wait for the re-render too, so the next click cannot race it.
+    await expect(page.getByRole('radio', { name: '30d' })).toBeChecked();
 
     await page.getByTestId('node-detail-tab-traceroutes').click();
     await expect(page).toHaveURL(/tab=traceroutes/);
