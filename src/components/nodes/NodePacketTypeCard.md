@@ -10,11 +10,11 @@ Packets one node sent ("Sent packets") or heard ("Heard packets", managed nodes 
 
 ## Behaviour
 
-- **Query:** `interval=1` always. 24h and 7d ask for `hour` intervals, 30d and 90d for `day` (`packetIntervalType`). It never sends `interval > 1`: the server's `interval=6` leaves the buckets hourly while each claims a 6-hour end (raised as a follow-up). The end is one hour past `window.end` (`metricQueryEnd`), so the newest hour is included.
+- **Query:** `interval=1` always. 24h and 7d ask for `hour` intervals, 30d and 90d for `day` (`packetIntervalType`). It never sends `interval > 1`: the server's `interval=6` leaves the buckets hourly while each claims a 6-hour end (raised as a follow-up). The end is one hour past `window.end` (`metricQueryEnd`) so the bucket in progress is covered; only intervals inside the chart's bucket grid are drawn or counted (at 24h the hour in progress is not drawn, as on the other charts, decision 46).
 - **Roll-up:** `buildPacketTypeRows` (`src/lib/node-packet-series.ts`) folds the hourly rows into 6-hour buckets at 7d by each interval's start. The bucket in progress is marked partial (faded, dashed).
 - **Bars:** at most 24 at 24h, 29 at 7d (28 whole buckets, one more when the window starts mid-bucket), 31 at 30d, 91 at 90d. A test asserts these.
-- **Colours:** the long-standing per-type colours (hex, not chart tokens): text message blue, position green, device metrics amber, node info violet, local stats pink, environment metrics red, other grey. A type the list does not know adds to Other.
-- Headline is the total for the range; an empty range shows a plain-words placeholder. A screen-reader table and name come from [`TrendChart`](../stats/TrendChart.md).
+- **Colours:** the long-standing per-type colours (hex, not chart tokens): text message blue, position green, device metrics amber, node info violet, local stats pink, environment metrics red, other grey. A type the list does not know adds to Other; Other is left out of the chart and legend when it has no packets.
+- Headline is the sum of the bars drawn; an empty range shows a plain-words placeholder. A screen-reader table and name come from [`TrendChart`](../stats/TrendChart.md).
 
 ## Wiring
 
