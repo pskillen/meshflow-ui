@@ -30,6 +30,7 @@ function isLowBatteryLevel(raw: number | null | undefined): boolean {
 export function qualifiesLowBatterySection(node: ObservedNode, now: Date = new Date()): boolean {
   const m = node.latest_device_metrics;
   if (!m) return true;
+  if (matchesLowBatteryNoTelemetryRow(node)) return true;
   if (isBatteryTelemetryStale(node, now)) return true;
   return isLowBatteryLevel(m.battery_level);
 }
@@ -44,19 +45,20 @@ export type LowBatteryRowFlags = {
 export function getLowBatteryRowFlags(node: ObservedNode, now: Date = new Date()): LowBatteryRowFlags {
   const m = node.latest_device_metrics;
   const reportedAt = getBatteryMetricsReportedAt(node);
-  const hasUsableMetrics = Boolean(m && reportedAt);
   const level = describeBattery(m?.battery_level);
+  const hasUsableMetrics = Boolean(m && reportedAt) && level.kind !== 'none';
   const isZeroPercent = hasUsableMetrics && level.kind === 'level' && level.pct === 0;
   const showStaleBatteryBadge = !hasUsableMetrics || isBatteryTelemetryStale(node, now);
   const showLowBatteryBadge = hasUsableMetrics && isLowBatteryLevel(m?.battery_level);
   return { isZeroPercent, showLowBatteryBadge, showStaleBatteryBadge };
 }
 
-/** Row matches the “no battery telemetry” bucket (no device metrics or no reported_time). */
+/** Row matches the “no battery telemetry” bucket (no device metrics, no reported_time, or no battery level). */
 export function matchesLowBatteryNoTelemetryRow(node: ObservedNode): boolean {
   const m = node.latest_device_metrics;
   const reportedAt = getBatteryMetricsReportedAt(node);
-  return !(m && reportedAt);
+  if (!(m && reportedAt)) return true;
+  return describeBattery(m.battery_level).kind === 'none';
 }
 
 /** Row matches the “always 0%” bucket (usable metrics, level 0). */

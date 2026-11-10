@@ -5,6 +5,7 @@ import {
   hasMeshInfraMapBatteryOrPresenceAlert,
   qualifiesLowBatterySection,
   isLowBatteryTableRowVisible,
+  matchesLowBatteryNoTelemetryRow,
   matchesLowBatteryStaleReadingRow,
   partitionMeshInfraLowBatteryTableNodes,
   partitionLowBatteryNodes,
@@ -147,9 +148,12 @@ describe('battery level interpretation (101, 0, missing)', () => {
       } as ObservedNode['latest_device_metrics'],
     });
 
-  it('does not count a null level as low (null < 50 is true in JS)', () => {
+  it('does not count a null level as low (null < 50 is true in JS) but puts it in the no-telemetry bucket', () => {
     const n = withLevel(null);
-    expect(qualifiesLowBatterySection(n)).toBe(false);
+    expect(qualifiesLowBatterySection(n)).toBe(true);
+    expect(matchesLowBatteryNoTelemetryRow(n)).toBe(true);
+    expect(partitionLowBatteryNodes([n])).toEqual([n]);
+    expect(isLowBatteryTableRowVisible(n, { showStaleReadings: true, showZeroPercent: true, showNoTelemetry: false })).toBe(false);
     expect(getLowBatteryRowFlags(n).showLowBatteryBadge).toBe(false);
     expect(getLowBatteryRowFlags(n).isZeroPercent).toBe(false);
     expect(hasMeshInfraMapBatteryOrPresenceAlert(n)).toBe(false);

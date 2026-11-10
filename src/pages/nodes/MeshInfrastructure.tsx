@@ -649,7 +649,7 @@ function MeshInfrastructureContent({ protocol }: { protocol: InfraProtocol }) {
                             ) : null}
                             {flags.showStaleBatteryBadge ? (
                               <Badge variant="outline" className="text-xs">
-                                {node.latest_device_metrics?.reported_time
+                                {!matchesLowBatteryNoTelemetryRow(node)
                                   ? `Battery reading ${STALE_BATTERY_TELEMETRY_DAYS}+ days old`
                                   : 'No battery telemetry'}
                               </Badge>
