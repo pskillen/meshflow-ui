@@ -61,19 +61,22 @@ function DashboardContent() {
                   size="sm"
                   onClick={() => setMapOpen((open) => !open)}
                   aria-expanded={showMap}
-                  aria-controls="dashboard-map-body"
+                  aria-controls={showMap ? 'dashboard-map-body' : undefined}
                   data-testid="dashboard-map-toggle"
                 >
                   {showMap ? 'Hide map' : 'Show map'}
                 </Button>
               )}
             </div>
-            {showMap && (
-              <p className="text-sm text-muted-foreground">
-                Constellations represent local regions on the mesh. Below is a map of nodes which report into Meshflow.
-                Click on a node to view more information. View the <Link to="nodes">Nodes page</Link> for a list.
-              </p>
-            )}
+            <p className="text-sm text-muted-foreground">
+              {showMap && (
+                <>
+                  Constellations represent local regions on the mesh. Below is a map of nodes which report into
+                  Meshflow. Click on a node to view more information.{' '}
+                </>
+              )}
+              View the <Link to="nodes">Nodes page</Link> for a list.
+            </p>
           </CardHeader>
           {showMap && (
             <CardContent id="dashboard-map-body">
