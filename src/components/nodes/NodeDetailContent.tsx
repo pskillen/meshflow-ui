@@ -176,7 +176,7 @@ function TracerouteLinksSection({
 
   const { data, isLoading, error } = useNodeTracerouteLinks(internalId, { triggeredAtAfter });
   // Same params as NodeTracerouteHistorySection, so this is one request shared with the table and the count matches it.
-  const { data: tracerouteList, isLoading: tracerouteCountLoading } = useTraceroutes({
+  const { data: tracerouteList } = useTraceroutes({
     target_node: meshtasticNodeId,
     triggered_after: range.window.start.toISOString(),
     page_size: NODE_TRACEROUTE_HISTORY_PAGE_SIZE,
@@ -206,7 +206,7 @@ function TracerouteLinksSection({
             <StatTile
               role="listitem"
               label="Traceroutes"
-              value={tracerouteCountLoading ? '—' : COUNT_FORMAT.format(tracerouteList?.count ?? 0)}
+              value={tracerouteList == null ? '—' : COUNT_FORMAT.format(tracerouteList.count)}
               sub="to this node"
               data-testid="node-traceroute-tile-traceroutes"
             />

@@ -242,6 +242,16 @@ describe('NodeDetailContent tabbed layout', () => {
       renderTraceroutes();
       expect(screen.getByTestId('node-traceroute-tile-traceroutes')).toHaveTextContent('\u2014');
     });
+
+    it('shows a dash, not 0, when the count query failed (no data, not loading)', () => {
+      vi.mocked(useTraceroutes).mockReturnValue({ data: undefined, isLoading: false } as unknown as ReturnType<
+        typeof useTraceroutes
+      >);
+      renderTraceroutes();
+      const tile = screen.getByTestId('node-traceroute-tile-traceroutes');
+      expect(tile).toHaveTextContent('\u2014');
+      expect(tile).not.toHaveTextContent('0');
+    });
   });
 
   describe('shared range', () => {
