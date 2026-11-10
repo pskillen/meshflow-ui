@@ -73,13 +73,12 @@ jobs:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
 
+      # No --with-deps / install-deps: ubuntu-latest already has Chromium's shared libraries.
+      # install-deps only adds 9 font packages (CJK/Thai/unifont), which an apt mirror
+      # sometimes serves at ~75 kB/s, turning a 12s step into 4-5 min. No test compares screenshots.
       - name: Install Playwright Browsers
         if: steps.playwright-cache.outputs.cache-hit != 'true'
-        run: npx playwright install --with-deps chromium
-
-      - name: Install Playwright system dependencies
-        if: steps.playwright-cache.outputs.cache-hit == 'true'
-        run: npx playwright install-deps chromium
+        run: npx playwright install chromium
 
       - name: Run Browser Tests
         env:
