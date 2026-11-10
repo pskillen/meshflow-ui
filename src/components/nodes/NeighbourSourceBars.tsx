@@ -79,7 +79,7 @@ export function NeighbourSourceBars({ nodeId, range }: { nodeId: number; range: 
                           protocol: 1,
                         }) ?? '#'
                       }
-                      className="rounded bg-muted px-1.5 py-0.5 text-xs text-teal-600 hover:underline dark:text-teal-400"
+                      className="rounded bg-muted px-1.5 py-0.5 text-xs text-primary underline-offset-2 hover:underline"
                     >
                       {c.short_name || c.node_id_str}
                     </Link>
