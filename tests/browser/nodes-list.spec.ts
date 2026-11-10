@@ -75,19 +75,19 @@ test.describe('Meshtastic node list', () => {
   test('on a phone the map key is a button, closed by default', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 });
     await page.goto('/nodes');
-    const key = page.getByRole('region', { name: 'Map marker colours' });
+    const key = page.getByRole('region', { name: 'Map key' });
     const button = page.getByRole('button', { name: 'Map key' });
     await expect(button).toBeVisible();
     await expect(key).toBeHidden();
     await button.click();
     await expect(key).toBeVisible();
-    await page.getByRole('button', { name: 'Hide key' }).click();
+    await page.keyboard.press('Escape');
     await expect(key).toBeHidden();
   });
 
   test('on a desktop the key is always shown and there is no button', async ({ page }) => {
     await page.goto('/nodes');
-    await expect(page.getByRole('region', { name: 'Map marker colours' })).toBeVisible();
+    await expect(page.getByRole('region', { name: 'Map key' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Map key' })).toBeHidden();
   });
 });

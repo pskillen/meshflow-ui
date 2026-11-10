@@ -16,9 +16,9 @@ It renders nothing when no section has content.
 ## Behaviour
 
 - Positioned top-right inside the map container (`z-10`, below sheets and dialogs).
-- **Phones (below the `sm` breakpoint):** the key is closed and a "Map key" button sits in its place; the button toggles the panel ("Hide key" when open, `aria-expanded` and `aria-controls` set). The panel scrolls inside 85% of the map height.
+- **Phones (below the `sm` breakpoint):** the key is closed and a "Map key" button (at least 32px tall) sits in its place. The button always has the same name; `aria-expanded` says whether the panel is open, and `aria-controls` points at it. Escape closes the panel and returns focus to the button. The panel is at most the map width minus 4rem, so it never covers the zoom control at top left, and scrolls inside 85% of the map height.
 - **sm and up:** the panel is always shown and the button is hidden, as before (max 40% of the map height).
-- The panel keeps `role="region"` with the label "Map marker colours" in both states. The phone/desktop split is CSS only (`hidden sm:block`, `sm:hidden`), so there is no resize listener.
+- The panel is a `role="region"` named "Map key", the same as the button, in both states. The phone/desktop split is CSS only (`hidden sm:block`, `sm:hidden`), so there is no resize listener.
 
 ## Wiring
 
