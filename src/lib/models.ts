@@ -509,6 +509,20 @@ export interface DeviceMetrics {
   uptime_seconds: number; // Changed from uptime
 }
 
+/**
+ * One bucketed metric row (`bucket=1h|6h|1d` on the node metric endpoints): `reported_time` is the bucket start (UTC),
+ * `samples` the reports in it. Each field is the bucket mean of the non-null readings, or null when there were none
+ * (battery_level ignores 101 unless every report was 101; uptime is the max; wind direction and rainfall take the
+ * latest reading). There is no `id` or `logged_time`.
+ */
+export type MetricBucket<T> = {
+  node: number;
+  reported_time: Date | null;
+  samples: number;
+} & {
+  [K in Exclude<keyof T, 'id' | 'node' | 'logged_time' | 'reported_time'>]-?: number | null;
+};
+
 /** Latest environment metrics from node (NodeLatestStatus) */
 export interface LatestEnvironmentMetrics {
   temperature?: number | null;
@@ -1023,3 +1037,7 @@ export interface DxNodeExclusionResponse {
   exclude_notes: string;
   updated_at: string | null;
 }
+
+export type DeviceMetricBucket = MetricBucket<DeviceMetrics>;
+export type EnvironmentMetricBucket = MetricBucket<EnvironmentMetrics>;
+export type PowerMetricBucket = MetricBucket<PowerMetrics>;

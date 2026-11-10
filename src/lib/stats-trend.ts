@@ -147,8 +147,11 @@ export function describeTrend(args: {
   bucket: StatsBucket;
   rows: TrendRow[];
   series: { key: string; label: string }[];
+  /** Format a value for the name and table. Default: whole-number grouping ("1,234"). */
+  format?: (value: number) => string;
 }): { name: string; table: { timestamp: number; label: string; cells: string[] }[] } {
   const { label, headline, bucket, rows, series } = args;
+  const fmt = args.format ?? ((v: number) => countFormat.format(v));
   const valueOf = (row: TrendRow, key: string) => (typeof row[key] === 'number' ? (row[key] as number) : null);
   const withData = (row: TrendRow) => series.some((s) => valueOf(row, s.key) != null);
 
@@ -159,7 +162,7 @@ export function describeTrend(args: {
     const values = series
       .map((s) => ({ s, v: valueOf(latest, s.key) }))
       .filter((x) => x.v != null)
-      .map((x) => `${x.s.label} ${countFormat.format(x.v!)}`)
+      .map((x) => `${x.s.label} ${fmt(x.v!)}`)
       .join(', ');
     parts.push(`Latest, ${formatTrendLabel(latest.timestamp, bucket)}: ${values}.`);
   }
@@ -170,7 +173,7 @@ export function describeTrend(args: {
     label: `${formatTrendLabel(row.timestamp, bucket)}${row.partial ? ' (partial)' : ''}`,
     cells: series.map((s) => {
       const v = valueOf(row, s.key);
-      return v == null ? 'no data' : countFormat.format(v);
+      return v == null ? 'no data' : fmt(v);
     }),
   }));
   return { name: parts.join(' '), table };
