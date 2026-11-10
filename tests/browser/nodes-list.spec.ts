@@ -97,10 +97,6 @@ test.describe('Meshtastic node list', () => {
     expect(chromeBox.height).toBeLessThanOrEqual(100);
     expect(mapBox.height).toBeLessThanOrEqual(270);
     expect(searchBox.y + searchBox.height).toBeLessThan(400);
-    // Search and sort share one row.
-    const sort = page.getByRole('radio', { name: 'Sort by name' });
-    const sortBox = (await sort.boundingBox())!;
-    expect(Math.abs(sortBox.y + sortBox.height / 2 - (searchBox.y + searchBox.height / 2))).toBeLessThan(12);
     // The chrome stays put while the page scrolls.
     await page.mouse.wheel(0, 400);
     await expect.poll(async () => (await chrome.boundingBox())!.y).toBeLessThan(60);

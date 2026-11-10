@@ -2,83 +2,29 @@ import { useProtocolObservedNodesSuspense } from '@/hooks/api/useProtocolNodes';
 import { useManagedNodesSuspense } from '@/hooks/api/useNodes';
 import { useMeshCoreManagedNodesSuspense } from '@/hooks/api/useMeshCore';
 import { useMemo, useState } from 'react';
-import { NodeCard } from '@/components/nodes/NodeCard';
+import { NodesTable } from '@/components/nodes/NodesTable';
 import { NodesAndConstellationsMap } from '@/components/nodes/NodesAndConstellationsMap';
 import { NodesMap } from '@/components/nodes/NodesMap';
 import { StatsRangeBar } from '@/components/stats/StatsRangeBar';
 import { useStatsRange } from '@/hooks/useStatsRange';
 import { STATS_ONLINE_KEY, STATS_PRESET_KEYS } from '@/lib/stats-range';
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Input } from '@/components/ui/input';
 import { Search } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import type { ObservedNode } from '@/lib/models';
-import { Link } from 'react-router-dom';
 import { filterManagedNodesForMapDisplay } from '@/lib/managed-node-status';
 import { buildMeshCoreMapNodes } from '@/lib/meshcore-map-nodes';
 import { filterManagedNodesByProtocol, type ProtocolPageConfig } from '@/lib/mesh-protocol';
-import { formatDistanceToNow } from 'date-fns';
 
 /** The API's maximum page size, so a normal range arrives in one request. Further pages are on demand. */
 const NODE_LIST_PAGE_SIZE = 1000;
-
-type SortOption = 'last_heard' | 'name';
 
 /** Node lists offer Online (2h) on top of the shared presets. Module-level so the hook sees a stable array. */
 const NODE_LIST_RANGE_OPTIONS = [STATS_ONLINE_KEY, ...STATS_PRESET_KEYS] as const;
 
 /** A short map on phones so the list starts in the first screen; the desktop default is unchanged. */
 const MAP_MIN_HEIGHT = 'min-h-[260px] sm:min-h-[400px]';
-
-function IdentityOnlyTable({ nodes, config }: { nodes: ObservedNode[]; config: ProtocolPageConfig }) {
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Identity only / no position ({nodes.length})</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>ID</TableHead>
-              <TableHead>Name</TableHead>
-              <TableHead>Prefix</TableHead>
-              <TableHead>Last heard</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {nodes.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={4} className="text-muted-foreground">
-                  No nodes in this section yet.
-                </TableCell>
-              </TableRow>
-            ) : (
-              nodes.map((node) => (
-                <TableRow key={String(node.internal_id)}>
-                  <TableCell className="font-mono text-xs">
-                    <Link to={config.routes.nodeDetail(node.internal_id)} className="text-primary hover:underline">
-                      {node.node_id_str}
-                    </Link>
-                  </TableCell>
-                  <TableCell>
-                    {node.long_name || '—'} / {node.short_name || '—'}
-                  </TableCell>
-                  <TableCell className="font-mono text-xs">{node.mc_pubkey_prefix || '—'}</TableCell>
-                  <TableCell>
-                    {node.last_heard ? formatDistanceToNow(node.last_heard, { addSuffix: true }) : '—'}
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </CardContent>
-    </Card>
-  );
-}
 
 type ProtocolNodesPageProps = {
   config: ProtocolPageConfig;
@@ -89,7 +35,6 @@ function ProtocolNodesPageContent({
   managedNodesForMap,
 }: ProtocolNodesPageProps & { managedNodesForMap: ReturnType<typeof filterManagedNodesForMapDisplay> }) {
   const range = useStatsRange({ area: 'node-lists', options: NODE_LIST_RANGE_OPTIONS });
-  const [sortBy, setSortBy] = useState<SortOption>('last_heard');
   const [searchQuery, setSearchQuery] = useState('');
 
   const lastHeardAfter = range.window.start;
@@ -104,19 +49,6 @@ function ProtocolNodesPageContent({
     pageSize: NODE_LIST_PAGE_SIZE,
   });
 
-  const sortNodes = (nodes: ObservedNode[]) => {
-    return [...nodes].sort((a, b) => {
-      if (sortBy === 'last_heard') {
-        if (!a.last_heard) return 1;
-        if (!b.last_heard) return -1;
-        return b.last_heard.getTime() - a.last_heard.getTime();
-      }
-      const aName = a.long_name || '';
-      const bName = b.long_name || '';
-      return aName.localeCompare(bName);
-    });
-  };
-
   const filterNodes = (nodes: ObservedNode[]) => {
     if (!searchQuery) return nodes;
     const query = searchQuery.toLowerCase();
@@ -129,8 +61,8 @@ function ProtocolNodesPageContent({
     );
   };
 
-  const displayedNodes = sortNodes(filterNodes(mainListNodes || []));
-  const observedForMap = searchQuery ? filterNodes(mainListNodes || []) : mainListNodes || [];
+  const displayedNodes = filterNodes(mainListNodes || []);
+  const observedForMap = searchQuery ? displayedNodes : mainListNodes || [];
   const mapNodes = useMemo(() => {
     if (config.slug !== 'meshcore') {
       return observedForMap;
@@ -141,22 +73,6 @@ function ProtocolNodesPageContent({
     () => mapNodes.filter((n) => n.latest_position?.latitude != null && n.latest_position?.longitude != null),
     [mapNodes]
   );
-
-  const { withLocation, identityOnly } = useMemo(() => {
-    if (config.slug === 'meshtastic') {
-      return { withLocation: displayedNodes, identityOnly: [] as ObservedNode[] };
-    }
-    const withLoc: ObservedNode[] = [];
-    const noLoc: ObservedNode[] = [];
-    for (const n of displayedNodes) {
-      if (n.latest_position?.latitude != null && n.latest_position?.longitude != null) {
-        withLoc.push(n);
-      } else {
-        noLoc.push(n);
-      }
-    }
-    return { withLocation: withLoc, identityOnly: noLoc };
-  }, [displayedNodes, config.slug]);
 
   // The one place the count is shown. ui#419 adds a separate "Showing the first X of Y" notice for the server cap.
   const countLine = (
@@ -200,20 +116,6 @@ function ProtocolNodesPageContent({
               className="pl-10"
             />
           </div>
-          <ToggleGroup
-            type="single"
-            size="sm"
-            value={sortBy}
-            onValueChange={(value) => value && setSortBy(value as SortOption)}
-            className="shrink-0"
-          >
-            <ToggleGroupItem value="last_heard" aria-label="Sort by last heard">
-              Last heard
-            </ToggleGroupItem>
-            <ToggleGroupItem value="name" aria-label="Sort by name">
-              Name
-            </ToggleGroupItem>
-          </ToggleGroup>
         </div>
       </div>
 
@@ -255,51 +157,18 @@ function ProtocolNodesPageContent({
         </CardContent>
       </Card>
 
-      {config.slug === 'meshtastic' ? (
-        <div className="space-y-4">
-          <h2 className="text-xl font-semibold">Recent Nodes</h2>
-          {countLine}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {displayedNodes.map((node) => (
-              <NodeCard key={node.internal_id} node={node} />
-            ))}
+      <div className="space-y-4">
+        <h2 className="text-xl font-semibold">Recent Nodes</h2>
+        {countLine}
+        <NodesTable nodes={displayedNodes} config={config} />
+        {hasNextPage && (
+          <div className="flex justify-center pt-4">
+            <Button variant="outline" onClick={() => fetchNextPage()}>
+              Load more
+            </Button>
           </div>
-          {hasNextPage && (
-            <div className="flex justify-center pt-4">
-              <Button variant="outline" onClick={() => fetchNextPage()}>
-                Load more
-              </Button>
-            </div>
-          )}
-        </div>
-      ) : (
-        <div className="space-y-6">
-          {countLine}
-          <Card>
-            <CardHeader>
-              <CardTitle>With location ({withLocation.length})</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {withLocation.map((node) => (
-                  <NodeCard key={node.internal_id} node={node} />
-                ))}
-              </div>
-              {withLocation.length === 0 && (
-                <p className="text-sm text-muted-foreground">No nodes with a known position in this range.</p>
-              )}
-            </CardContent>
-          </Card>
-          <IdentityOnlyTable nodes={identityOnly} config={config} />
-          {hasNextPage && (
-            <div className="flex justify-center pt-4">
-              <Button variant="outline" onClick={() => fetchNextPage()}>
-                Load more
-              </Button>
-            </div>
-          )}
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }

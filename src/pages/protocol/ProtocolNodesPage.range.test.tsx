@@ -19,9 +19,6 @@ vi.mock('@/components/nodes/NodesAndConstellationsMap', () => ({
 vi.mock('@/components/nodes/NodesMap', () => ({
   NodesMap: ({ nodes }: { nodes: unknown[] }) => <div data-testid="map-stub">{nodes.length}</div>,
 }));
-vi.mock('@/components/nodes/NodeCard', () => ({
-  NodeCard: ({ node }: { node: ObservedNode }) => <div data-testid="node-card">{node.long_name}</div>,
-}));
 
 import { useProtocolObservedNodesSuspense } from '@/hooks/api/useProtocolNodes';
 import { useManagedNodesSuspense } from '@/hooks/api/useNodes';
@@ -116,7 +113,7 @@ describe('ProtocolNodesPage', () => {
     renderPage();
     const map = screen.getByTestId('map-stub');
     const search = screen.getByRole('textbox', { name: /search nodes/i });
-    const firstCard = screen.getAllByTestId('node-card')[0]!;
+    const firstCard = screen.getAllByTestId('node-row')[0]!;
     const chrome = screen.getByTestId('nodes-chrome');
     expect(chrome).toHaveClass('sticky');
     expect(within(chrome).getByTestId('stats-range-bar')).toBeInTheDocument();
@@ -128,7 +125,7 @@ describe('ProtocolNodesPage', () => {
 
     expect(map).toHaveTextContent('3');
     await user.type(search, 'brav');
-    expect(screen.getAllByTestId('node-card')).toHaveLength(1);
+    expect(screen.getAllByTestId('node-row')).toHaveLength(1);
     expect(screen.getByTestId('map-stub')).toHaveTextContent('1');
     expect(screen.getByTestId('nodes-count')).toHaveTextContent('Showing 1 of 3 nodes heard in last 7 days');
   });
@@ -139,7 +136,7 @@ describe('ProtocolNodesPage', () => {
     expect(screen.getByRole('heading', { name: 'Recent Nodes' })).toBeInTheDocument();
   });
 
-  it('MeshCore: filters the identity-only table and the map from the same search box', async () => {
+  it('MeshCore: one table with a Position column, no separate identity-only section, filtered by the same search box', async () => {
     const user = userEvent.setup();
     mockObserved.mockReturnValue({
       nodes: [
@@ -151,14 +148,20 @@ describe('ProtocolNodesPage', () => {
       hasNextPage: false,
     } as unknown as ReturnType<typeof useProtocolObservedNodesSuspense>);
     renderPage(MESHCORE_CONFIG);
-    expect(screen.getByText(/Identity only \/ no position \(1\)/)).toBeInTheDocument();
+    expect(screen.queryByText(/Identity only/)).toBeNull();
+    expect(screen.getAllByTestId('nodes-table')).toHaveLength(1);
+    expect(screen.getAllByTestId('node-row')).toHaveLength(2);
     const search = screen.getByRole('textbox', { name: /search nodes/i });
     await user.type(search, 'zzz');
-    expect(screen.getByText(/Identity only \/ no position \(0\)/)).toBeInTheDocument();
-    expect(screen.getByText(/With location \(0\)/)).toBeInTheDocument();
+    expect(screen.queryAllByTestId('node-row')).toHaveLength(0);
     await user.clear(search);
     await user.type(search, 'nopos');
-    expect(screen.getByText(/Identity only \/ no position \(1\)/)).toBeInTheDocument();
-    expect(screen.getByText(/With location \(0\)/)).toBeInTheDocument();
+    expect(screen.getAllByTestId('node-row')).toHaveLength(1);
+  });
+
+  it('has no sort toggle; headers sort instead', () => {
+    renderPage();
+    expect(screen.queryByRole('radio', { name: /sort by/i })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Last heard' })).toBeInTheDocument();
   });
 });
