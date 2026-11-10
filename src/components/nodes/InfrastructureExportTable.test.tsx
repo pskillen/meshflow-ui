@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 
 import type { InfrastructureExportRow } from '@/lib/infrastructure-export-rows';
@@ -38,10 +38,15 @@ function renderTable(rows: InfrastructureExportRow[]) {
   );
 }
 
-/** Node IDs in the order the body rows are rendered. */
+/**
+ * Node IDs in the order the body rows are rendered.
+ * Reads the DOM directly: role queries (getAllByRole) are very slow in jsdom
+ * with 50+ rows and made the pagination test time out under load.
+ */
 function bodyNodeIds(): string[] {
-  const rows = screen.getAllByRole('row').slice(2); // two header rows (titles + filters)
-  return rows.map((r) => within(r).getAllByRole('cell')[0].textContent ?? '');
+  return Array.from(document.querySelectorAll('tbody tr')).map(
+    (r) => r.querySelector('td')?.textContent ?? ''
+  );
 }
 
 describe('InfrastructureExportTable', () => {
