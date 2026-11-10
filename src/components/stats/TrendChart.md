@@ -17,10 +17,11 @@ Helpers in `src/lib/stats-trend.ts`: `markPartialBuckets(rows, window, bucket)` 
 
 ## Behaviour
 
+- X ticks are evenly spaced whole buckets apart, starting at the first: up to six, fewer as the chart narrows (measured; 3 under about 300px of plot, 4 to 5 up to about 500px). The plot keeps a 20px right margin so the last label is not clipped.
 - Rows are laid on the full UTC bucket grid between `window.start` and `window.end`, so every chart with the same window has the same x positions. Charts sharing a `syncId` share hover.
 - The y-axis runs from 0 to a `niceAxisMax` top (stacked bars fit the stack total).
 - Partial buckets (the one in progress, or a first bucket with fewer samples than a whole one) are drawn as faded dashed bars, or a dashed continuation of the line, and the tooltip adds "partial bucket".
-- X labels and tooltips are in UTC, matching the buckets. Ticks are every Nth bucket from the first (about six in all), so the gaps are even.
+- X labels and tooltips are in UTC, matching the buckets. Ticks are every Nth bucket from the first, so the gaps are even.
 
 ## Accessibility (the pattern every chart in phases 11-16 reuses)
 

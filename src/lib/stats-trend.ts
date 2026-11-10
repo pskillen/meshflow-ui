@@ -179,11 +179,17 @@ export function describeTrend(args: {
   return { name: parts.join(' '), table };
 }
 
+/** How many x labels fit a plot `width` px wide: about 80px each, 3 at the narrowest, 6 at most. */
+export function maxTrendTicks(width: number): number {
+  return Math.min(6, Math.max(3, Math.floor(width / 80)));
+}
+
 /**
- * X ticks for a bucket grid: at most about six, a whole number of buckets apart starting at the first, so the labels
- * are evenly spaced (a "preserve start and end" tick on a grid that does not divide evenly leaves an odd last gap).
+ * X ticks for a bucket grid: at most `maxTicks` (default 6), a whole number of buckets apart starting at the first,
+ * so the labels are evenly spaced (a "preserve start and end" tick on a grid that does not divide evenly leaves an
+ * odd last gap). Pass `maxTrendTicks(width)` on a narrow chart so the labels do not collide.
  */
-export function evenTrendTicks(timestamps: number[]): number[] {
-  const stride = Math.max(1, Math.ceil(timestamps.length / 6));
+export function evenTrendTicks(timestamps: number[], maxTicks = 6): number[] {
+  const stride = Math.max(1, Math.ceil(timestamps.length / Math.max(2, maxTicks)));
   return timestamps.filter((_, i) => i % stride === 0);
 }
