@@ -118,4 +118,31 @@ test.describe('Meshtastic node list', () => {
     await expect(page.getByRole('region', { name: 'Map key' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Map key' })).toBeHidden();
   });
+
+  test('Recent Nodes is a sortable table; Powered shows for 101 and there is no sort toggle', async ({ page }) => {
+    await page.goto('/nodes');
+    const table = page.getByTestId('nodes-table');
+    await expect(table.getByRole('columnheader')).toHaveText([
+      'Node',
+      'ID',
+      'Role',
+      'Hardware',
+      'Battery',
+      'Last heard',
+    ]);
+    await expect(table.getByText('Powered')).toHaveCount(1);
+    await expect(page.getByRole('radio', { name: /Sort by/ })).toHaveCount(0);
+    await expect(table.getByTestId('node-row').first()).toContainText('Alph');
+    await table.getByRole('button', { name: 'Last heard' }).click();
+    await expect(table.getByTestId('node-row').first()).toContainText('Char');
+  });
+
+  test('on a phone the table keeps node, battery and last heard', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 812 });
+    await page.goto('/nodes');
+    const table = page.getByTestId('nodes-table');
+    await expect(table.getByRole('columnheader')).toHaveText(['Node', 'Battery', 'Last heard']);
+    const box = (await table.boundingBox())!;
+    expect(box.width).toBeLessThanOrEqual(375);
+  });
 });
