@@ -26,9 +26,11 @@ export function NodeStatsSection({ internalId, node, isManagedNode, range }: Nod
   const meshtasticNodeId = node.meshtastic_node_id;
   const [batteryDisplayMode, setBatteryDisplayMode] = React.useState<BatteryDisplayMode>('voltage');
 
-  // Stable object: the range window only moves when the key or the hour does.
+  // Stable object: the range window only moves when the key or the hour does. The old charts round `endDate` up to
+  // the next hour; `window.end` is the top of the current hour, so without the extra hour they would stop short of
+  // the newest data.
   const controlledDateRange = React.useMemo(
-    () => ({ startDate: range.window.start, endDate: range.window.end }),
+    () => ({ startDate: range.window.start, endDate: new Date(range.window.end.getTime() + 60 * 60 * 1000) }),
     [range.window]
   );
 
