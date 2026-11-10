@@ -16,6 +16,8 @@ The frame every stats chart sits in: title, a headline number for the range, a p
 
 ## Behaviour
 
+The title is an `h3`. The headline has an id that a [`TrendChart`](TrendChart.md) inside the card points `aria-describedby` at (see its Accessibility section). A range preset names the span, but its window runs to the end of the bucket in progress and starts on a bucket boundary, so it can show a bucket more than the label says (90d draws 91 UTC days).
+
 Presentational. Numbers use tabular figures; the caller formats them. The card can shrink inside a grid (`min-w-0`).
 
 ## Wiring

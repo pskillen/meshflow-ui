@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useContext, useMemo } from 'react';
 import { Bar, BarChart, CartesianGrid, Line, LineChart, Rectangle, XAxis, YAxis } from 'recharts';
 import {
   ChartContainer,
@@ -8,11 +8,14 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from '@/components/ui/chart';
+import { ChartCardContext } from '@/components/stats/chart-card-context';
 import { maxStackTotal, niceAxisMax } from '@/lib/axis-ticks';
 import type { StatsBucket, StatsRangeWindow } from '@/lib/stats-range';
 import {
   PARTIAL_LINE_SUFFIX,
   densifyTrendRows,
+  describeTrend,
+  evenTrendTicks,
   formatCompact,
   formatTrendLabel,
   formatTrendTick,
@@ -44,8 +47,14 @@ export interface TrendChartProps {
   syncId?: string;
   /** Pixel height. Default 190. */
   height?: number;
-  /** Accessible description of the chart. */
+  /**
+   * Accessible name stem: the chart's title and range, "Online nodes, last 7 days". The chart's full name adds the
+   * bucket size, `headline`, the latest value and whether the last bucket is in progress; a table of every bucketed
+   * value follows the chart for screen readers.
+   */
   label?: string;
+  /** The card's headline ("avg 88"), repeated in the accessible name. */
+  headline?: string;
   className?: string;
 }
 
@@ -84,8 +93,10 @@ export function TrendChart({
   syncId,
   height = 190,
   label,
+  headline,
   className,
 }: TrendChartProps) {
+  const { headlineId } = useContext(ChartCardContext);
   const keys = useMemo(() => series.map((s) => s.key), [series]);
   const config = useMemo<ChartConfig>(
     () => Object.fromEntries(series.map((s) => [s.key, { label: s.label, color: s.color }])),
@@ -111,6 +122,12 @@ export function TrendChart({
     return niceAxisMax(max);
   }, [dense, keys, kind, stacked]);
 
+  const ticks = useMemo(() => evenTrendTicks(dense.map((r) => r.timestamp)), [dense]);
+  const description = useMemo(
+    () => describeTrend({ label, headline, bucket, rows: dense, series }),
+    [label, headline, bucket, dense, series]
+  );
+
   const common = {
     syncId,
     margin: { top: 8, right: 8, left: 0, bottom: 0 },
@@ -122,8 +139,8 @@ export function TrendChart({
       tickLine={false}
       axisLine={false}
       tickMargin={6}
-      minTickGap={bucket === 'hourly' ? 28 : 40}
-      interval="preserveStartEnd"
+      ticks={ticks}
+      interval={0}
       tickFormatter={(t: number) => formatTrendTick(t, bucket)}
     />
   );
@@ -156,69 +173,95 @@ export function TrendChart({
   const legend = series.length > 1 ? <ChartLegend content={<ChartLegendContent />} /> : null;
 
   return (
-    <ChartContainer
-      config={config}
-      className={className ?? 'aspect-auto w-full'}
-      style={{ height }}
-      role="img"
-      aria-label={label}
-      data-testid="trend-chart"
-      data-kind={kind}
-    >
-      {kind === 'line' ? (
-        <LineChart data={lineRows} {...common}>
-          <CartesianGrid vertical={false} strokeOpacity={0.5} />
-          {xAxis}
-          {yAxis}
-          {tooltip}
-          {legend}
-          {series.map((s) => (
-            <Line
-              key={s.key}
-              dataKey={s.key}
-              name={s.label}
-              stroke={`var(--color-${s.key})`}
-              strokeWidth={2}
-              dot={false}
-              isAnimationActive={false}
-            />
+    <>
+      <ChartContainer
+        config={config}
+        className={className ?? 'aspect-auto w-full'}
+        style={{ height }}
+        role="img"
+        aria-label={description.name}
+        aria-describedby={headlineId}
+        data-testid="trend-chart"
+        data-kind={kind}
+      >
+        {kind === 'line' ? (
+          <LineChart data={lineRows} {...common}>
+            <CartesianGrid vertical={false} strokeOpacity={0.5} />
+            {xAxis}
+            {yAxis}
+            {tooltip}
+            {legend}
+            {series.map((s) => (
+              <Line
+                key={s.key}
+                dataKey={s.key}
+                name={s.label}
+                stroke={`var(--color-${s.key})`}
+                strokeWidth={2}
+                dot={false}
+                isAnimationActive={false}
+              />
+            ))}
+            {series.map((s) => (
+              <Line
+                key={`${s.key}${PARTIAL_LINE_SUFFIX}`}
+                dataKey={`${s.key}${PARTIAL_LINE_SUFFIX}`}
+                name={s.label}
+                stroke={`var(--color-${s.key})`}
+                strokeWidth={2}
+                strokeDasharray="4 3"
+                dot={false}
+                legendType="none"
+                tooltipType="none"
+                isAnimationActive={false}
+              />
+            ))}
+          </LineChart>
+        ) : (
+          <BarChart data={dense} maxBarSize={56} {...common}>
+            <CartesianGrid vertical={false} strokeOpacity={0.5} />
+            {xAxis}
+            {yAxis}
+            {tooltip}
+            {legend}
+            {series.map((s, i) => (
+              <Bar
+                key={s.key}
+                dataKey={s.key}
+                name={s.label}
+                stackId={stacked ? 'stack' : undefined}
+                fill={`var(--color-${s.key})`}
+                radius={!stacked || i === series.length - 1 ? [3, 3, 0, 0] : 0}
+                shape={(p: unknown) => <PartialAwareBar {...(p as PartialRectProps)} />}
+                isAnimationActive={false}
+              />
+            ))}
+          </BarChart>
+        )}
+      </ChartContainer>
+      <table className="sr-only" data-testid="trend-chart-table">
+        <caption>{description.name}</caption>
+        <thead>
+          <tr>
+            <th scope="col">Bucket</th>
+            {series.map((s) => (
+              <th key={s.key} scope="col">
+                {s.label}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {description.table.map((row) => (
+            <tr key={row.timestamp}>
+              <th scope="row">{row.label}</th>
+              {row.cells.map((cell, i) => (
+                <td key={series[i]!.key}>{cell}</td>
+              ))}
+            </tr>
           ))}
-          {series.map((s) => (
-            <Line
-              key={`${s.key}${PARTIAL_LINE_SUFFIX}`}
-              dataKey={`${s.key}${PARTIAL_LINE_SUFFIX}`}
-              name={s.label}
-              stroke={`var(--color-${s.key})`}
-              strokeWidth={2}
-              strokeDasharray="4 3"
-              dot={false}
-              legendType="none"
-              tooltipType="none"
-              isAnimationActive={false}
-            />
-          ))}
-        </LineChart>
-      ) : (
-        <BarChart data={dense} maxBarSize={56} {...common}>
-          <CartesianGrid vertical={false} strokeOpacity={0.5} />
-          {xAxis}
-          {yAxis}
-          {tooltip}
-          {legend}
-          {series.map((s, i) => (
-            <Bar
-              key={s.key}
-              dataKey={s.key}
-              name={s.label}
-              stackId={stacked ? 'stack' : undefined}
-              fill={`var(--color-${s.key})`}
-              radius={!stacked || i === series.length - 1 ? [3, 3, 0, 0] : 0}
-              shape={(p: unknown) => <PartialAwareBar {...(p as PartialRectProps)} />}
-              isAnimationActive={false}
-            />
-          ))}
-        </BarChart>
-      )}
-    </ChartContainer>
+        </tbody>
+      </table>
+    </>
   );
 }

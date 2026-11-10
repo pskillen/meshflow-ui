@@ -69,6 +69,11 @@ function chartNote(trend: CountTrend, range: StatsRange): string | undefined {
   return parts.length ? parts.join(' ') : undefined;
 }
 
+/** A headline over a truncated range (the API ignored `bucket`) covers only part of it: say so. */
+function withPartial(headline: string, trend: CountTrend): string {
+  return trend.truncated ? `${headline} (partial)` : headline;
+}
+
 function ChartSkeleton({ title }: { title: string }) {
   return (
     <ChartCard title={title} data-testid="chart-skeleton">
@@ -109,8 +114,10 @@ function NodesChart({
     [pages, scope, metric, range.window, range.bucket]
   );
 
-  const headline =
-    metric === 'online_nodes' ? `avg ${nf.format(meanOf(trend.rows, keys))}` : nf.format(totalOf(trend.rows, keys));
+  const headline = withPartial(
+    metric === 'online_nodes' ? `avg ${nf.format(meanOf(trend.rows, keys))}` : nf.format(totalOf(trend.rows, keys)),
+    trend
+  );
   const measure =
     metric === 'online_nodes'
       ? `Each point: nodes heard in the 2h around it${range.bucket === 'hourly' ? '' : ` · ${range.bucketLabel} mean`}`
@@ -132,6 +139,7 @@ function NodesChart({
         bucket={range.bucket}
         syncId={SYNC_ID}
         label={`${title}, ${range.longLabel}`}
+        headline={headline}
       />
     </ChartCard>
   );
@@ -176,10 +184,12 @@ function PacketVolumeChart({ scope, range }: NodeChartProps) {
   );
   const shown = split ?? total;
 
+  const headline = withPartial(nf.format(totalOf(total.rows, keys)), total);
+
   return (
     <ChartCard
       title="Packet volume"
-      headline={nf.format(totalOf(total.rows, keys))}
+      headline={headline}
       measure={`Packets per ${bucketPhrase(range.bucket)}${byType ? ', by packet type' : ''}`}
       note={chartNote(shown, range)}
       data-testid="chart-packet_volume"
@@ -210,6 +220,7 @@ function PacketVolumeChart({ scope, range }: NodeChartProps) {
         bucket={range.bucket}
         syncId={SYNC_ID}
         label={`Packet volume, ${range.longLabel}`}
+        headline={headline}
       />
     </ChartCard>
   );

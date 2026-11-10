@@ -15,6 +15,7 @@ vi.mock('recharts', async (importOriginal) => {
 });
 
 type Params = Record<string, unknown>;
+const state = vi.hoisted(() => ({ truncate: false }));
 const calls: { types: readonly string[]; params: Params }[] = [];
 
 function snap(stat: string, iso: string, count: number, extra: Record<string, unknown> = {}) {
@@ -33,7 +34,7 @@ vi.mock('@/hooks/api/useStatsSnapshots', () => ({
             ...(params.bucket ? { samples: 24 } : {}),
           }),
         ];
-        return [t, { count: rows.length, next: null, previous: null, results: rows }];
+        return [t, { count: state.truncate ? rows.length + 500 : rows.length, next: null, previous: null, results: rows }];
       })
     );
   },
@@ -67,6 +68,7 @@ const lastParamsFor = (type: string) => [...calls].reverse().find((c) => c.types
 describe('MeshStatsSection', () => {
   beforeEach(() => {
     calls.length = 0;
+    state.truncate = false;
     window.sessionStorage.clear();
   });
 
@@ -107,6 +109,20 @@ describe('MeshStatsSection', () => {
     expect(screen.getByTestId('chart-new_nodes-headline')).toHaveTextContent('10');
     expect(screen.getByTestId('chart-packet_volume-measure')).toHaveTextContent('Packets per UTC day');
     expect(screen.getByTestId('chart-online_nodes-measure')).toHaveTextContent('daily mean');
+  });
+
+  it('marks the headline partial when the API returned only part of the range', () => {
+    state.truncate = true;
+    renderSection('meshtastic', '/?range=30d');
+    expect(screen.getByTestId('chart-new_nodes-headline')).toHaveTextContent('10 (partial)');
+    expect(screen.getByTestId('chart-packet_volume-headline')).toHaveTextContent('(partial)');
+  });
+
+  it('titles each chart with a heading', () => {
+    renderSection();
+    for (const name of ['Online nodes', 'New nodes', 'Packet volume']) {
+      expect(screen.getByRole('heading', { level: 3, name })).toBeInTheDocument();
+    }
   });
 
   it('keeps the Total / By type toggle on single-protocol dashboards', () => {
