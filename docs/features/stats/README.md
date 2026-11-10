@@ -47,7 +47,7 @@ Each was decided in https://github.com/pskillen/meshflow-ui/issues/407.
 - Dashboard charts share `ChartCard` and `TrendChart`, and 30d/90d ask for `bucket=1d`.
 - Home "Right now" shows the total with `MT n · MC n`. "All time" is not shown. There is one battery helper.
 - The firmware split is the latest snapshot, labelled with its own window. The trend follows the range on a daily grid. Phones show counts and the trend only. Home puts stats above the map, and on phones the map stays collapsed and unmounted until opened. Unknown firmware is dashed, so it is never told apart by colour alone.
-- Previous-period deltas shipped in ui#445 without a faint previous-period line on the trend charts.
+- Dashboard headlines show the change against the previous period; there is no previous-period line on the trend charts.
 
 ## Known gaps
 
