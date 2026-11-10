@@ -7,7 +7,7 @@ export class DashboardPage extends BasePage {
   }
 
   get recentlyActiveNodesHeading() {
-    return this.page.getByText('Recently Active Nodes');
+    return this.page.getByRole('heading', { name: 'Right now' });
   }
 
   get meshflowMapHeading() {
@@ -15,15 +15,11 @@ export class DashboardPage extends BasePage {
   }
 
   get meshStatsHeading() {
-    return this.page.getByText('Mesh stats');
+    return this.page.getByText('Over the last 7 days');
   }
 
   get nodesPageLink() {
     return this.page.getByRole('link', { name: /nodes page/i });
-  }
-
-  get recentlyActiveNodesTable() {
-    return this.recentlyActiveNodesHeading.locator('..').locator('..').locator('table');
   }
 
   async expectLoaded() {
@@ -33,9 +29,9 @@ export class DashboardPage extends BasePage {
   }
 
   async expectNodeCounts(values: (string | number)[]) {
-    const section = this.page.getByTestId('dashboard-recently-active-nodes');
+    const section = this.page.getByTestId('right-now-tiles');
     for (const value of values) {
-      await expect(section.getByText(String(value), { exact: true })).toBeVisible();
+      await expect(section.getByText(String(value), { exact: false }).first()).toBeVisible();
     }
   }
 

@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { subHours, subDays, startOfDay } from 'date-fns';
+import { windowForTimeRangeKey } from '@/lib/time-range';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { TimeRangeSelect, TimeRangeOption } from '@/components/TimeRangeSelect';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
@@ -22,20 +22,6 @@ const STATS_TIME_RANGE_OPTIONS: TimeRangeOption[] = [
   { key: '14d', label: '14 days' },
 ];
 
-function computeDateRange(value: string): { startDate: Date; endDate: Date } {
-  const now = new Date();
-  if (value.endsWith('d')) {
-    const days = parseInt(value);
-    const startDate = days === 1 ? startOfDay(now) : subDays(startOfDay(now), days);
-    return { startDate, endDate: now };
-  }
-  if (value.endsWith('h')) {
-    const hours = parseInt(value);
-    return { startDate: subHours(now, hours), endDate: now };
-  }
-  return { startDate: subDays(now, 7), endDate: now };
-}
-
 interface NodeStatsSectionProps {
   internalId: string;
   node: ObservedNode;
@@ -45,7 +31,7 @@ interface NodeStatsSectionProps {
 export function NodeStatsSection({ internalId, node, isManagedNode }: NodeStatsSectionProps) {
   const meshtasticNodeId = node.meshtastic_node_id;
   const [timeRange, setTimeRange] = React.useState('48h');
-  const [dateRange, setDateRange] = React.useState(() => computeDateRange('48h'));
+  const [dateRange, setDateRange] = React.useState(() => windowForTimeRangeKey('48h'));
   const [batteryDisplayMode, setBatteryDisplayMode] = React.useState<BatteryDisplayMode>('voltage');
 
   const controlledDateRange = { startDate: dateRange.startDate, endDate: dateRange.endDate };

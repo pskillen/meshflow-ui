@@ -1,6 +1,5 @@
-import { startOfDay, subDays, subHours } from 'date-fns';
-
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { windowForTimeRangeKey } from '@/lib/time-range';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 
 export interface TimeRangeOption {
@@ -17,29 +16,7 @@ interface TimeRangeSelectProps {
 
 export function TimeRangeSelect({ options, value, onChange, className }: TimeRangeSelectProps) {
   const handleTimeRangeChange = (newValue: string) => {
-    const now = new Date();
-    let startDate: Date;
-
-    // Check if the time range is in days or hours
-    if (newValue.endsWith('d')) {
-      const days = parseInt(newValue);
-      if (days === 1) {
-        // For 1 day, use start of today
-        startDate = startOfDay(now);
-      } else {
-        // For multiple days, subtract days from start of today
-        startDate = subDays(startOfDay(now), days);
-      }
-    } else if (newValue.endsWith('h')) {
-      // For hours, just subtract hours from now
-      const hours = parseInt(newValue);
-      startDate = subHours(now, hours);
-    } else {
-      // Default fallback
-      startDate = subDays(now, 7);
-    }
-
-    onChange(newValue, { startDate, endDate: now });
+    onChange(newValue, windowForTimeRangeKey(newValue));
   };
 
   return (

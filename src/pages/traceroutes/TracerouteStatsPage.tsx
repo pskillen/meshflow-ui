@@ -5,11 +5,15 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { ListIcon, RouteIcon } from 'lucide-react';
+import { StatsRangeBar } from '@/components/stats/StatsRangeBar';
+import { useStatsRange } from '@/hooks/useStatsRange';
 import { TracerouteStatsSection } from '@/components/traceroutes/TracerouteStatsSection';
 import { useTracerouteTriggerableNodesSuspense, useTriggerTraceroute } from '@/hooks/api/useTraceroutes';
 import { useManagedNodesSuspense, useNodesSuspense } from '@/hooks/api/useNodes';
 import { TriggerTracerouteModal, TriggerMode } from './TriggerTracerouteModal';
 import { getTracerouteErrorMessage } from './tracerouteErrors';
+
+const TRACEROUTE_STATS_AREA = 'traceroutes';
 
 function parseNumberParam(raw: string | null): number | null {
   if (!raw) return null;
@@ -20,6 +24,7 @@ function parseNumberParam(raw: string | null): number | null {
 export function TracerouteStatsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const sourceNodeId = parseNumberParam(searchParams.get('source_node'));
+  const range = useStatsRange({ area: TRACEROUTE_STATS_AREA });
 
   const setSourceNode = (id: number | null) => {
     const next = new URLSearchParams(searchParams);
@@ -63,22 +68,6 @@ export function TracerouteStatsPage() {
           Traceroute statistics
         </h1>
         <div className="flex flex-wrap items-center gap-2">
-          <Select
-            value={sourceNodeId != null ? String(sourceNodeId) : 'all'}
-            onValueChange={(v) => setSourceNode(v === 'all' ? null : parseInt(v, 10))}
-          >
-            <SelectTrigger className="w-[200px]">
-              <SelectValue placeholder="Source (stats scope)" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All sources</SelectItem>
-              {triggerableNodes.map((n) => (
-                <SelectItem key={n.meshtastic_node_id} value={String(n.meshtastic_node_id)}>
-                  {n.short_name ?? n.node_id_str ?? String(n.meshtastic_node_id)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
           <Button variant="outline" size="default" asChild>
             <Link to="/traceroutes/history">
               <ListIcon className="mr-2 h-4 w-4" />
@@ -94,7 +83,30 @@ export function TracerouteStatsPage() {
         </div>
       </div>
 
-      <TracerouteStatsSection sourceNodeId={sourceNodeId} />
+      <StatsRangeBar value={range.key} options={range.options} onChange={range.setRange}>
+        <Select
+          value={sourceNodeId != null ? String(sourceNodeId) : 'all'}
+          onValueChange={(v) => setSourceNode(v === 'all' ? null : parseInt(v, 10))}
+        >
+          <SelectTrigger className="w-[200px]">
+            <SelectValue placeholder="Source (stats scope)" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All sources</SelectItem>
+            {triggerableNodes.map((n) => (
+              <SelectItem key={n.meshtastic_node_id} value={String(n.meshtastic_node_id)}>
+                {n.short_name ?? n.node_id_str ?? String(n.meshtastic_node_id)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </StatsRangeBar>
+
+      <TracerouteStatsSection
+        sourceNodeId={sourceNodeId}
+        triggeredAtAfter={range.window.start}
+        rangeLabel={range.longLabel}
+      />
 
       <TriggerTracerouteModal
         open={triggerModalOpen}

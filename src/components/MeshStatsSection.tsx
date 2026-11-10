@@ -1,32 +1,31 @@
-'use client';
-
-import * as React from 'react';
-import { subDays } from 'date-fns';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { TimeRangeSelect, TimeRangeOption } from '@/components/TimeRangeSelect';
-import { OnlineNodesChart } from '@/components/OnlineNodesChart';
-import { PacketStatsChartFromSnapshots } from '@/components/PacketStatsChartFromSnapshots';
-import { ChartConfig } from '@/components/ui/chart';
+import { Fragment, Suspense, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { MC_PACKET_TYPE_DISPLAY_NAMES, type MeshStatsProtocolScope } from '@/lib/stats-snapshot-types';
+import { ChartCard } from '@/components/stats/ChartCard';
+import { TrendChart, type TrendSeries } from '@/components/stats/TrendChart';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { useStatsSnapshotsForTypesSuspense } from '@/hooks/api/useStatsSnapshots';
+import type { StatsRange } from '@/hooks/useStatsRange';
 import { PACKET_TYPE_DISPLAY_NAMES } from '@/lib/stats-aggregation';
+import {
+  MC_PACKET_TYPE_DISPLAY_NAMES,
+  onlineNodesMetricStatTypes,
+  packetVolumeStatTypes,
+  type MeshStatsProtocolScope,
+  type OnlineNodesChartMetric,
+} from '@/lib/stats-snapshot-types';
+import { formatTrendLabel } from '@/lib/stats-trend';
+import {
+  buildByTypeRows,
+  buildCountRows,
+  bucketPhrase,
+  meanOf,
+  seriesForScope,
+  snapshotParamsForRange,
+  totalOf,
+  type CountTrend,
+} from '@/lib/stats-trend-data';
 
-const MESH_STATS_TIME_OPTIONS: TimeRangeOption[] = [
-  { key: '48h', label: 'Last 48 hours' },
-  { key: '1d', label: 'Today' },
-  { key: '2d', label: 'Last 2 days' },
-  { key: '7d', label: 'Last 7 days' },
-  { key: '30d', label: 'Last 30 days' },
-];
-
-const OVERLAY_CHART_CONFIG = {
-  meshtastic: { label: 'Meshtastic', color: 'hsl(var(--chart-1))' },
-  meshcore: { label: 'MeshCore', color: 'hsl(var(--chart-4))' },
-} satisfies ChartConfig;
-
-const SINGLE_SERIES_CONFIG = {
-  value: { label: 'Count', color: 'hsl(var(--chart-1))' },
-} satisfies ChartConfig;
+const nf = new Intl.NumberFormat('en-GB');
 
 const PACKET_TYPE_COLORS = [
   'hsl(var(--chart-1))',
@@ -38,118 +37,237 @@ const PACKET_TYPE_COLORS = [
   'hsl(280 60% 55%)',
 ];
 
-function buildPacketTypeChartConfig(labels: Record<string, string>): ChartConfig {
-  return {
-    value: { label: 'Packets', color: 'hsl(var(--chart-2))' },
-    ...Object.fromEntries(
-      Object.keys(labels).map((k, i) => [
-        k,
-        { label: labels[k], color: PACKET_TYPE_COLORS[i % PACKET_TYPE_COLORS.length] },
-      ])
-    ),
-  };
+function packetTypeSeries(labels: Record<string, string>): TrendSeries[] {
+  return Object.keys(labels).map((key, i) => ({
+    key,
+    label: labels[key]!,
+    color: PACKET_TYPE_COLORS[i % PACKET_TYPE_COLORS.length]!,
+  }));
 }
 
-const SECTION_COPY: Record<
-  MeshStatsProtocolScope,
-  { title: string; description: string; links?: { href: string; label: string }[] }
-> = {
-  both: {
-    title: 'Mesh stats',
-    description:
-      'Meshtastic and MeshCore activity from hourly snapshots. Online nodes use a 2h window; new nodes are daily totals.',
-  },
-  meshtastic: {
-    title: 'Meshtastic stats',
-    description: 'Packet and node activity on the Meshtastic mesh (hourly snapshots).',
-    links: [
-      { href: '/messages', label: 'Messages' },
-      { href: '/nodes', label: 'Nodes' },
-    ],
-  },
-  meshcore: {
-    title: 'MeshCore stats',
-    description: 'Packet and node activity on the MeshCore mesh (hourly snapshots).',
-    links: [
-      { href: '/meshcore/messages', label: 'Messages' },
-      { href: '/meshcore/nodes', label: 'Nodes' },
-    ],
-  },
+const SECTION_LINKS: Partial<Record<MeshStatsProtocolScope, { href: string; label: string }[]>> = {
+  meshtastic: [
+    { href: '/messages', label: 'Messages' },
+    { href: '/nodes', label: 'Nodes' },
+  ],
+  meshcore: [
+    { href: '/meshcore/messages', label: 'Messages' },
+    { href: '/meshcore/nodes', label: 'Nodes' },
+  ],
 };
 
-export function MeshStatsSection({ protocolScope = 'both' }: { protocolScope?: MeshStatsProtocolScope }) {
-  const [timeRangeKey, setTimeRangeKey] = React.useState('2d');
-  const [dateRange, setDateRange] = React.useState<{ startDate: Date; endDate: Date }>({
-    startDate: subDays(new Date(), 2),
-    endDate: new Date(),
-  });
+const SYNC_ID = 'mesh-stats';
 
-  const handleTimeRangeChange = (value: string, timeRange: { startDate: Date; endDate: Date }) => {
-    if (value === timeRangeKey) return;
-    setTimeRangeKey(value);
-    setDateRange(timeRange);
-  };
+/** The note under a chart: what the dashes mean, what is truncated, and the latest point. */
+function chartNote(trend: CountTrend, range: StatsRange): string | undefined {
+  const parts: string[] = [];
+  if (trend.hasPartial) parts.push('Faded or dashed: still in progress, or only partly covered.');
+  if (trend.truncated) parts.push('The API returned only part of this range; the oldest days are missing.');
+  if (trend.latest != null && range.bucket !== 'daily') {
+    parts.push(`Latest point ${formatTrendLabel(trend.latest, range.bucket)}.`);
+  }
+  return parts.length ? parts.join(' ') : undefined;
+}
 
-  const copy = SECTION_COPY[protocolScope];
-  const nodeChartConfig = protocolScope === 'both' ? OVERLAY_CHART_CONFIG : SINGLE_SERIES_CONFIG;
-  const packetChartConfig =
-    protocolScope === 'meshcore'
-      ? buildPacketTypeChartConfig(MC_PACKET_TYPE_DISPLAY_NAMES)
-      : buildPacketTypeChartConfig(PACKET_TYPE_DISPLAY_NAMES);
+/** A headline over a truncated range (the API ignored `bucket`) covers only part of it: say so. */
+function withPartial(headline: string, trend: CountTrend): string {
+  return trend.truncated ? `${headline} (partial)` : headline;
+}
+
+function ChartSkeleton({ title }: { title: string }) {
+  return (
+    <ChartCard title={title} data-testid="chart-skeleton">
+      <div className="h-[190px] w-full animate-pulse rounded bg-muted/50" />
+    </ChartCard>
+  );
+}
+
+interface NodeChartProps {
+  scope: MeshStatsProtocolScope;
+  range: StatsRange;
+}
+
+/** Online nodes (line, mean per bucket) or New nodes (bars, total per bucket). */
+function NodesChart({
+  scope,
+  range,
+  metric,
+  title,
+  kind,
+}: NodeChartProps & { metric: OnlineNodesChartMetric; title: string; kind: 'line' | 'bar' }) {
+  const statTypes = useMemo(() => onlineNodesMetricStatTypes(metric, scope), [metric, scope]);
+  const params = useMemo(() => snapshotParamsForRange(range.window, range.bucket), [range.window, range.bucket]);
+  const pages = useStatsSnapshotsForTypesSuspense(statTypes, params);
+  const series = useMemo(() => seriesForScope(scope), [scope]);
+  const keys = series.map((s) => s.key);
+  const trend = useMemo(
+    () =>
+      buildCountRows({
+        pages,
+        scope,
+        mtStat: metric,
+        mcStat: metric === 'online_nodes' ? 'mc_online_nodes' : 'mc_new_nodes',
+        mode: metric === 'online_nodes' ? 'average' : 'sum',
+        window: range.window,
+        bucket: range.bucket,
+      }),
+    [pages, scope, metric, range.window, range.bucket]
+  );
+
+  const headline = withPartial(
+    metric === 'online_nodes' ? `avg ${nf.format(meanOf(trend.rows, keys))}` : nf.format(totalOf(trend.rows, keys)),
+    trend
+  );
+  const measure =
+    metric === 'online_nodes'
+      ? `Each point: nodes heard in the 2h around it${range.bucket === 'hourly' ? '' : ` · ${range.bucketLabel} mean`}`
+      : `First seen, per ${bucketPhrase(range.bucket)}`;
 
   return (
-    <Card data-testid="dashboard-mesh-stats">
-      <CardHeader className="relative">
-        <CardTitle>{copy.title}</CardTitle>
-        <CardDescription>
-          {copy.description}
-          {copy.links?.length ? (
-            <span className="mt-2 block">
-              {copy.links.map((link, i) => (
-                <React.Fragment key={link.href}>
-                  {i > 0 ? ' · ' : ''}
-                  <Link to={link.href} className="underline underline-offset-2">
-                    {link.label}
-                  </Link>
-                </React.Fragment>
-              ))}
-            </span>
-          ) : null}
-        </CardDescription>
-        <div className="absolute right-4 top-4">
-          <TimeRangeSelect options={MESH_STATS_TIME_OPTIONS} value={timeRangeKey} onChange={handleTimeRangeChange} />
+    <ChartCard
+      title={title}
+      headline={headline}
+      measure={measure}
+      note={chartNote(trend, range)}
+      data-testid={`chart-${metric}`}
+    >
+      <TrendChart
+        kind={kind}
+        rows={trend.rows}
+        series={series}
+        window={range.window}
+        bucket={range.bucket}
+        syncId={SYNC_ID}
+        label={`${title}, ${range.longLabel}`}
+        headline={headline}
+      />
+    </ChartCard>
+  );
+}
+
+/** Packet volume: total per bucket, with a Total / By type toggle on single-protocol dashboards. */
+function PacketVolumeChart({ scope, range }: NodeChartProps) {
+  const [view, setView] = useState<'total' | 'byType'>('total');
+  const statTypes = useMemo(() => packetVolumeStatTypes(scope), [scope]);
+  const params = useMemo(() => snapshotParamsForRange(range.window, range.bucket), [range.window, range.bucket]);
+  const pages = useStatsSnapshotsForTypesSuspense(statTypes, params);
+  const series = useMemo(() => seriesForScope(scope), [scope]);
+  const keys = series.map((s) => s.key);
+  const typeLabels = scope === 'meshcore' ? MC_PACKET_TYPE_DISPLAY_NAMES : PACKET_TYPE_DISPLAY_NAMES;
+  const typeSeries = useMemo(() => packetTypeSeries(typeLabels), [typeLabels]);
+  const canSplit = scope !== 'both';
+  const byType = canSplit && view === 'byType';
+
+  const total = useMemo(
+    () =>
+      buildCountRows({
+        pages,
+        scope,
+        mtStat: 'packet_volume',
+        mcStat: 'mc_packet_volume',
+        mode: 'sum',
+        window: range.window,
+        bucket: range.bucket,
+      }),
+    [pages, scope, range.window, range.bucket]
+  );
+  const split = useMemo(
+    () =>
+      byType
+        ? buildByTypeRows({
+            page: pages[scope === 'meshcore' ? 'mc_packet_volume' : 'packet_volume'],
+            window: range.window,
+            bucket: range.bucket,
+          })
+        : null,
+    [byType, pages, scope, range.window, range.bucket]
+  );
+  const shown = split ?? total;
+
+  const headline = withPartial(nf.format(totalOf(total.rows, keys)), total);
+
+  return (
+    <ChartCard
+      title="Packet volume"
+      headline={headline}
+      measure={`Packets per ${bucketPhrase(range.bucket)}${byType ? ', by packet type' : ''}`}
+      note={chartNote(shown, range)}
+      data-testid="chart-packet_volume"
+      actions={
+        canSplit ? (
+          <ToggleGroup
+            type="single"
+            value={view}
+            onValueChange={(v) => v && setView(v as 'total' | 'byType')}
+            variant="outline"
+            size="sm"
+          >
+            <ToggleGroupItem value="total" aria-label="Total packets">
+              Total
+            </ToggleGroupItem>
+            <ToggleGroupItem value="byType" aria-label="Packets by type">
+              By type
+            </ToggleGroupItem>
+          </ToggleGroup>
+        ) : undefined
+      }
+    >
+      <TrendChart
+        kind="bar"
+        rows={shown.rows}
+        series={byType ? typeSeries : series}
+        window={range.window}
+        bucket={range.bucket}
+        syncId={SYNC_ID}
+        label={`Packet volume, ${range.longLabel}`}
+        headline={headline}
+      />
+    </ChartCard>
+  );
+}
+
+export interface MeshStatsSectionProps {
+  protocolScope?: MeshStatsProtocolScope;
+  /** The dashboards' shared range (`useStatsRange({ area: 'dashboards' })`), chosen on the page's `StatsRangeBar`. */
+  range: StatsRange;
+}
+
+/** "Over the range" charts for a dashboard: Online nodes, New nodes, Packet volume. See MeshStatsSection.md. */
+export function MeshStatsSection({ protocolScope = 'both', range }: MeshStatsSectionProps) {
+  const links = SECTION_LINKS[protocolScope];
+  return (
+    <section className="space-y-2 md:space-y-3" data-testid="dashboard-mesh-stats">
+      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+        <h2 className="text-sm md:text-base font-semibold">Over the {range.longLabel}</h2>
+        <p className="hidden text-xs text-muted-foreground md:block">
+          Every chart shares this range, x-axis and hover.
+        </p>
+        {links?.length ? (
+          <p className="text-xs text-muted-foreground">
+            {links.map((link, i) => (
+              <Fragment key={link.href}>
+                {i > 0 ? ' · ' : ''}
+                <Link to={link.href} className="underline underline-offset-2">
+                  {link.label}
+                </Link>
+              </Fragment>
+            ))}
+          </p>
+        ) : null}
+      </div>
+      <div className="grid gap-3 md:grid-cols-2">
+        <div className="md:col-span-2">
+          <Suspense fallback={<ChartSkeleton title="Online nodes" />}>
+            <NodesChart scope={protocolScope} range={range} metric="online_nodes" title="Online nodes" kind="line" />
+          </Suspense>
         </div>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-6">
-        <OnlineNodesChart
-          title="Online Nodes"
-          description="Nodes heard within 2h"
-          metric="online_nodes"
-          protocolScope={protocolScope}
-          config={nodeChartConfig}
-          embedded
-          dateRange={dateRange}
-          movingAverage={protocolScope !== 'both'}
-        />
-        <OnlineNodesChart
-          title="New Nodes"
-          description="Newly discovered nodes per day"
-          metric="new_nodes"
-          protocolScope={protocolScope}
-          config={nodeChartConfig}
-          embedded
-          dateRange={dateRange}
-          movingAverage={false}
-        />
-        <PacketStatsChartFromSnapshots
-          title="Packet volume"
-          description="Packets per hour (or aggregated window)"
-          config={protocolScope === 'both' ? OVERLAY_CHART_CONFIG : packetChartConfig}
-          protocolScope={protocolScope}
-          embedded
-          dateRange={dateRange}
-        />
-      </CardContent>
-    </Card>
+        <Suspense fallback={<ChartSkeleton title="New nodes" />}>
+          <NodesChart scope={protocolScope} range={range} metric="new_nodes" title="New nodes" kind="bar" />
+        </Suspense>
+        <Suspense fallback={<ChartSkeleton title="Packet volume" />}>
+          <PacketVolumeChart scope={protocolScope} range={range} />
+        </Suspense>
+      </div>
+    </section>
   );
 }

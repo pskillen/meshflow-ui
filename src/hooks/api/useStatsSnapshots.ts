@@ -15,7 +15,7 @@ function getStatsSnapshotsKey(params?: StatsSnapshotsParams): string {
     const rounded = roundToNearestMinutes(params.recordedAtBefore, { nearestTo: 5 });
     parts.push(rounded.toISOString());
   }
-  parts.push(params.page?.toString() ?? '', params.page_size?.toString() ?? '');
+  parts.push(params.bucket ?? '', params.page?.toString() ?? '', params.page_size?.toString() ?? '');
   return parts.join('-');
 }
 
