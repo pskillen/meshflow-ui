@@ -1,44 +1,18 @@
-import { useMemo } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Cell,
-  Legend,
-  Line,
-  LineChart,
-  Pie,
-  PieChart,
-  XAxis,
-  YAxis,
-  Tooltip as RechartsTooltip,
-} from 'recharts';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ChartConfig, ChartContainer, ChartTooltipContent } from '@/components/ui/chart';
+import { HelpCircle } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { HelpCircle } from 'lucide-react';
+import { ChartCard } from '@/components/stats/ChartCard';
+import { StatTile } from '@/components/stats/StatTile';
+import { TrendChart } from '@/components/stats/TrendChart';
+import { BarList, type BarListRow } from '@/components/traceroutes/BarList';
 import { useTracerouteStats } from '@/hooks/api/useTraceroutes';
-import { strategyLabel } from '@/lib/traceroute-strategy';
-import {
-  buildStrategySuccessBarChartData,
-  type StrategySuccessBarChartRow,
-} from '@/lib/traceroute-strategy-success-chart';
-
-/** Muted overlay colour for failed segment on stacked bars (same hue family, translucent). */
-function withChartFillAlpha(hex: string, alpha: number): string {
-  const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex.trim());
-  if (!m) {
-    return `rgba(148, 163, 184, ${alpha})`;
-  }
-  const r = parseInt(m[1], 16);
-  const g = parseInt(m[2], 16);
-  const b = parseInt(m[3], 16);
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-}
-
-const CHART_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#ef4444', '#06b6d4', '#84cc16'];
+import { bucketPhrase } from '@/lib/stats-trend';
+import type { StatsRange } from '@/hooks/useStatsRange';
+import { buildStrategySuccessBarChartData } from '@/lib/traceroute-strategy-success-chart';
+import { buildOutcomeTrend, wantsHourlyOutcomes } from '@/lib/traceroute-stats-trend';
 
 const SOURCE_LABELS: Record<string, string> = {
   '1': 'User',
@@ -53,65 +27,47 @@ const SOURCE_LABELS: Record<string, string> = {
   monitor: 'Node watch',
 };
 
-// Min number of attempts before a target is included in top/least success rankings.
-// One-off 1/1 perfect runs would otherwise dominate the "top" list.
-const TOP_TARGETS_MIN_ATTEMPTS = 5;
+/** Min number of attempts before a target is ranked. One-off 1/1 perfect runs would otherwise dominate. */
+export const TOP_TARGETS_MIN_ATTEMPTS = 5;
 
-// Max distinct slices to show in "by node" pie charts before grouping into "Other".
-const PIE_TOP_N = 7;
+/** Bars shown per card; the table behind "Show table" has the rest. */
+const BAR_LIMIT = 6;
+const TARGET_BAR_LIMIT = 5;
+const TARGET_TABLE_LIMIT = 25;
+
+const COMPLETED_COLOR = 'hsl(var(--chart-2))';
+const FAILED_COLOR = 'hsl(var(--chart-5))';
+
+const OUTCOME_SERIES = [
+  { key: 'completed', label: 'Completed', color: COMPLETED_COLOR },
+  { key: 'failed', label: 'Failed', color: FAILED_COLOR },
+];
 
 export type TracerouteStatsSectionProps = {
-  /** When set, stats (including this chart) are limited to traceroutes from this source mesh node id. */
+  /** When set, stats are limited to traceroutes from this source mesh node id (the page's feeder filter). */
   sourceNodeId?: number | null;
-  /** Start of the range window (from `useStatsRange().window.start`). */
-  triggeredAtAfter: Date;
-  /** Wording for the range in chart titles (from `useStatsRange().longLabel`), e.g. "last 7 days". */
-  rangeLabel: string;
+  /** The page's range (`useStatsRange()`): its key picks hourly or daily data, its window starts the query. */
+  range: Pick<StatsRange, 'key' | 'longLabel' | 'window'>;
 };
 
-export function TracerouteStatsSection({
-  sourceNodeId = null,
-  triggeredAtAfter,
-  rangeLabel,
-}: TracerouteStatsSectionProps) {
-  const { data, isLoading, error } = useTracerouteStats({ triggeredAtAfter, sourceNodeId });
+const pct = (rate: number | null | undefined) => (rate != null ? `${(rate * 100).toFixed(0)}%` : '—');
 
-  const sourcesChartData = useMemo(() => {
-    if (!data?.sources?.length) return [];
-    return data.sources.map((s, idx) => ({
-      name: SOURCE_LABELS[String(s.trigger_type)] ?? String(s.trigger_type),
-      value: s.count,
-      fill: CHART_COLORS[idx % CHART_COLORS.length],
-    }));
-  }, [data?.sources]);
+export function TracerouteStatsSection({ sourceNodeId = null, range }: TracerouteStatsSectionProps) {
+  const { data, isLoading, error } = useTracerouteStats({
+    triggeredAtAfter: range.window.start,
+    sourceNodeId,
+    bucket: wantsHourlyOutcomes(range.key) ? '1h' : undefined,
+  });
 
-  const strategyMixChartData = useMemo(() => {
-    const raw = data?.by_strategy;
-    if (!raw || typeof raw !== 'object') return [];
-    return Object.entries(raw)
-      .map(([key, counts], idx) => {
-        const total = counts.completed + counts.failed + counts.pending + counts.sent;
-        return {
-          name: strategyLabel(key),
-          value: total,
-          fill: CHART_COLORS[idx % CHART_COLORS.length],
-        };
-      })
-      .filter((d) => d.value > 0);
-  }, [data?.by_strategy]);
-
-  const strategySuccessBarRows = useMemo(
-    () =>
-      buildStrategySuccessBarChartData(data?.by_strategy_excluding_external ?? data?.by_strategy).map((r, idx) => {
-        const fill = CHART_COLORS[idx % CHART_COLORS.length];
-        return {
-          ...r,
-          fill,
-          failedFill: withChartFillAlpha(fill, 0.4),
-        };
-      }),
-    [data?.by_strategy_excluding_external, data?.by_strategy]
+  const trend = useMemo(
+    () => buildOutcomeTrend(data?.success_over_time, range.key, range.window),
+    [data?.success_over_time, range.key, range.window]
   );
+
+  const completed = data?.success_failure?.find((s) => s.status === 'completed')?.count ?? 0;
+  const failed = data?.success_failure?.find((s) => s.status === 'failed')?.count ?? 0;
+  const finished = completed + failed;
+  const reached = (data?.by_target ?? []).filter((t) => t.completed > 0).length;
 
   const sourceScopeHint = useMemo(() => {
     if (sourceNodeId == null || !data?.by_source?.length) return null;
@@ -120,69 +76,48 @@ export function TracerouteStatsSection({
     return `Stats scoped to source ${row.short_name ?? row.node_id_str ?? sourceNodeId}.`;
   }, [sourceNodeId, data?.by_source]);
 
-  const sentByNodeChartData = useMemo(() => {
-    const rows = data?.by_source ?? [];
-    if (rows.length === 0) return [];
-    const sorted = [...rows].sort((a, b) => b.total - a.total).filter((r) => r.total > 0);
-    const top = sorted.slice(0, PIE_TOP_N);
-    const rest = sorted.slice(PIE_TOP_N);
-    const otherTotal = rest.reduce((acc, r) => acc + r.total, 0);
-    const slices = top.map((r, idx) => ({
-      name: r.short_name ?? r.node_id_str ?? `Node ${r.managed_node_id}`,
-      value: r.total,
-      fill: CHART_COLORS[idx % CHART_COLORS.length],
+  const strategies = useMemo(
+    () => buildStrategySuccessBarChartData(data?.by_strategy_excluding_external ?? data?.by_strategy),
+    [data?.by_strategy_excluding_external, data?.by_strategy]
+  );
+  const strategyBars: BarListRow[] = strategies
+    .filter((s) => s.completed + s.failed + s.pending + s.sent > 0)
+    .map((s) => ({
+      key: s.strategyKey,
+      label: s.label,
+      percent: s.success_pct ?? 0,
+      text: s.success_pct != null ? `${s.success_pct.toFixed(0)}% · ${s.completed + s.failed}` : '— · 0',
     }));
-    if (otherTotal > 0) {
-      slices.push({
-        name: `Other (${rest.length})`,
-        value: otherTotal,
-        fill: '#9ca3af',
-      });
-    }
-    return slices;
-  }, [data?.by_source]);
 
-  const successFailureChartData = useMemo(() => {
-    if (!data?.success_failure?.length) return [];
-    return data.success_failure.map((s) => ({
-      name: s.status === 'completed' ? 'Success' : 'Failed',
-      value: s.count,
-      fill: s.status === 'completed' ? '#22c55e' : '#ef4444',
-    }));
-  }, [data?.success_failure]);
+  const feeders = useMemo(
+    () => [...(data?.by_source ?? [])].filter((r) => r.total > 0).sort((a, b) => b.total - a.total),
+    [data?.by_source]
+  );
+  const feederBars: BarListRow[] = feeders.slice(0, BAR_LIMIT).map((r) => ({
+    key: String(r.managed_node_id),
+    label: r.short_name ?? r.node_id_str ?? `Node ${r.managed_node_id}`,
+    percent: (r.success_rate ?? 0) * 100,
+    text: `${pct(r.success_rate)} · ${r.total}`,
+  }));
 
-  const successOverTimeData = useMemo(() => {
-    if (!data?.success_over_time?.length) return [];
-    return data.success_over_time.map((d) => {
-      const finished = d.completed + d.failed;
-      const success_pct = finished > 0 ? (d.completed / finished) * 100 : null;
-      return { ...d, success_pct };
-    });
-  }, [data?.success_over_time]);
-
-  const lineChartConfig: ChartConfig = {
-    completed: { color: '#22c55e', label: 'Completed' },
-    failed: { color: '#ef4444', label: 'Failed' },
-    success_pct: { color: '#3b82f6', label: 'Success %' },
-  };
-
-  const strategyStackChartConfig: ChartConfig = {
-    completed: { label: 'Completed', color: '#22c55e' },
-    failed: { label: 'Failed', color: '#94a3b8' },
-  };
+  const triggers = useMemo(() => [...(data?.sources ?? [])].sort((a, b) => b.count - a.count), [data?.sources]);
+  const triggerTotal = triggers.reduce((acc, s) => acc + s.count, 0);
+  const triggerBars: BarListRow[] = triggers.map((s) => ({
+    key: String(s.trigger_type),
+    label: SOURCE_LABELS[String(s.trigger_type)] ?? String(s.trigger_type),
+    percent: triggerTotal ? (100 * s.count) / triggerTotal : 0,
+    text: `${triggerTotal ? Math.round((100 * s.count) / triggerTotal) : 0}% · ${s.count}`,
+  }));
 
   const eligibleTargets = useMemo(
     () => (data?.by_target ?? []).filter((t) => t.total >= TOP_TARGETS_MIN_ATTEMPTS && t.success_rate != null),
     [data?.by_target]
   );
-  const topSuccessTargets = useMemo(
-    () => [...eligibleTargets].sort((a, b) => (b.success_rate ?? 0) - (a.success_rate ?? 0)).slice(0, 5),
+  const mostReliable = useMemo(
+    () => [...eligibleTargets].sort((a, b) => (b.success_rate ?? 0) - (a.success_rate ?? 0)),
     [eligibleTargets]
   );
-  const leastSuccessTargets = useMemo(
-    () => [...eligibleTargets].sort((a, b) => (a.success_rate ?? 0) - (b.success_rate ?? 0)).slice(0, 5),
-    [eligibleTargets]
-  );
+  const leastReliable = useMemo(() => [...mostReliable].reverse(), [mostReliable]);
 
   if (error) {
     return (
@@ -196,420 +131,168 @@ export function TracerouteStatsSection({
     );
   }
 
+  const loading = <p className="py-6 text-center text-sm text-muted-foreground">Loading…</p>;
+  const dash = '…';
+  const measure = `Runs per ${bucketPhrase(trend.bucket)}, by trigger time`;
+
   return (
-    <div className="space-y-4">
-      <h2 className="text-lg font-semibold">Traceroute Statistics</h2>
+    <TooltipProvider>
+      <div className="space-y-4" data-testid="traceroute-stats-section">
+        <div>
+          <h2 className="text-lg font-semibold">Traceroute Statistics</h2>
+          {sourceScopeHint ? <p className="text-xs text-muted-foreground">{sourceScopeHint}</p> : null}
+        </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {/* TR sources pie */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm">TR Sources</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <div className="h-[180px] flex items-center justify-center text-muted-foreground text-sm">Loading…</div>
-            ) : sourcesChartData.length > 0 ? (
-              <ChartContainer config={{}} className="aspect-auto h-[180px] w-full">
-                <PieChart>
-                  <Pie
-                    data={sourcesChartData}
-                    dataKey="value"
-                    nameKey="name"
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={40}
-                    outerRadius={65}
-                    paddingAngle={2}
-                    label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`}
-                  >
-                    {sourcesChartData.map((entry, idx) => (
-                      <Cell key={idx} fill={entry.fill} />
-                    ))}
-                  </Pie>
-                  <RechartsTooltip content={<ChartTooltipContent formatter={(v) => [v, '']} />} />
-                </PieChart>
-              </ChartContainer>
-            ) : (
-              <div className="h-[180px] flex items-center justify-center text-muted-foreground text-sm">No data</div>
-            )}
-          </CardContent>
-        </Card>
+        <div role="list" className="grid grid-cols-2 gap-3 md:grid-cols-4" data-testid="traceroute-stat-tiles">
+          <StatTile
+            role="listitem"
+            hero
+            label="Success rate"
+            value={isLoading ? dash : finished ? `${((100 * completed) / finished).toFixed(0)}%` : '—'}
+            sub={isLoading ? undefined : `${completed.toLocaleString()} of ${finished.toLocaleString()} finished`}
+            data-testid="tile-success-rate"
+          />
+          <StatTile
+            role="listitem"
+            label="Runs"
+            value={isLoading ? dash : finished.toLocaleString()}
+            sub="completed + failed"
+            data-testid="tile-runs"
+          />
+          <StatTile
+            role="listitem"
+            label="Targets probed"
+            value={isLoading ? dash : (data?.by_target?.length ?? 0).toLocaleString()}
+            sub={isLoading ? undefined : `${reached.toLocaleString()} reached`}
+            data-testid="tile-targets"
+          />
+          <StatTile
+            role="listitem"
+            label="Feeders running"
+            value={isLoading ? dash : feeders.length.toLocaleString()}
+            sub="sent at least one"
+            data-testid="tile-feeders"
+          />
+        </div>
 
-        {/* Strategy mix */}
-        <Card data-testid="traceroute-strategy-mix-card">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Strategy mix</CardTitle>
-            <CardDescription className="text-xs text-muted-foreground">
-              Share of runs by target selection hypothesis (scheduled and manual when recorded).
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <div className="h-[180px] flex items-center justify-center text-muted-foreground text-sm">Loading…</div>
-            ) : strategyMixChartData.length > 0 ? (
-              <ChartContainer config={{}} className="aspect-auto h-[180px] w-full">
-                <PieChart>
-                  <Pie
-                    data={strategyMixChartData}
-                    dataKey="value"
-                    nameKey="name"
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={40}
-                    outerRadius={65}
-                    paddingAngle={2}
-                    label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`}
-                  >
-                    {strategyMixChartData.map((entry, idx) => (
-                      <Cell key={idx} fill={entry.fill} />
-                    ))}
-                  </Pie>
-                  <RechartsTooltip content={<ChartTooltipContent formatter={(v) => [v, '']} />} />
-                </PieChart>
-              </ChartContainer>
-            ) : (
-              <div className="h-[180px] flex items-center justify-center text-muted-foreground text-sm">No data</div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Success/failure pie */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Success / Failure</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <div className="h-[180px] flex items-center justify-center text-muted-foreground text-sm">Loading…</div>
-            ) : successFailureChartData.length > 0 ? (
-              <ChartContainer config={{}} className="aspect-auto h-[180px] w-full">
-                <PieChart>
-                  <Pie
-                    data={successFailureChartData}
-                    dataKey="value"
-                    nameKey="name"
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={40}
-                    outerRadius={65}
-                    paddingAngle={2}
-                    label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`}
-                  >
-                    {successFailureChartData.map((entry, idx) => (
-                      <Cell key={idx} fill={entry.fill} />
-                    ))}
-                  </Pie>
-                  <RechartsTooltip content={<ChartTooltipContent formatter={(v) => [v, '']} />} />
-                </PieChart>
-              </ChartContainer>
-            ) : (
-              <div className="h-[180px] flex items-center justify-center text-muted-foreground text-sm">No data</div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Success over time (window matches selector + source scope) */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Success over time ({rangeLabel})</CardTitle>
-            <CardDescription className="text-xs text-muted-foreground">
-              Daily completed / failed counts (left axis) and success rate (right axis, dashed). Uses the same time
-              window and source scope as the bar above.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <div className="h-[180px] flex items-center justify-center text-muted-foreground text-sm">Loading…</div>
-            ) : successOverTimeData.length ? (
-              <ChartContainer config={lineChartConfig} className="aspect-auto h-[180px] w-full">
-                <LineChart data={successOverTimeData} margin={{ top: 4, right: 4, bottom: 20, left: 4 }}>
-                  <XAxis
-                    dataKey="date"
-                    tickLine={false}
-                    axisLine={false}
-                    tickMargin={4}
-                    tickFormatter={(v: string) => {
-                      const d = new Date(v);
-                      return d.toLocaleDateString('en-GB', { month: 'short', day: 'numeric' });
-                    }}
-                    tick={{ fontSize: 10 }}
-                  />
-                  <YAxis yAxisId="left" tickLine={false} axisLine={false} width={28} tick={{ fontSize: 10 }} />
-                  <YAxis
-                    yAxisId="right"
-                    orientation="right"
-                    tickLine={false}
-                    axisLine={false}
-                    width={32}
-                    domain={[0, 100]}
-                    tickFormatter={(v: number) => `${v}%`}
-                    tick={{ fontSize: 10 }}
-                  />
-                  <RechartsTooltip
-                    content={
-                      <ChartTooltipContent
-                        formatter={(value, name) => {
-                          if (name === 'success_pct') {
-                            return [value == null ? '—' : `${(value as number).toFixed(0)}%`, ' Success rate'];
-                          }
-                          return [value, ` ${name === 'completed' ? 'Completed' : 'Failed'}`];
-                        }}
-                        labelFormatter={(l) => new Date(Number(l)).toLocaleDateString()}
-                      />
-                    }
-                  />
-                  <Line
-                    yAxisId="left"
-                    type="monotone"
-                    dataKey="completed"
-                    stroke="#22c55e"
-                    strokeWidth={2}
-                    dot={{ r: 2 }}
-                    connectNulls
-                  />
-                  <Line
-                    yAxisId="left"
-                    type="monotone"
-                    dataKey="failed"
-                    stroke="#ef4444"
-                    strokeWidth={2}
-                    dot={{ r: 2 }}
-                    connectNulls
-                  />
-                  <Line
-                    yAxisId="right"
-                    type="monotone"
-                    dataKey="success_pct"
-                    stroke="#3b82f6"
-                    strokeWidth={2}
-                    strokeDasharray="4 4"
-                    dot={{ r: 2 }}
-                    connectNulls
-                  />
-                  <Legend />
-                </LineChart>
-              </ChartContainer>
-            ) : (
-              <div className="h-[180px] flex items-center justify-center text-muted-foreground text-sm">No data</div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card data-testid="traceroute-strategy-success-chart-card">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm">Runs by strategy</CardTitle>
-          <CardDescription className="text-xs text-muted-foreground">
-            Stacked counts: completed (solid) and failed (lighter overlay) per target selection strategy so bar height
-            reflects volume. Success % in the tooltip is completed ÷ (completed + failed). Rows with no recorded
-            strategy are grouped under Legacy. External mesh reports are omitted here only (they do not select a
-            hypothesis). Pending and in-flight runs are not stacked; counts appear in the tooltip only.
-            {sourceScopeHint ? ` ${sourceScopeHint}` : ''}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+        <ChartCard
+          title="Outcomes"
+          headline={isLoading ? undefined : `${finished.toLocaleString()} runs`}
+          measure={measure}
+          note={
+            trend.fellBack
+              ? 'Hourly data is not available from the server yet, so this shows UTC days.'
+              : trend.bucket === 'daily' && range.key !== '30d' && range.key !== '90d'
+                ? 'Traceroutes are counted per UTC day beyond 24 hours. Partial days are faded.'
+                : undefined
+          }
+          data-testid="traceroute-outcomes-card"
+        >
           {isLoading ? (
-            <div className="h-[220px] flex items-center justify-center text-muted-foreground text-sm">Loading…</div>
+            loading
           ) : (
-            <ChartContainer config={strategyStackChartConfig} className="aspect-auto h-[240px] w-full max-w-4xl">
-              <BarChart
-                data={strategySuccessBarRows}
-                margin={{ top: 8, right: 8, left: 4, bottom: 52 }}
-                accessibilityLayer
-              >
-                <CartesianGrid vertical={false} strokeDasharray="3 3" className="stroke-muted" />
-                <XAxis
-                  dataKey="label"
-                  tickLine={false}
-                  axisLine={false}
-                  tickMargin={8}
-                  interval={0}
-                  angle={-32}
-                  textAnchor="end"
-                  height={56}
-                  tick={{ fontSize: 11 }}
-                />
-                <YAxis
-                  tickLine={false}
-                  axisLine={false}
-                  domain={[0, 'auto']}
-                  width={36}
-                  tickFormatter={(v: number) => `${v}`}
-                  allowDecimals={false}
-                  tick={{ fontSize: 11 }}
-                />
-                <RechartsTooltip
-                  content={({ active, payload }) => {
-                    if (!active || !payload?.length) return null;
-                    const p = payload[0].payload as StrategySuccessBarChartRow;
-                    const finished = p.completed + p.failed;
-                    const rateLine =
-                      finished > 0
-                        ? `${p.success_pct != null ? p.success_pct.toFixed(0) : '—'}% (${p.completed} completed / ${p.failed} failed)`
-                        : `No finished runs (${p.pending} queued, ${p.sent} in flight)`;
-                    return (
-                      <div className="rounded-md border border-border/50 bg-background px-3 py-2 text-xs shadow-md">
-                        <div className="font-medium">{p.label}</div>
-                        <div className="mt-1 text-muted-foreground tabular-nums">{rateLine}</div>
-                      </div>
-                    );
-                  }}
-                />
-                <Legend />
-                <Bar dataKey="completed" stackId="strategy" name="Completed" radius={[0, 0, 0, 0]}>
-                  {strategySuccessBarRows.map((entry) => (
-                    <Cell key={`c-${entry.strategyKey}`} fill={entry.fill} />
-                  ))}
-                </Bar>
-                <Bar dataKey="failed" stackId="strategy" name="Failed" radius={[4, 4, 0, 0]}>
-                  {strategySuccessBarRows.map((entry) => (
-                    <Cell key={`f-${entry.strategyKey}`} fill={entry.failedFill} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ChartContainer>
+            <TrendChart
+              kind="bar"
+              rows={trend.rows}
+              series={OUTCOME_SERIES}
+              window={trend.window}
+              bucket={trend.bucket}
+              label={`Outcomes, ${range.longLabel}`}
+              headline={`${finished.toLocaleString()} runs`}
+            />
           )}
-        </CardContent>
-      </Card>
+        </ChartCard>
 
-      <TooltipProvider>
         <div className="grid gap-4 md:grid-cols-2">
-          <TargetsRankingCard
-            title="Top success targets"
-            description={`Targets with the highest success rate in this period (min ${TOP_TARGETS_MIN_ATTEMPTS} attempts).`}
+          <TableCard
+            title="By strategy"
+            measure="Success rate · finished runs"
+            testId="traceroute-by-strategy-card"
             isLoading={isLoading}
-            rows={topSuccessTargets}
-            emptyMessage={`No targets with at least ${TOP_TARGETS_MIN_ATTEMPTS} finished attempts.`}
+            bars={
+              <BarList
+                label="Success rate by strategy"
+                rows={strategyBars}
+                emptyMessage="No runs with a recorded strategy."
+              />
+            }
+            table={
+              <SimpleTable
+                head={['Strategy', 'Total', 'Completed', 'Failed', 'Pending', 'In flight', 'Success']}
+                rows={strategies.map((s) => [
+                  s.label,
+                  s.completed + s.failed + s.pending + s.sent,
+                  s.completed,
+                  s.failed,
+                  s.pending,
+                  s.sent,
+                  s.success_pct != null ? `${s.success_pct.toFixed(0)}%` : '—',
+                ])}
+              />
+            }
+            note="External mesh reports are left out here: they do not select a hypothesis. Runs with no recorded strategy are Legacy."
           />
-          <TargetsRankingCard
-            title="Least successful targets"
-            description={`Targets with the lowest success rate in this period (min ${TOP_TARGETS_MIN_ATTEMPTS} attempts).`}
+
+          <TableCard
+            title="By feeder"
+            measure={`Success rate · runs (top ${BAR_LIMIT})`}
+            testId="traceroute-by-feeder-card"
             isLoading={isLoading}
-            rows={leastSuccessTargets}
-            emptyMessage={`No targets with at least ${TOP_TARGETS_MIN_ATTEMPTS} finished attempts.`}
+            bars={<BarList label="Success rate by feeder" rows={feederBars} />}
+            table={<SourceTable rows={feeders} />}
+          />
+
+          <TableCard
+            title="Most reliable targets"
+            measure={`Success rate · runs (${TOP_TARGETS_MIN_ATTEMPTS} or more)`}
+            testId="traceroute-top-targets-card"
+            isLoading={isLoading}
+            bars={
+              <BarList
+                label="Most reliable targets"
+                rows={targetBars(mostReliable.slice(0, TARGET_BAR_LIMIT))}
+                emptyMessage={`No targets with at least ${TOP_TARGETS_MIN_ATTEMPTS} attempts.`}
+              />
+            }
+            table={<TargetTable rows={mostReliable.slice(0, TARGET_TABLE_LIMIT)} />}
+          />
+
+          <TableCard
+            title="Least reliable targets"
+            measure={`Success rate · runs (${TOP_TARGETS_MIN_ATTEMPTS} or more)`}
+            testId="traceroute-least-targets-card"
+            isLoading={isLoading}
+            bars={
+              <BarList
+                label="Least reliable targets"
+                rows={targetBars(leastReliable.slice(0, TARGET_BAR_LIMIT))}
+                color="hsl(var(--chart-5))"
+                emptyMessage={`No targets with at least ${TOP_TARGETS_MIN_ATTEMPTS} attempts.`}
+              />
+            }
+            table={<TargetTable rows={leastReliable.slice(0, TARGET_TABLE_LIMIT)} />}
+          />
+
+          <TableCard
+            title="By trigger"
+            measure="Share of runs · runs"
+            testId="traceroute-by-trigger-card"
+            isLoading={isLoading}
+            bars={<BarList label="Runs by trigger" rows={triggerBars} color="hsl(var(--chart-3))" />}
+            table={
+              <SimpleTable
+                head={['Trigger', 'Runs', 'Share']}
+                rows={triggers.map((s) => [
+                  SOURCE_LABELS[String(s.trigger_type)] ?? String(s.trigger_type),
+                  s.count,
+                  `${triggerTotal ? Math.round((100 * s.count) / triggerTotal) : 0}%`,
+                ])}
+              />
+            }
           />
         </div>
-
-        <div className="grid gap-4 lg:grid-cols-3">
-          <Card className="lg:col-span-2">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm">By source node</CardTitle>
-              <CardDescription className="text-xs text-muted-foreground">
-                Managed nodes that initiated traceroutes in this period. Success rate uses only completed and failed
-                runs; pending and sent count toward Total only.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {isLoading ? (
-                <div className="min-h-[120px] flex items-center justify-center text-muted-foreground text-sm">
-                  Loading…
-                </div>
-              ) : data?.by_source?.length ? (
-                <div className="rounded-md border overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Source</TableHead>
-                        <TableHead className="text-right tabular-nums">Total</TableHead>
-                        <TableHead className="text-right tabular-nums">Completed</TableHead>
-                        <TableHead className="text-right tabular-nums">Failed</TableHead>
-                        <TableHead className="text-right">
-                          <span className="inline-flex items-center justify-end gap-1">
-                            Success rate
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <button
-                                  type="button"
-                                  className="text-muted-foreground hover:text-foreground inline-flex"
-                                  aria-label="Success rate definition"
-                                >
-                                  <HelpCircle className="h-3.5 w-3.5" />
-                                </button>
-                              </TooltipTrigger>
-                              <TooltipContent className="max-w-xs text-left" side="top">
-                                Completed ÷ (completed + failed) for this period. If there are no finished runs, rate is
-                                shown as —.
-                              </TooltipContent>
-                            </Tooltip>
-                          </span>
-                        </TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {data.by_source.map((row) => (
-                        <TableRow key={row.managed_node_id}>
-                          <TableCell>
-                            <div className="flex flex-col gap-0.5 min-w-0">
-                              <span className="font-medium truncate" title={row.short_name}>
-                                {row.short_name}
-                              </span>
-                              <span
-                                className="text-xs text-muted-foreground font-mono truncate"
-                                title={row.node_id_str}
-                              >
-                                {row.node_id_str}
-                              </span>
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-right tabular-nums">{row.total}</TableCell>
-                          <TableCell className="text-right tabular-nums">{row.completed}</TableCell>
-                          <TableCell className="text-right tabular-nums">{row.failed}</TableCell>
-                          <TableCell className="text-right tabular-nums">
-                            {row.success_rate != null ? `${(row.success_rate * 100).toFixed(0)}%` : '—'}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              ) : (
-                <div className="min-h-[120px] flex items-center justify-center text-muted-foreground text-sm">
-                  No data
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm">TRs Sent by Node</CardTitle>
-              <CardDescription className="text-xs text-muted-foreground">
-                Share of total runs per source node (top {PIE_TOP_N}, remainder grouped as “Other”).
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {isLoading ? (
-                <div className="h-[260px] flex items-center justify-center text-muted-foreground text-sm">Loading…</div>
-              ) : sentByNodeChartData.length > 0 ? (
-                <ChartContainer config={{}} className="aspect-auto h-[260px] w-full">
-                  <PieChart>
-                    <Pie
-                      data={sentByNodeChartData}
-                      dataKey="value"
-                      nameKey="name"
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={50}
-                      outerRadius={85}
-                      paddingAngle={2}
-                      label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`}
-                    >
-                      {sentByNodeChartData.map((entry, idx) => (
-                        <Cell key={idx} fill={entry.fill} />
-                      ))}
-                    </Pie>
-                    <RechartsTooltip content={<ChartTooltipContent formatter={(v) => [v, '']} />} />
-                  </PieChart>
-                </ChartContainer>
-              ) : (
-                <div className="h-[260px] flex items-center justify-center text-muted-foreground text-sm">No data</div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-      </TooltipProvider>
-    </div>
+      </div>
+    </TooltipProvider>
   );
 }
 
@@ -617,76 +300,200 @@ interface TargetRow {
   meshtastic_node_id: number;
   node_id_str: string;
   short_name: string | null;
-  long_name: string | null;
   total: number;
   completed: number;
   failed: number;
   success_rate: number | null;
 }
 
-function TargetsRankingCard({
+function targetBars(rows: TargetRow[]): BarListRow[] {
+  return rows.map((r) => ({
+    key: String(r.meshtastic_node_id),
+    label: r.short_name ?? r.node_id_str,
+    percent: (r.success_rate ?? 0) * 100,
+    text: `${pct(r.success_rate)} · ${r.completed + r.failed}`,
+    href: `/traceroutes/history?target_node=${r.meshtastic_node_id}`,
+  }));
+}
+
+/** A card of bars with the full table behind a toggle, so nothing the old pies showed is lost. */
+function TableCard({
   title,
-  description,
+  measure,
+  testId,
   isLoading,
-  rows,
-  emptyMessage,
+  bars,
+  table,
+  note,
 }: {
   title: string;
-  description: string;
+  measure: string;
+  testId: string;
   isLoading: boolean;
-  rows: TargetRow[];
-  emptyMessage: string;
+  bars: ReactNode;
+  table: ReactNode;
+  note?: ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <ChartCard
+      title={title}
+      measure={measure}
+      data-testid={testId}
+      note={note}
+      actions={
+        <button
+          type="button"
+          aria-expanded={open}
+          onClick={() => setOpen((v) => !v)}
+          className="rounded-md border px-2 py-1 text-xs text-muted-foreground hover:text-foreground"
+        >
+          {open ? 'Hide table' : 'Show table'}
+        </button>
+      }
+    >
+      {isLoading ? (
+        <p className="py-6 text-center text-sm text-muted-foreground">Loading…</p>
+      ) : (
+        <div className="space-y-3">
+          {bars}
+          {open ? <div className="rounded-md border overflow-x-auto">{table}</div> : null}
+        </div>
+      )}
+    </ChartCard>
+  );
+}
+
+function SimpleTable({ head, rows }: { head: string[]; rows: (string | number)[][] }) {
+  return (
+    <Table>
+      <TableHeader>
+        <TableRow>
+          {head.map((h, i) => (
+            <TableHead key={h} className={i === 0 ? undefined : 'text-right tabular-nums'}>
+              {h}
+            </TableHead>
+          ))}
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {rows.map((r) => (
+          <TableRow key={String(r[0])}>
+            {r.map((c, i) => (
+              <TableCell key={i} className={i === 0 ? undefined : 'text-right tabular-nums'}>
+                {typeof c === 'number' ? c.toLocaleString() : c}
+              </TableCell>
+            ))}
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
+  );
+}
+
+function SourceTable({
+  rows,
+}: {
+  rows: {
+    managed_node_id: string;
+    node_id_str: string;
+    short_name: string;
+    total: number;
+    completed: number;
+    failed: number;
+    success_rate: number | null;
+  }[];
 }) {
   return (
-    <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm">{title}</CardTitle>
-        <CardDescription className="text-xs text-muted-foreground">{description}</CardDescription>
-      </CardHeader>
-      <CardContent>
-        {isLoading ? (
-          <div className="min-h-[120px] flex items-center justify-center text-muted-foreground text-sm">Loading…</div>
-        ) : rows.length === 0 ? (
-          <div className="min-h-[120px] flex items-center justify-center text-muted-foreground text-sm">
-            {emptyMessage}
-          </div>
-        ) : (
-          <div className="rounded-md border overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Target</TableHead>
-                  <TableHead className="text-right tabular-nums">Attempts</TableHead>
-                  <TableHead className="text-right tabular-nums">Success rate</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {rows.map((row) => (
-                  <TableRow key={row.meshtastic_node_id}>
-                    <TableCell>
-                      <Link
-                        to={`/traceroutes/history?target_node=${row.meshtastic_node_id}`}
-                        className="flex flex-col gap-0.5 min-w-0 hover:underline"
-                      >
-                        <span className="font-medium truncate" title={row.short_name ?? row.node_id_str}>
-                          {row.short_name ?? row.node_id_str}
-                        </span>
-                        <span className="text-xs text-muted-foreground font-mono truncate" title={row.node_id_str}>
-                          {row.node_id_str}
-                        </span>
-                      </Link>
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums">{row.completed + row.failed}</TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {row.success_rate != null ? `${(row.success_rate * 100).toFixed(0)}%` : '—'}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>Source</TableHead>
+          <TableHead className="text-right tabular-nums">Total</TableHead>
+          <TableHead className="text-right tabular-nums">Completed</TableHead>
+          <TableHead className="text-right tabular-nums">Failed</TableHead>
+          <TableHead className="text-right">
+            <span className="inline-flex items-center justify-end gap-1">
+              Success rate
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    className="text-muted-foreground hover:text-foreground inline-flex"
+                    aria-label="Success rate definition"
+                  >
+                    <HelpCircle className="h-3.5 w-3.5" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent className="max-w-xs text-left" side="top">
+                  Completed ÷ (completed + failed) for this period. If there are no finished runs, rate is shown as —.
+                  Pending and sent runs count toward Total only.
+                </TooltipContent>
+              </Tooltip>
+            </span>
+          </TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {rows.map((row) => (
+          <TableRow key={row.managed_node_id}>
+            <TableCell>
+              <div className="flex flex-col gap-0.5 min-w-0">
+                <span className="font-medium truncate" title={row.short_name}>
+                  {row.short_name}
+                </span>
+                <span className="text-xs text-muted-foreground font-mono truncate" title={row.node_id_str}>
+                  {row.node_id_str}
+                </span>
+              </div>
+            </TableCell>
+            <TableCell className="text-right tabular-nums">{row.total}</TableCell>
+            <TableCell className="text-right tabular-nums">{row.completed}</TableCell>
+            <TableCell className="text-right tabular-nums">{row.failed}</TableCell>
+            <TableCell className="text-right tabular-nums">{pct(row.success_rate)}</TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
+  );
+}
+
+function TargetTable({ rows }: { rows: TargetRow[] }) {
+  if (rows.length === 0) {
+    return (
+      <p className="p-3 text-sm text-muted-foreground">No targets with at least {TOP_TARGETS_MIN_ATTEMPTS} attempts.</p>
+    );
+  }
+  return (
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>Target</TableHead>
+          <TableHead className="text-right tabular-nums">Attempts</TableHead>
+          <TableHead className="text-right tabular-nums">Success rate</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {rows.map((row) => (
+          <TableRow key={row.meshtastic_node_id}>
+            <TableCell>
+              <Link
+                to={`/traceroutes/history?target_node=${row.meshtastic_node_id}`}
+                className="flex flex-col gap-0.5 min-w-0 hover:underline"
+              >
+                <span className="font-medium truncate" title={row.short_name ?? row.node_id_str}>
+                  {row.short_name ?? row.node_id_str}
+                </span>
+                <span className="text-xs text-muted-foreground font-mono truncate" title={row.node_id_str}>
+                  {row.node_id_str}
+                </span>
+              </Link>
+            </TableCell>
+            <TableCell className="text-right tabular-nums">{row.completed + row.failed}</TableCell>
+            <TableCell className="text-right tabular-nums">{pct(row.success_rate)}</TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
   );
 }

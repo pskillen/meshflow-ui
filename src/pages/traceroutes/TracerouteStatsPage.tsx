@@ -88,11 +88,11 @@ export function TracerouteStatsPage() {
           value={sourceNodeId != null ? String(sourceNodeId) : 'all'}
           onValueChange={(v) => setSourceNode(v === 'all' ? null : parseInt(v, 10))}
         >
-          <SelectTrigger className="w-[200px]">
-            <SelectValue placeholder="Source (stats scope)" />
+          <SelectTrigger className="h-8 w-[9.5rem] sm:w-[200px]" aria-label="Feeder">
+            <SelectValue placeholder="Feeder" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All sources</SelectItem>
+            <SelectItem value="all">All feeders</SelectItem>
             {triggerableNodes.map((n) => (
               <SelectItem key={n.meshtastic_node_id} value={String(n.meshtastic_node_id)}>
                 {n.short_name ?? n.node_id_str ?? String(n.meshtastic_node_id)}
@@ -102,11 +102,7 @@ export function TracerouteStatsPage() {
         </Select>
       </StatsRangeBar>
 
-      <TracerouteStatsSection
-        sourceNodeId={sourceNodeId}
-        triggeredAtAfter={range.window.start}
-        rangeLabel={range.longLabel}
-      />
+      <TracerouteStatsSection sourceNodeId={sourceNodeId} range={range} />
 
       <TriggerTracerouteModal
         open={triggerModalOpen}
