@@ -188,17 +188,22 @@ test.describe('Dashboard range charts', () => {
 
   test('makes one previous-window request per stat type per chart', async ({ page }) => {
     await page.goto('/?range=24h');
-    await expect(page.getByTestId('chart-packet_volume-delta')).toBeVisible();
-    const earlier = requests.filter(
-      (u) => new Date(u.searchParams.get('recorded_at_before')!).getTime() < Date.now() - 12 * HOUR
-    );
-    const byStat = new Map<string, number>();
-    for (const u of earlier)
-      byStat.set(u.searchParams.get('stat_type')!, (byStat.get(u.searchParams.get('stat_type')!) ?? 0) + 1);
-    expect([...byStat.keys()].sort()).toEqual(
-      ['mc_new_nodes', 'mc_online_nodes', 'mc_packet_volume', 'new_nodes', 'online_nodes', 'packet_volume'].sort()
-    );
-    expect([...byStat.values()].every((n) => n === 1)).toBe(true);
+    // The delta line is reserved while loading, so wait for the previous-window requests themselves.
+    const previousByStat = () => {
+      const byStat = new Map<string, number>();
+      for (const u of requests.filter(
+        (r) => new Date(r.searchParams.get('recorded_at_before')!).getTime() < Date.now() - 12 * HOUR
+      ))
+        byStat.set(u.searchParams.get('stat_type')!, (byStat.get(u.searchParams.get('stat_type')!) ?? 0) + 1);
+      return byStat;
+    };
+    await expect
+      .poll(() => [...previousByStat().keys()].sort())
+      .toEqual(
+        ['mc_new_nodes', 'mc_online_nodes', 'mc_packet_volume', 'new_nodes', 'online_nodes', 'packet_volume'].sort()
+      );
+    await expect(page.getByTestId('chart-packet_volume-delta')).not.toBeEmpty();
+    expect([...previousByStat().values()].every((n) => n === 1)).toBe(true);
   });
 
   test('home overlays both protocols', async ({ page }) => {
