@@ -71,6 +71,10 @@ function NodesList() {
 Hooks must not walk every page of a list automatically: a list of observed nodes runs to thousands of rows, and a
 refetch interval re-requests every loaded page. Fetch the next page on demand.
 
+Two deliberate exceptions walk every page: `useAllInfrastructureNodesSuspense` (in `useNodes.ts`) and the managed-node
+loader in `pages/nodes/monitor.tsx`. Managed and infrastructure node sets are small (tens to low hundreds), so
+walking them is cheap and the callers need the complete set. Do not copy the pattern for observed nodes.
+
 `useObservedNodesHeard` follows this: it fetches one page of 1000 (the API maximum) and returns `total` and
 `truncated`, so a map overlay can say when it shows only part of the list.
 
