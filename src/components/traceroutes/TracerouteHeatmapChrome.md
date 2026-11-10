@@ -13,7 +13,7 @@ Range: `rangeValue` (preset key, or null while a custom date is active), `rangeO
 - Presets 24h / 7d / 30d / 90d (default 7d), from `useMapRange`; the range is in `?range=` and a custom start date in `?since=`.
 - The mesh-view select navigates between heatmap and topology, carrying the query string (so range and filters survive).
 - Source feeder and strategy filters write `?source=` / `?strategy=`.
-- The bar is not sticky here: the map needs the height.
+- The bar is not sticky here: the map needs the height. It uses `StatsRangeBar`'s `compact` layout: presets and the Custom button share one row pinned right, and on narrow screens the filters are a two-column grid (mesh view full width).
 
 ## Wiring
 

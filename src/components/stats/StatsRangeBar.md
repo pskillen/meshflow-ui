@@ -11,6 +11,7 @@ The one time-range control for stats screens: a segmented set of presets, option
 - `onChange(key)` – `range.setRange`.
 - `title?` – optional heading at the start of the bar.
 - `children?` – slot for screen extras placed before the range control (the source/feeder filter on traceroutes, a custom range on maps).
+- `compact?`, `rangeExtras?` – see Behaviour; `rangeExtras` sits right after the presets.
 - `sticky?` (default true) – `position: sticky; top: 0` so the control stays in reach while scrolling.
 - `className?`.
 
@@ -20,7 +21,7 @@ The one time-range control for stats screens: a segmented set of presets, option
 - Keyboard: roving tabindex (only the selected radio is a tab stop, or the first when `value` is null); Left/Right move to and select the previous/next option, wrapping; Home/End select the first/last. With `value` null, arrows select from the start (Right: first, Left: last). Selection follows focus, as for a native radio group.
 - Wraps on narrow screens; the button group scrolls horizontally rather than overflowing the page, and buttons are 32px tall on touch widths.
 - Has an opaque-ish background (`bg-background/95` with blur) so content does not show through when stuck.
-- Custom range is not built yet: a screen that needs it passes its own control as `children`.
+- `compact` (map pages): presets pinned to the right edge with `rangeExtras` (a custom range button) on the same row, and `children` as a two-column grid below `sm` (a full-width child takes `col-span-2`). Other screens leave it off.
 
 ## Wiring
 

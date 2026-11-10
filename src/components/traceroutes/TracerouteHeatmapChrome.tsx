@@ -153,16 +153,17 @@ export function TracerouteHeatmapChrome({
       options={rangeOptions}
       onChange={onRangeChange}
       sticky={false}
-      className="gap-y-3"
+      compact
+      rangeExtras={rangeExtras}
       title={
         <span className="flex items-center gap-2">
           <RouteIcon className="h-6 w-6" />
-          <h1 className="text-xl font-semibold sm:text-2xl">Traceroute mesh</h1>
+          <h1 className="text-xl font-semibold">Traceroute mesh</h1>
         </span>
       }
     >
-      <div className="flex flex-wrap items-center gap-3" data-testid="heatmap-filters">
-        <div className="w-full min-w-[min(100%,280px)] sm:w-auto sm:min-w-[280px]">
+      <>
+        <div className="col-span-2 sm:col-auto sm:w-[230px]">
           <Select
             value={meshViewValue}
             onValueChange={(v) => {
@@ -187,7 +188,7 @@ export function TracerouteHeatmapChrome({
           value={sourceMeshId != null ? String(sourceMeshId) : 'all'}
           onValueChange={(v) => onUpdateParams({ source: v === 'all' ? null : v })}
         >
-          <SelectTrigger className="w-full sm:w-[200px]" data-testid="heatmap-source-select">
+          <SelectTrigger className="w-full sm:w-[150px]" data-testid="heatmap-source-select">
             <SelectValue placeholder="Source feeder" />
           </SelectTrigger>
           <SelectContent>
@@ -202,7 +203,7 @@ export function TracerouteHeatmapChrome({
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="w-full sm:w-[180px] justify-between" type="button">
+            <Button variant="outline" size="sm" className="w-full justify-between sm:w-[130px]" type="button">
               {multiSelectLabel(strategyTokens, HEATMAP_STRATEGY_OPTIONS, 'Strategy')}
               <ChevronDown className="h-4 w-4 opacity-50" />
             </Button>
@@ -233,6 +234,7 @@ export function TracerouteHeatmapChrome({
             variant="ghost"
             size="sm"
             type="button"
+            className="col-span-2 sm:col-auto"
             onClick={() => onUpdateParams({ strategy: null, source: null })}
             data-testid="heatmap-clear-geo-filters"
           >
@@ -240,8 +242,7 @@ export function TracerouteHeatmapChrome({
             Clear geo filters
           </Button>
         )}
-        {rangeExtras}
-      </div>
+      </>
     </StatsRangeBar>
   );
 }

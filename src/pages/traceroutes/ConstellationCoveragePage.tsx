@@ -4,9 +4,9 @@ import { CircleDashedIcon } from 'lucide-react';
 
 import { StatsRangeBar } from '@/components/stats/StatsRangeBar';
 import { MapInfoButton } from '@/components/traceroutes/MapInfoButton';
+import { CoverageStrategyMenu } from '@/components/traceroutes/CoverageStrategyMenu';
 import { useMapRange } from '@/hooks/useMapRange';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -23,8 +23,6 @@ import { useObservedNodesHeard } from '@/hooks/api/useObservedNodesHeard';
 import { observedNodesToCoverageGhosts } from '@/lib/coverageHeardGhosts';
 import { cn } from '@/lib/utils';
 import {
-  TRACEROUTE_STRATEGIES,
-  STRATEGY_META,
   createCoverageStrategiesAllSelected,
   coverageTargetStrategyQueryParam,
   coverageTargetStrategySummary,
@@ -218,15 +216,28 @@ export function ConstellationCoveragePage() {
         options={range.options}
         onChange={setPreset}
         sticky={false}
+        compact
         title={
           <span className="flex items-center gap-2">
             <CircleDashedIcon className="h-6 w-6 shrink-0" />
-            <h1 className="text-xl font-semibold sm:text-2xl">Constellation coverage</h1>
+            <h1 className="text-xl font-semibold">Constellation coverage</h1>
+            <MapInfoButton title="Constellation coverage">
+              <p>
+                Combines traceroute attempts from every managed node in the selected constellation, over the selected
+                time range. <strong>Hexes</strong> group targets into H3 cells; <strong>dots</strong> show each probed
+                target (size = attempts, colour = smoothed reliability). <strong>Tower markers</strong> show managed
+                feeder positions.
+              </p>
+              <p>Filter by target-selection strategy to debug scheduler behaviour.</p>
+            </MapInfoButton>
           </span>
         }
       >
-        <div className="flex items-center gap-2">
-          <Label className="text-xs text-muted-foreground" htmlFor="constellation-coverage-constellation">
+        <div className="col-span-2 flex items-center gap-2 sm:col-auto">
+          <Label
+            className="whitespace-nowrap text-xs text-muted-foreground"
+            htmlFor="constellation-coverage-constellation"
+          >
             Constellation
           </Label>
           <Select
@@ -236,7 +247,7 @@ export function ConstellationCoveragePage() {
           >
             <SelectTrigger
               id="constellation-coverage-constellation"
-              className="min-w-[200px]"
+              className="min-w-0 flex-1 sm:min-w-[150px] sm:flex-none"
               aria-label="Select constellation"
             >
               <SelectValue placeholder="Select constellation" />
@@ -251,11 +262,14 @@ export function ConstellationCoveragePage() {
           </Select>
         </div>
         <div className="flex items-center gap-2">
-          <Label className="text-xs text-muted-foreground" htmlFor="constellation-coverage-resolution">
+          <Label
+            className="whitespace-nowrap text-xs text-muted-foreground"
+            htmlFor="constellation-coverage-resolution"
+          >
             H3 resolution
           </Label>
           <Select value={String(h3Resolution)} onValueChange={(v) => setH3Resolution(Number.parseInt(v, 10))}>
-            <SelectTrigger id="constellation-coverage-resolution" className="min-w-[100px]" aria-label="H3 resolution">
+            <SelectTrigger id="constellation-coverage-resolution" className="min-w-[90px]" aria-label="H3 resolution">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -266,7 +280,10 @@ export function ConstellationCoveragePage() {
           </Select>
         </div>
         <div className="flex items-center gap-2">
-          <Label className="text-xs text-muted-foreground" htmlFor="constellation-coverage-min-attempts">
+          <Label
+            className="whitespace-nowrap text-xs text-muted-foreground"
+            htmlFor="constellation-coverage-min-attempts"
+          >
             Min attempts
           </Label>
           <Input
@@ -281,17 +298,8 @@ export function ConstellationCoveragePage() {
             className="w-20"
           />
         </div>
-        <MapInfoButton title="Constellation coverage">
-          <p>
-            Combines traceroute attempts from every managed node in the selected constellation, over the selected time
-            range. <strong>Hexes</strong> group targets into H3 cells; <strong>dots</strong> show each probed target
-            (size = attempts, colour = smoothed reliability). <strong>Tower markers</strong> show managed feeder
-            positions.
-          </p>
-          <p>Filter by target-selection strategy to debug scheduler behaviour.</p>
-        </MapInfoButton>
       </StatsRangeBar>
-      <div className="flex flex-wrap items-start gap-3" data-testid="constellation-coverage-filters">
+      <div className="flex flex-wrap items-center gap-3" data-testid="constellation-coverage-filters">
         <div className="flex rounded-md border border-input bg-muted/50 p-0.5" data-testid="constellation-layer-pills">
           {CONSTELLATION_LAYERS.map((key) => (
             <button
@@ -311,25 +319,7 @@ export function ConstellationCoveragePage() {
             </button>
           ))}
         </div>
-        <div className="flex flex-col gap-2 rounded-md border border-border bg-muted/30 px-3 py-2">
-          <span className="text-xs font-medium text-muted-foreground">Target selection strategies</span>
-          <div className="flex flex-wrap gap-x-4 gap-y-2">
-            {TRACEROUTE_STRATEGIES.map((opt) => (
-              <label
-                key={opt}
-                htmlFor={`constellation-strategy-${opt}`}
-                className="flex cursor-pointer items-center gap-2 text-sm"
-              >
-                <Checkbox
-                  id={`constellation-strategy-${opt}`}
-                  checked={strategies[opt] ?? false}
-                  onCheckedChange={(c) => setStrategies((s) => ({ ...s, [opt]: c === true }))}
-                />
-                <span className="leading-none">{STRATEGY_META[opt].label}</span>
-              </label>
-            ))}
-          </div>
-        </div>
+        <CoverageStrategyMenu value={strategies} onChange={setStrategies} />
       </div>
 
       <div className="block md:hidden">

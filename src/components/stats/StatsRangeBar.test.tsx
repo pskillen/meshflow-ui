@@ -36,6 +36,26 @@ describe('StatsRangeBar', () => {
     expect(screen.getByTestId('stats-range-bar').className).toContain('sticky');
   });
 
+  it('compact: puts rangeExtras on the presets row and pins both right', () => {
+    render(
+      <StatsRangeBar
+        value="7d"
+        options={STATS_PRESET_KEYS}
+        onChange={() => {}}
+        compact
+        rangeExtras={<button type="button">Custom</button>}
+      >
+        <span>filter</span>
+      </StatsRangeBar>
+    );
+    const presets = screen.getByRole('radiogroup');
+    const custom = screen.getByRole('button', { name: 'Custom' });
+    expect(presets.parentElement).toBe(custom.parentElement);
+    expect(presets.parentElement!.className).toContain('ml-auto');
+    // filters sit in a two-column grid on narrow screens
+    expect(screen.getByText('filter').parentElement!.className).toContain('grid-cols-2');
+  });
+
   describe('keyboard', () => {
     function setup(value: StatsRangeKey = '7d') {
       const onChange = vi.fn();
