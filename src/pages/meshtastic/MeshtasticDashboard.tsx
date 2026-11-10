@@ -20,8 +20,8 @@ function MeshtasticDashboardContent() {
         <div data-testid="meshtastic-dashboard-recent-counts">
           <RightNowBand scope="meshtastic" />
         </div>
-        <FirmwareAdoptionCard range={range} />
         <MeshStatsSection protocolScope="meshtastic" range={range} />
+        <FirmwareAdoptionCard range={range} />
       </div>
     </div>
   );
