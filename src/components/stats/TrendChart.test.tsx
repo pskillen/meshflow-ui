@@ -88,6 +88,44 @@ describe('TrendChart options for node metrics', () => {
     );
     expect(ticks).toEqual(['0', '25', '50', '75', '100']);
   });
+
+  it('puts ticks every yTickStep on a fixed range, and clips what lies outside it', () => {
+    const { container } = render(
+      <TrendChart
+        kind="line"
+        rows={[{ timestamp: w.start.getTime(), a: 15 }]}
+        series={[{ key: 'a', label: 'SNR', color: 'hsl(var(--chart-1))' }]}
+        window={w}
+        bucket="daily"
+        yRange={[-20, 10]}
+        yTickStep={10}
+        dots
+      />
+    );
+    const ticks = Array.from(container.querySelectorAll('.recharts-yAxis-tick-labels .recharts-cartesian-axis-tick-value')).map(
+      (t) => t.textContent
+    );
+    expect(ticks).toEqual(['-20', '-10', '0', '10']);
+    // Fixed domain is kept: recharts only clips (rather than widens) with allowDataOverflow.
+    expect(container.querySelector('.recharts-line [clip-path], .recharts-line-dots')).not.toBeNull();
+  });
+
+  it('draws a dot for a lone sample in the bucket in progress', () => {
+    const w7 = statsRangeWindow('7d', NOW);
+    const rows = markPartialBuckets([{ timestamp: w7.lastBucketStart.getTime(), a: -7 }], w7, '6h');
+    const { container } = render(
+      <TrendChart
+        kind="line"
+        rows={rows}
+        series={[{ key: 'a', label: 'SNR', color: 'hsl(var(--chart-1))' }]}
+        window={w7}
+        bucket="6h"
+        yRange={[-20, 10]}
+        dots
+      />
+    );
+    expect(container.querySelectorAll('.recharts-line-dots circle, .recharts-dot')).toHaveLength(1);
+  });
 });
 
 describe('TrendChart', () => {

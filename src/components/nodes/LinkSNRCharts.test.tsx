@@ -1,7 +1,21 @@
-import { describe, expect, it } from 'vitest';
+import { cloneElement, isValidElement, type ReactElement } from 'react';
+import { describe, expect, it, vi } from 'vitest';
 import { render, screen, within, fireEvent } from '@testing-library/react';
 import type { StatsRange } from '@/hooks/useStatsRange';
 import { STATS_RANGES, statsRangeWindow, type StatsPresetKey } from '@/lib/stats-range';
+
+// ResponsiveContainer measures its parent, which jsdom reports as 0x0; give it a fixed size.
+vi.mock('recharts', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('recharts')>();
+  return {
+    ...actual,
+    ResponsiveContainer: ({ children }: { children: ReactElement }) =>
+      isValidElement(children)
+        ? cloneElement(children as ReactElement<{ width: number; height: number }>, { width: 400, height: 190 })
+        : null,
+  };
+});
+
 import { LinkSNRCharts } from './LinkSNRCharts';
 
 const NOW = new Date('2026-11-10T09:37:00Z');
@@ -61,6 +75,39 @@ describe('LinkSNRCharts', () => {
     expect(screen.getAllByRole('heading', { level: 3 })).toHaveLength(4);
     fireEvent.click(screen.getByRole('button', { name: /show all links \(2 more\)/i }));
     expect(screen.getAllByRole('heading', { level: 3 })).toHaveLength(6);
+  });
+
+  it('draws a dot for a link whose only sample is in the bucket in progress', () => {
+    const only = {
+      peer_node_id: 3,
+      peer_short_name: 'ONE',
+      inbound: [{ triggered_at: '2026-11-10T08:00:00Z', snr: -7 }],
+      outbound: [],
+    };
+    const { container } = render(<LinkSNRCharts snrHistory={[only]} range={rangeFor('7d')} />);
+    const card = screen.getByTestId('chart-link-snr-3');
+    expect(within(card).getByTestId('chart-link-snr-3-headline')).toHaveTextContent('avg in -7.0 dB');
+    expect(container.querySelectorAll('[data-testid="chart-link-snr-3"] .recharts-dot')).toHaveLength(1);
+  });
+
+  it('keeps the -20..10 scale with ticks every 10, and says how many points are off it', () => {
+    const wild = {
+      peer_node_id: 4,
+      peer_short_name: 'WILD',
+      inbound: [
+        { triggered_at: '2026-11-09T00:00:00Z', snr: 15 },
+        { triggered_at: '2026-11-09T12:00:00Z', snr: -30 },
+        { triggered_at: '2026-11-09T18:00:00Z', snr: 2 },
+      ],
+      outbound: [],
+    };
+    const { container } = render(<LinkSNRCharts snrHistory={[wild, link(5, 'OK', 2)]} range={rangeFor('7d')} />);
+    expect(screen.getByTestId('chart-link-snr-4')).toHaveTextContent('2 points off the scale.');
+    expect(screen.getByTestId('chart-link-snr-5')).not.toHaveTextContent('off the scale');
+    const ticks = Array.from(
+      container.querySelectorAll('[data-testid="chart-link-snr-4"] .recharts-yAxis-tick-labels .recharts-cartesian-axis-tick-value')
+    ).map((t) => t.textContent);
+    expect(ticks).toEqual(['-20', '-10', '0', '10']);
   });
 
   it('shows a message with no links', () => {
