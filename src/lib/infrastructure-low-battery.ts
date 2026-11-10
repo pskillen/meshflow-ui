@@ -1,5 +1,6 @@
 import { subDays } from 'date-fns';
 import type { ObservedNode } from '@/lib/models';
+import { describeBattery } from '@/lib/battery';
 
 /** Battery reading older than this is treated as stale (separate from GPS freshness). */
 export const STALE_BATTERY_TELEMETRY_DAYS = 3;
@@ -20,12 +21,18 @@ export function isBatteryTelemetryStale(node: ObservedNode, now: Date = new Date
   return at < subDays(now, STALE_BATTERY_TELEMETRY_DAYS);
 }
 
+function isLowBatteryLevel(raw: number | null | undefined): boolean {
+  const d = describeBattery(raw);
+  return d.kind === 'level' && d.pct < LOW_BATTERY_THRESHOLD_PERCENT;
+}
+
 /** True if the node should appear in the low-battery section (union of low % and stale / missing telemetry). */
 export function qualifiesLowBatterySection(node: ObservedNode, now: Date = new Date()): boolean {
   const m = node.latest_device_metrics;
   if (!m) return true;
+  if (matchesLowBatteryNoTelemetryRow(node)) return true;
   if (isBatteryTelemetryStale(node, now)) return true;
-  return m.battery_level < LOW_BATTERY_THRESHOLD_PERCENT;
+  return isLowBatteryLevel(m.battery_level);
 }
 
 export type LowBatteryRowFlags = {
@@ -38,19 +45,20 @@ export type LowBatteryRowFlags = {
 export function getLowBatteryRowFlags(node: ObservedNode, now: Date = new Date()): LowBatteryRowFlags {
   const m = node.latest_device_metrics;
   const reportedAt = getBatteryMetricsReportedAt(node);
-  const hasUsableMetrics = Boolean(m && reportedAt);
-  const level = m?.battery_level;
-  const isZeroPercent = hasUsableMetrics && level === 0;
+  const level = describeBattery(m?.battery_level);
+  const hasUsableMetrics = Boolean(m && reportedAt) && level.kind !== 'none';
+  const isZeroPercent = hasUsableMetrics && level.kind === 'level' && level.pct === 0;
   const showStaleBatteryBadge = !hasUsableMetrics || isBatteryTelemetryStale(node, now);
-  const showLowBatteryBadge = hasUsableMetrics && level != null && level < LOW_BATTERY_THRESHOLD_PERCENT;
+  const showLowBatteryBadge = hasUsableMetrics && isLowBatteryLevel(m?.battery_level);
   return { isZeroPercent, showLowBatteryBadge, showStaleBatteryBadge };
 }
 
-/** Row matches the “no battery telemetry” bucket (no device metrics or no reported_time). */
+/** Row matches the “no battery telemetry” bucket (no device metrics, no reported_time, or no battery level). */
 export function matchesLowBatteryNoTelemetryRow(node: ObservedNode): boolean {
   const m = node.latest_device_metrics;
   const reportedAt = getBatteryMetricsReportedAt(node);
-  return !(m && reportedAt);
+  if (!(m && reportedAt)) return true;
+  return describeBattery(m.battery_level).kind === 'none';
 }
 
 /** Row matches the “always 0%” bucket (usable metrics, level 0). */
@@ -105,9 +113,9 @@ export function hasMeshInfraMapBatteryOrPresenceAlert(node: ObservedNode, now: D
   const hasUsableMetrics = Boolean(m && reportedAt);
   if (!hasUsableMetrics) return true;
 
-  const level = m!.battery_level;
-  if (level === 0) return true;
-  if (level != null && level < LOW_BATTERY_THRESHOLD_PERCENT) return true;
+  const level = describeBattery(m!.battery_level);
+  if (level.kind === 'level' && level.pct === 0) return true;
+  if (isLowBatteryLevel(m!.battery_level)) return true;
 
   return false;
 }

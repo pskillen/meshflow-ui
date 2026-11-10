@@ -29,7 +29,7 @@ export function bucketLinkSnr(
   const startMs = window.start.getTime();
   // `end` is the top of the current hour. When a 6h or daily bucket is in progress it runs on past it and is drawn
   // (dashed), so samples count up to its end; otherwise anything at or after `end` is off the chart's grid.
-  const endMs = window.partialEnd ? window.lastBucketStart.getTime() + step : window.end.getTime();
+  const endMs = snrWindowEndMs(window, bucket);
   const acc = new Map<number, Record<string, { sum: number; n: number }>>();
   const add = (points: SnrPoint[], key: string) => {
     for (const p of points) {
@@ -88,4 +88,51 @@ export function countOffScale(
       n + keys.filter((k) => typeof r[k] === 'number' && ((r[k] as number) < min || (r[k] as number) > max)).length,
     0
   );
+}
+
+export interface RawSnrPoint {
+  /** Sample time, ms since epoch. */
+  t: number;
+  snr: number;
+  dir: 'inbound' | 'outbound';
+}
+
+/** The end of the x axis: the same bound `bucketLinkSnr` uses, so Means and Raw show the same samples. */
+export function snrWindowEndMs(
+  window: Pick<StatsRangeWindow, 'end' | 'lastBucketStart' | 'partialEnd'>,
+  bucket: StatsBucket
+): number {
+  return window.partialEnd ? window.lastBucketStart.getTime() + TREND_BUCKET_MS[bucket] : window.end.getTime();
+}
+
+/** Every sample of one link in the window (same bounds as `bucketLinkSnr`), oldest first, unbucketed. */
+export function rawLinkSnr(
+  link: Pick<NodeTracerouteLinkSnrHistory, 'inbound' | 'outbound'>,
+  window: Pick<StatsRangeWindow, 'start' | 'end' | 'lastBucketStart' | 'partialEnd'>,
+  bucket: StatsBucket
+): RawSnrPoint[] {
+  const startMs = window.start.getTime();
+  const endMs = snrWindowEndMs(window, bucket);
+  const out: RawSnrPoint[] = [];
+  const add = (points: SnrPoint[], dir: RawSnrPoint['dir']) => {
+    for (const p of points) {
+      const t = new Date(p.triggered_at).getTime();
+      if (Number.isNaN(t) || t < startMs || t >= endMs || typeof p.snr !== 'number') continue;
+      out.push({ t, snr: p.snr, dir });
+    }
+  };
+  add(link.inbound, SNR_IN);
+  add(link.outbound, SNR_OUT);
+  return out.sort((a, b) => a.t - b.t);
+}
+
+/** Mean SNR of the raw samples going one way, or null when there are none. */
+export function meanOfRaw(points: RawSnrPoint[], dir: RawSnrPoint['dir']): number | null {
+  const values = points.filter((p) => p.dir === dir).map((p) => p.snr);
+  return values.length ? values.reduce((a, b) => a + b, 0) / values.length : null;
+}
+
+/** How many raw samples lie outside `[min, max]`. */
+export function countRawOffScale(points: RawSnrPoint[], [min, max]: [number, number]): number {
+  return points.filter((p) => p.snr < min || p.snr > max).length;
 }

@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import type { ObservedNode } from '@/lib/models';
+import { buildInfrastructureExportRow } from './infrastructure-export-rows';
 import { escapeCsvCell, infrastructureRowsToCsv, type CsvColumnDef } from './infrastructure-csv';
 
 type Row = { name: string; count: number | null };
@@ -45,5 +47,25 @@ describe('infrastructureRowsToCsv', () => {
   it('quotes node names containing commas', () => {
     const csv = infrastructureRowsToCsv([{ name: 'East, Router', count: 2 }], columns);
     expect(csv).toContain('"East, Router"');
+  });
+});
+
+describe('battery column in the CSV export', () => {
+  it('writes a number, "Powered" and a blank cell for 87, 101 and missing', () => {
+    const mk = (battery_level: number | null) =>
+      buildInfrastructureExportRow(
+        {
+          internal_id: 'x',
+          meshtastic_node_id: 1,
+          node_id_str: '!1',
+          latest_device_metrics: { battery_level, reported_time: null, logged_time: null },
+        } as ObservedNode,
+        null
+      );
+    const cols: CsvColumnDef<ReturnType<typeof mk>>[] = [
+      { id: 'battery_percent', header: 'Battery %', getValue: (r) => r.battery_percent },
+    ];
+    const csv = infrastructureRowsToCsv([mk(87), mk(101), mk(null)], cols);
+    expect(csv.split('\n')).toEqual(['Battery %', '87', 'Powered', '']);
   });
 });

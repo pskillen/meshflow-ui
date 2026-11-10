@@ -93,3 +93,27 @@ describe('InfrastructureNodeCard', () => {
     expect(screen.getByTestId('infra-propagation-map-9')).toBeInTheDocument();
   });
 });
+
+describe('InfrastructureNodeCard battery', () => {
+  it.each([
+    ['a level', 87, 'Battery: 87%'],
+    ['zero', 0, 'Battery: 0%'],
+    ['powered (101)', 101, 'Battery: Powered'],
+    ['missing', null, 'Battery: —'],
+  ])('shows %s', (_label, battery_level, text) => {
+    renderCard(
+      makeNode({
+        latest_device_metrics: {
+          battery_level,
+          voltage: null,
+          meshtastic_channel_utilization: null,
+          meshtastic_air_util_tx: null,
+          uptime_seconds: null,
+          reported_time: null,
+          logged_time: null,
+        },
+      })
+    );
+    expect(screen.getByText((c) => c.replace(/\s+/g, ' ').trim() === text)).toBeInTheDocument();
+  });
+});

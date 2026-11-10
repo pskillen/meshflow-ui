@@ -8,6 +8,11 @@ export interface ChartCardProps {
   title: string;
   /** The one number for the range: "avg 88", "16,867". Right-aligned beside the title. */
   headline?: ReactNode;
+  /**
+   * Change against the previous period ("+12% vs previous 7d"), a second line under the headline in a neutral colour.
+   * `null` reserves the line's height while the comparison loads; leave it undefined for no line at all.
+   */
+  delta?: ReactNode;
   /** Plain-words pill saying what one point or bar is: "Packets per 6-hour bucket". */
   measure?: ReactNode;
   /** Controls for this chart only (a Total / By type toggle). Sits beside the measure pill. */
@@ -23,6 +28,7 @@ export interface ChartCardProps {
 export function ChartCard({
   title,
   headline,
+  delta,
   measure,
   actions,
   note,
@@ -40,10 +46,19 @@ export function ChartCard({
           {headline != null && (
             <div
               id={headlineId}
-              className="text-sm font-medium tabular-nums"
+              className="text-right text-sm font-medium tabular-nums"
               data-testid={testId ? `${testId}-headline` : undefined}
             >
               {headline}
+              {delta !== undefined && ' '}
+              {delta !== undefined && (
+                <span
+                  className="block min-h-4 text-[11px] font-normal leading-4 text-muted-foreground"
+                  data-testid={testId ? `${testId}-delta` : undefined}
+                >
+                  {delta}
+                </span>
+              )}
             </div>
           )}
         </div>

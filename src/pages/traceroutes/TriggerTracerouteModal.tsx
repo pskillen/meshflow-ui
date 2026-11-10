@@ -17,6 +17,7 @@ import { AutoTargetPreviewMap } from '@/components/traceroutes/AutoTargetPreview
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { ManagedNode, ObservedNode } from '@/lib/models';
 import { filterManagedNodesForMapDisplay } from '@/lib/managed-node-status';
+import { filterManagedNodesByProtocol } from '@/lib/mesh-protocol';
 import { observedNodeHeardOnOrAfter, pickTargetLastHeardCutoff } from '@/lib/observed-node-recency';
 import type { TargetPreviewStrategy } from '@/lib/tracerouteTargetGeometry';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -83,15 +84,18 @@ export function TriggerTracerouteModal({
     setTargetNodeLabel(formatNodeLabel(fixedTargetNode));
   }, [hasFixedTarget, fixedTargetNode]);
 
-  const selectedManaged = managedNodes.find((m) => m.meshtastic_node_id === managedNodeId);
+  // Traceroutes are triggered by Meshtastic node number, so MeshCore feeders are neither sources nor map markers.
+  const meshtasticFeeders = useMemo(() => filterManagedNodesByProtocol(managedNodes, 1), [managedNodes]);
+
+  const selectedManaged = meshtasticFeeders.find((m) => m.meshtastic_node_id === managedNodeId);
   const geo = selectedManaged?.geo_classification;
   const canIntraZone = geo?.applicable_strategies?.includes('intra_zone') ?? false;
 
-  const managedNodesForMap = useMemo(() => filterManagedNodesForMapDisplay(managedNodes), [managedNodes]);
+  const managedNodesForMap = useMemo(() => filterManagedNodesForMapDisplay(meshtasticFeeders), [meshtasticFeeders]);
 
   const meshtasticManagedNodes = useMemo(
-    () => managedNodes.filter((n) => n.meshtastic_node_id != null && n.meshtastic_node_id > 0),
-    [managedNodes]
+    () => meshtasticFeeders.filter((n) => n.meshtastic_node_id != null && n.meshtastic_node_id > 0),
+    [meshtasticFeeders]
   );
 
   const managedNodeIdSet = useMemo(

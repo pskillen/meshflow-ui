@@ -75,7 +75,7 @@ const test = base.extend({
       '**/api/nodes/observed-nodes/*/**': createJsonHandler([]),
       [`**/api/nodes/observed-nodes/${NODE_ID}/`]: createJsonHandler(NODE),
       [`**/api/nodes/observed-nodes/${NODE_ID}/traceroute-links/**`]: createJsonHandler(LINKS),
-      '**/api/traceroutes/**': createJsonHandler({ results: [], count: 0, next: null, previous: null }),
+      '**/api/traceroutes/**': createJsonHandler({ results: [], count: 23, next: null, previous: null }),
       '**/api/traceroutes/triggerable-nodes/**': createJsonHandler([]),
     });
     // eslint-disable-next-line react-hooks/rules-of-hooks -- Playwright fixture callback
@@ -107,7 +107,7 @@ test.describe('Node Traceroutes tab', () => {
       await page.goto(`/nodes/${NODE_ID}?tab=traceroutes&range=${range}`);
       await expect(page.getByTestId('node-traceroute-tiles')).toBeVisible();
       await expect(page.getByTestId('node-traceroute-tile-links')).toContainText('6');
-      await expect(page.getByTestId('node-traceroute-tile-peers')).toContainText('6');
+      await expect(page.getByTestId('node-traceroute-tile-traceroutes')).toContainText('23');
       await expect(page.getByTestId('node-traceroute-tile-best-snr')).toContainText('6.3');
 
       await expect.poll(() => linkParams.length).toBeGreaterThan(0);
@@ -126,6 +126,19 @@ test.describe('Node Traceroutes tab', () => {
     });
   }
 
+  test('the Traceroutes tile and the history table share one request', async ({ page }) => {
+    const history: string[] = [];
+    page.on('request', (req) => {
+      const url = new URL(req.url());
+      if (/\/api\/traceroutes\/$/.test(url.pathname) && url.searchParams.has('target_node')) history.push(req.url());
+    });
+    await page.goto(`/nodes/${NODE_ID}?tab=traceroutes&range=7d`);
+    await expect(page.getByTestId('node-traceroute-tile-traceroutes')).toContainText('23');
+    await expect(page.getByTestId('node-traceroute-tile-traceroutes')).toContainText('to this node');
+    await expect(page.getByTestId('node-traceroute-tile-peers')).toHaveCount(0);
+    expect(history).toHaveLength(1);
+  });
+
   test('SNR cards: four links first, then all; each has a headline and both directions', async ({ page }) => {
     await page.goto(`/nodes/${NODE_ID}?tab=traceroutes&range=24h`);
     await expect(page.getByTestId('link-snr-charts')).toBeVisible();
@@ -139,6 +152,68 @@ test.describe('Node Traceroutes tab', () => {
     await expect(page.getByTestId('chart-link-snr-1001').locator('.recharts-dot').first()).toBeVisible();
     await page.getByRole('button', { name: /show all links \(2 more\)/i }).click();
     await expect(page.getByTestId('link-snr-charts').getByRole('heading', { level: 3 })).toHaveCount(6);
+  });
+
+  for (const range of ['7d', '90d']) {
+    test(`${range}: the SNR view toggles to Raw samples and back to Means`, async ({ page }) => {
+      await page.goto(`/nodes/${NODE_ID}?tab=traceroutes&range=${range}`);
+      const card = page.getByTestId('chart-link-snr-1001');
+      await expect(page.getByRole('radio', { name: 'Bucket means' })).toBeChecked();
+      await expect(card.getByTestId('chart-link-snr-1001-measure')).toContainText('Mean SNR');
+
+      await page.getByRole('radio', { name: 'Raw samples' }).click();
+      await expect(card.getByTestId('chart-link-snr-1001-measure')).toContainText("one traceroute's SNR");
+      await expect(card.getByTestId('snr-points-chart')).toBeVisible();
+      await expect(card.getByTestId('snr-points-legend')).toContainText('SNR out (dB)');
+      // inbound circles and outbound triangles are drawn, one mark per sample
+      await expect(card.locator('.recharts-scatter circle').first()).toBeVisible();
+      await expect(card.locator('.recharts-scatter polygon').first()).toBeVisible();
+      await expect(card.getByTestId('chart-link-snr-1001-headline')).toContainText('avg in');
+      await expect(card.locator('.recharts-yAxis-tick-labels .recharts-cartesian-axis-tick-value')).toHaveText([
+        '-20',
+        '-10',
+        '0',
+        '10',
+      ]);
+
+      await page.getByRole('radio', { name: 'Bucket means' }).click();
+      await expect(card.getByTestId('chart-link-snr-1001-measure')).toContainText('Mean SNR');
+      await expect(card.getByTestId('snr-points-chart')).toHaveCount(0);
+    });
+  }
+
+  test('90d: Raw draws one mark per sample, spread across the window', async ({ page }) => {
+    const DAY = 24 * HOUR;
+    const now = Date.now();
+    const IN = 60;
+    const OUT = 25;
+    await page.route(`**/api/nodes/observed-nodes/${NODE_ID}/traceroute-links/**`, (route) =>
+      route.fulfill({
+        json: {
+          ...LINKS,
+          edges: LINKS.edges.slice(0, 1),
+          snr_history: [
+            {
+              peer_node_id: 1001,
+              peer_short_name: 'SPREAD',
+              inbound: Array.from({ length: IN }, (_, k) => ({
+                triggered_at: new Date(now - (k * 85 * DAY) / IN - HOUR).toISOString(),
+                snr: -15 + (k % 20),
+              })),
+              outbound: Array.from({ length: OUT }, (_, k) => ({
+                triggered_at: new Date(now - (k * 85 * DAY) / OUT - 2 * HOUR).toISOString(),
+                snr: -10 + (k % 15),
+              })),
+            },
+          ],
+        },
+      })
+    );
+    await page.goto(`/nodes/${NODE_ID}?tab=traceroutes&range=90d`);
+    await page.getByRole('radio', { name: 'Raw samples' }).click();
+    const card = page.getByTestId('chart-link-snr-1001');
+    await expect(card.locator('.recharts-scatter circle')).toHaveCount(IN);
+    await expect(card.locator('.recharts-scatter polygon')).toHaveCount(OUT);
   });
 
   test('a link whose only sample is in the bucket in progress still draws its point (30d)', async ({ page }) => {
@@ -219,6 +294,10 @@ test.describe('Node Traceroutes tab', () => {
     await expect(page.getByTestId('chart-link-snr-1001').getByTestId('trend-chart')).toBeVisible();
     await page.getByRole('button', { name: /show all links/i }).click();
     await expect(page.getByTestId('chart-link-snr-1003').getByTestId('trend-chart')).toBeVisible();
+    expect(await noPageScroll(page)).toBe(true);
+    await page.getByRole('radio', { name: 'Raw samples' }).click();
+    await expect(page.getByTestId('chart-link-snr-1003').getByTestId('snr-points-chart')).toBeVisible();
+    await expect(page.getByTestId('chart-link-snr-1001').getByTestId('snr-points-chart')).toBeVisible();
     expect(await noPageScroll(page)).toBe(true);
   });
 });

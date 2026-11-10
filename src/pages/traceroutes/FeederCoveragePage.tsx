@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useManagedNodes } from '@/hooks/api/useNodes';
 import { useFeederReach } from '@/hooks/api/useFeederReach';
+import { HeardTruncatedNotice } from './HeardTruncatedNotice';
 import { useObservedNodesHeard } from '@/hooks/api/useObservedNodesHeard';
 import { observedNodesToCoverageGhosts } from '@/lib/coverageHeardGhosts';
 import { FeederCoverageMap, type CoverageLayerKey } from '@/components/traceroutes/FeederCoverageMap';
@@ -164,9 +165,12 @@ export function FeederCoveragePage() {
     targetStrategy: targetStrategyParam,
   });
 
-  const { nodes: heardObservedNodes } = useObservedNodesHeard({
+  const {
+    nodes: heardObservedNodes,
+    total: heardTotal,
+    truncated: heardTruncated,
+  } = useObservedNodesHeard({
     lastHeardAfter: triggeredAtAfter,
-    pageSize: 500,
     enabled: layers.heard && selectedFeederId != null,
   });
 
@@ -288,6 +292,10 @@ export function FeederCoveragePage() {
         </div>
         <CoverageStrategyMenu value={strategies} onChange={setStrategies} />
       </div>
+
+      {layers.heard && heardTruncated && (
+        <HeardTruncatedNotice shown={heardObservedNodes.length} total={heardTotal} since={triggeredAtAfter} />
+      )}
 
       <div className="block md:hidden">
         <StatsCard

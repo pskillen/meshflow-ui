@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { batteryChartValue } from '@/lib/battery';
 import { Line, LineChart, CartesianGrid, XAxis, YAxis, Tooltip } from 'recharts';
 import { DeviceMetrics } from '@/lib/models';
 import { ChartConfig, ChartContainer, ChartTooltipContent } from '@/components/ui/chart';
@@ -22,7 +23,7 @@ export function NodeMiniChart({ metrics, dateRange, lines = 'all' }: NodeMiniCha
       .filter((m) => m.reported_time != null)
       .map((m) => ({
         timestamp: new Date(m.reported_time!).getTime(),
-        battery_level: m.battery_level,
+        battery_level: batteryChartValue(m.battery_level),
         meshtastic_channel_utilization: m.meshtastic_channel_utilization,
       }))
       .sort((a, b) => a.timestamp - b.timestamp);

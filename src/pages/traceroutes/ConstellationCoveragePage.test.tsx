@@ -15,7 +15,7 @@ vi.mock('@/hooks/api/useNodes', () => ({
 }));
 
 vi.mock('@/hooks/api/useObservedNodesHeard', () => ({
-  useObservedNodesHeard: vi.fn(() => ({ nodes: [], isLoading: false, isFetching: false })),
+  useObservedNodesHeard: vi.fn(() => ({ nodes: [], total: 0, truncated: false, isLoading: false, isFetching: false })),
 }));
 
 vi.mock('@/components/traceroutes/ConstellationCoverageMap', () => ({
@@ -39,10 +39,22 @@ vi.mock('@/components/traceroutes/ConstellationCoverageMap', () => ({
 
 import { useConstellations } from '@/hooks/api/useConstellations';
 import { useConstellationCoverage } from '@/hooks/api/useConstellationCoverage';
+import { useObservedNodesHeard } from '@/hooks/api/useObservedNodesHeard';
 import { ConstellationCoveragePage } from './ConstellationCoveragePage';
 
 const mockedUseConstellations = vi.mocked(useConstellations);
 const mockedUseCoverage = vi.mocked(useConstellationCoverage);
+const mockedUseHeard = vi.mocked(useObservedNodesHeard);
+
+function mockHeard(truncated: boolean) {
+  mockedUseHeard.mockReturnValue({
+    nodes: [],
+    total: truncated ? 2500 : 0,
+    truncated,
+    isLoading: false,
+    isFetching: false,
+  } as unknown as ReturnType<typeof useObservedNodesHeard>);
+}
 
 function setupHooks({
   constellations = [{ id: 1, name: 'C1' }],
@@ -159,5 +171,24 @@ describe('ConstellationCoveragePage', () => {
     expect(screen.queryByText(/Combines traceroute attempts/)).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'About this map' }));
     expect(screen.getByText(/Combines traceroute attempts/)).toBeInTheDocument();
+  });
+
+  it('shows the truncated notice only when the Heard layer is on and the list is truncated', () => {
+    setupHooks({ data: { hexes: [] } as unknown as ReturnType<typeof useConstellationCoverage>['data'] });
+    mockHeard(true);
+    renderAt('/traceroutes/map/coverage/constellation/1');
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /toggle heard layer/i }));
+    const notice = screen.getByRole('status');
+    expect(notice).toHaveTextContent(/first/);
+    expect(notice).toHaveTextContent('2,500');
+  });
+
+  it('shows no truncated notice when the Heard layer is on but the list is complete', () => {
+    setupHooks({ data: { hexes: [] } as unknown as ReturnType<typeof useConstellationCoverage>['data'] });
+    mockHeard(false);
+    renderAt('/traceroutes/map/coverage/constellation/1');
+    fireEvent.click(screen.getByRole('button', { name: /toggle heard layer/i }));
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
   });
 });

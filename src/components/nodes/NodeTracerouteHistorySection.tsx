@@ -18,7 +18,8 @@ import type { AutoTraceRoute, ObservedNode } from '@/lib/models';
 import { labelForTriggerTypeApi } from '@/lib/traceroute-trigger-type';
 import { useManagedNodesSuspense } from '@/hooks/api/useNodes';
 
-const PAGE_SIZE = 10;
+/** Page size of the history table's query; the Traceroutes tile shares it so both hit one React Query entry. */
+export const NODE_TRACEROUTE_HISTORY_PAGE_SIZE = 10;
 
 function routeSummary(tr: AutoTraceRoute): string {
   const outEmpty = !tr.route || tr.route.length === 0;
@@ -52,7 +53,7 @@ export function NodeTracerouteHistorySection({
   const { data, isLoading, error } = useTraceroutesWithWebSocket({
     target_node: nodeId,
     triggered_after: since?.toISOString(),
-    page_size: PAGE_SIZE,
+    page_size: NODE_TRACEROUTE_HISTORY_PAGE_SIZE,
   });
   const { triggerableNodes } = useTracerouteTriggerableNodesSuspense();
   const { managedNodes } = useManagedNodesSuspense({

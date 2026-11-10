@@ -1,4 +1,5 @@
 import { ObservedNode } from '@/lib/models';
+import { formatBattery } from '@/lib/battery';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
@@ -86,9 +87,7 @@ export function NodeSelector({ nodes, onSelect, onCancel, excludeNodes = [] }: N
                   </TableCell>
                   <TableCell>{node.long_name || '-'}</TableCell>
                   <TableCell>{node.last_heard ? node.last_heard.toLocaleString() : 'Never'}</TableCell>
-                  <TableCell>
-                    {node.latest_device_metrics?.battery_level ? `${node.latest_device_metrics.battery_level}%` : '-'}
-                  </TableCell>
+                  <TableCell>{formatBattery(node.latest_device_metrics?.battery_level)}</TableCell>
                   <TableCell>
                     <Button variant="secondary" size="sm" onClick={() => onSelect(node.meshtastic_node_id)}>
                       Monitor

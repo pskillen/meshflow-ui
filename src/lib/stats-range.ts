@@ -104,11 +104,29 @@ export function statsRangeWindow(key: StatsRangeKey, now: Date = new Date()): St
   };
 }
 
-/** The window of the same length immediately before `window`, for period-on-period comparison. */
-export function previousStatsWindow(window: StatsRangeWindow): StatsRangeWindow {
-  const span = window.end.getTime() - window.start.getTime();
-  const start = new Date(window.start.getTime() - span);
-  return { start, end: window.start, partialEnd: false, lastBucketStart: window.start };
+export interface ComparisonWindows {
+  /** Whole buckets of the current window: [start, lastBucketStart) when the last bucket is in progress, else [start, end). */
+  current: { start: Date; end: Date };
+  /** The same number of whole buckets immediately before `current.start`. */
+  previous: { start: Date; end: Date };
+  buckets: number;
+}
+
+/**
+ * The windows for a period-on-period comparison, on the same UTC bucket grid as the charts. The bucket in progress is
+ * left out of the current side, and the previous side has the same number of whole buckets, so the two are comparable.
+ */
+export function comparisonWindows(window: StatsRangeWindow, bucket: StatsBucket): ComparisonWindows {
+  const bucketMs = BUCKET_MS[bucket];
+  const startMs = window.start.getTime();
+  const endMs = window.partialEnd ? window.lastBucketStart.getTime() : window.end.getTime();
+  const buckets = Math.max(0, Math.round((endMs - startMs) / bucketMs));
+  const span = buckets * bucketMs;
+  return {
+    current: { start: new Date(startMs), end: new Date(endMs) },
+    previous: { start: new Date(startMs - span), end: new Date(startMs) },
+    buckets,
+  };
 }
 
 /** Bucket size for a range key. */

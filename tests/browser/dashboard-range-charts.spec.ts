@@ -7,6 +7,8 @@ const DAY = 24 * HOUR;
 const requests: URL[] = [];
 /** Set per test: an API that has not deployed `bucket=1d` ignores it and returns hourly rows. */
 let ignoreBucket = false;
+/** Set per test: simulates the snapshot hole, so any window that ends before the current one starts has no rows. */
+let noPreviousData = false;
 
 /** Snapshots for any request: hourly rows, or UTC-day rollups when `bucket=1d` is asked for. */
 function snapshots(route: Route) {
@@ -18,6 +20,14 @@ function snapshots(route: Route) {
   const flow = /packet_volume|new_nodes/.test(stat);
   const base = stat.startsWith('mc_') ? 20 : 80;
   const results = [];
+  // The current window ends within the last hour; a previous window ends at least 24h ago.
+  if (noPreviousData && before < Date.now() - 12 * HOUR) {
+    return route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ count: 0, next: null, previous: null, results }),
+    });
+  }
   if (url.searchParams.get('bucket') === '1d' && !ignoreBucket) {
     for (let t = Math.ceil(after / DAY) * DAY; t < before; t += DAY) {
       const samples = Math.min(24, Math.floor((before - t) / HOUR));
@@ -56,6 +66,7 @@ const test = base.extend({
   context: async ({ context }, useFixture) => {
     requests.length = 0;
     ignoreBucket = false;
+    noPreviousData = false;
     await installApiMocks(context, { '**/api/stats/snapshots/**': snapshots });
     // eslint-disable-next-line react-hooks/rules-of-hooks -- Playwright fixture callback
     await useFixture(context);
@@ -127,6 +138,72 @@ test.describe('Dashboard range charts', () => {
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
     expect(overflow).toBeLessThanOrEqual(0);
     await page.screenshot({ path: 'test-results/dash-phone.png', fullPage: true });
+  });
+
+  const noHScroll = async (page: import('@playwright/test').Page) => {
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+    expect(overflow).toBeLessThanOrEqual(0);
+  };
+
+  for (const [name, size] of [
+    ['desktop', { width: 1280, height: 900 }],
+    ['phone', { width: 375, height: 800 }],
+  ] as const) {
+    test(`previous-period change shows at every preset on ${name}`, async ({ page }) => {
+      await page.setViewportSize(size);
+      for (const preset of ['24h', '7d', '30d', '90d']) {
+        await page.goto(`/meshtastic/dashboard?range=${preset}`);
+        for (const id of ['online_nodes', 'new_nodes', 'packet_volume']) {
+          await expect(page.getByTestId(`chart-${id}-delta`)).toHaveText(
+            new RegExp(`^[+\\u2212]?\\d+% vs previous ${preset}$|^No change vs previous ${preset}$`)
+          );
+        }
+        await noHScroll(page);
+      }
+    });
+  }
+
+  test('previous-period change is neutral when the previous window has no data', async ({ page }) => {
+    noPreviousData = true;
+    await page.goto('/meshtastic/dashboard?range=7d');
+    await expect(page.getByTestId('chart-packet_volume-delta')).toHaveText('No comparison');
+    await expect(page.getByTestId('chart-online_nodes-delta')).not.toContainText('%');
+    await expect(page.getByTestId('trend-chart')).toHaveCount(3);
+  });
+
+  test('the neutral line stays on one row at 375px and the titles do not wrap', async ({ page }) => {
+    noPreviousData = true;
+    await page.setViewportSize({ width: 375, height: 800 });
+    await page.goto('/meshtastic/dashboard?range=7d');
+    for (const id of ['online_nodes', 'new_nodes', 'packet_volume']) {
+      const delta = page.getByTestId(`chart-${id}-delta`);
+      await expect(delta).toHaveText('No comparison');
+      const box = await delta.boundingBox();
+      expect(box!.height).toBeLessThan(20);
+      const title = await page.getByTestId(`chart-${id}`).getByRole('heading', { level: 3 }).boundingBox();
+      expect(title!.height).toBeLessThan(20);
+    }
+    await noHScroll(page);
+  });
+
+  test('makes one previous-window request per stat type per chart', async ({ page }) => {
+    await page.goto('/?range=24h');
+    // The delta line is reserved while loading, so wait for the previous-window requests themselves.
+    const previousByStat = () => {
+      const byStat = new Map<string, number>();
+      for (const u of requests.filter(
+        (r) => new Date(r.searchParams.get('recorded_at_before')!).getTime() < Date.now() - 12 * HOUR
+      ))
+        byStat.set(u.searchParams.get('stat_type')!, (byStat.get(u.searchParams.get('stat_type')!) ?? 0) + 1);
+      return byStat;
+    };
+    await expect
+      .poll(() => [...previousByStat().keys()].sort())
+      .toEqual(
+        ['mc_new_nodes', 'mc_online_nodes', 'mc_packet_volume', 'new_nodes', 'online_nodes', 'packet_volume'].sort()
+      );
+    await expect(page.getByTestId('chart-packet_volume-delta')).not.toBeEmpty();
+    expect([...previousByStat().values()].every((n) => n === 1)).toBe(true);
   });
 
   test('home overlays both protocols', async ({ page }) => {

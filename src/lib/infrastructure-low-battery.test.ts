@@ -1,8 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import type { ObservedNode } from '@/lib/models';
 import {
+  getLowBatteryRowFlags,
   hasMeshInfraMapBatteryOrPresenceAlert,
+  qualifiesLowBatterySection,
   isLowBatteryTableRowVisible,
+  matchesLowBatteryNoTelemetryRow,
   matchesLowBatteryStaleReadingRow,
   partitionMeshInfraLowBatteryTableNodes,
   partitionLowBatteryNodes,
@@ -131,6 +134,44 @@ describe('hasMeshInfraMapBatteryOrPresenceAlert', () => {
         logged_time: null,
       } as ObservedNode['latest_device_metrics'],
     });
+    expect(hasMeshInfraMapBatteryOrPresenceAlert(n)).toBe(true);
+  });
+});
+
+describe('battery level interpretation (101, 0, missing)', () => {
+  const withLevel = (battery_level: number | null) =>
+    node({
+      latest_device_metrics: {
+        battery_level,
+        reported_time: new Date(),
+        logged_time: null,
+      } as ObservedNode['latest_device_metrics'],
+    });
+
+  it('does not count a null level as low (null < 50 is true in JS) but puts it in the no-telemetry bucket', () => {
+    const n = withLevel(null);
+    expect(qualifiesLowBatterySection(n)).toBe(true);
+    expect(matchesLowBatteryNoTelemetryRow(n)).toBe(true);
+    expect(partitionLowBatteryNodes([n])).toEqual([n]);
+    expect(isLowBatteryTableRowVisible(n, { showStaleReadings: true, showZeroPercent: true, showNoTelemetry: false })).toBe(false);
+    expect(getLowBatteryRowFlags(n).showLowBatteryBadge).toBe(false);
+    expect(getLowBatteryRowFlags(n).isZeroPercent).toBe(false);
+    expect(hasMeshInfraMapBatteryOrPresenceAlert(n)).toBe(false);
+  });
+
+  it('never counts powered (101) as low', () => {
+    const n = withLevel(101);
+    expect(qualifiesLowBatterySection(n)).toBe(false);
+    expect(getLowBatteryRowFlags(n).showLowBatteryBadge).toBe(false);
+    expect(hasMeshInfraMapBatteryOrPresenceAlert(n)).toBe(false);
+  });
+
+  it('keeps 0 as a real, low, zero-percent reading', () => {
+    const n = withLevel(0);
+    expect(qualifiesLowBatterySection(n)).toBe(true);
+    const flags = getLowBatteryRowFlags(n);
+    expect(flags.isZeroPercent).toBe(true);
+    expect(flags.showLowBatteryBadge).toBe(true);
     expect(hasMeshInfraMapBatteryOrPresenceAlert(n)).toBe(true);
   });
 });

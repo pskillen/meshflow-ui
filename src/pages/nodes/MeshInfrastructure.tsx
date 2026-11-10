@@ -1,4 +1,5 @@
 import { useMemo, useState, useCallback, Suspense } from 'react';
+import { describeBattery, formatBattery } from '@/lib/battery';
 import { Link } from 'react-router-dom';
 import { subDays, subHours, format } from 'date-fns';
 import { enGB } from 'date-fns/locale';
@@ -622,9 +623,9 @@ function MeshInfrastructureContent({ protocol }: { protocol: InfraProtocol }) {
                         </TableCell>
                         <TableCell>
                           <div className="flex flex-col">
-                            {level != null ? (
+                            {describeBattery(level).kind !== 'none' ? (
                               <>
-                                <span>{level}%</span>
+                                <span>{formatBattery(level)}</span>
                                 {reportedAt ? (
                                   <>
                                     <span className="text-xs text-muted-foreground">
@@ -648,7 +649,7 @@ function MeshInfrastructureContent({ protocol }: { protocol: InfraProtocol }) {
                             ) : null}
                             {flags.showStaleBatteryBadge ? (
                               <Badge variant="outline" className="text-xs">
-                                {node.latest_device_metrics?.reported_time
+                                {!matchesLowBatteryNoTelemetryRow(node)
                                   ? `Battery reading ${STALE_BATTERY_TELEMETRY_DAYS}+ days old`
                                   : 'No battery telemetry'}
                               </Badge>

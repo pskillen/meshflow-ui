@@ -1,17 +1,20 @@
-import { Fragment, Suspense, useMemo, useState } from 'react';
+import { Fragment, Suspense, useMemo, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { ChartCard } from '@/components/stats/ChartCard';
 import { TrendChart, type TrendSeries } from '@/components/stats/TrendChart';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-import { useStatsSnapshotsForTypesSuspense } from '@/hooks/api/useStatsSnapshots';
+import { useStatsSnapshotsForTypes, useStatsSnapshotsForTypesSuspense } from '@/hooks/api/useStatsSnapshots';
 import type { StatsRange } from '@/hooks/useStatsRange';
 import { PACKET_TYPE_DISPLAY_NAMES } from '@/lib/stats-aggregation';
+import { comparePeriods, describeNoComparison, formatDelta } from '@/lib/stats-delta';
+import { comparisonWindows } from '@/lib/stats-range';
 import {
   MC_PACKET_TYPE_DISPLAY_NAMES,
   onlineNodesMetricStatTypes,
   packetVolumeStatTypes,
   type MeshStatsProtocolScope,
   type OnlineNodesChartMetric,
+  type StatsSnapshotStatType,
 } from '@/lib/stats-snapshot-types';
 import { formatTrendLabel } from '@/lib/stats-trend';
 import {
@@ -23,6 +26,7 @@ import {
   snapshotParamsForRange,
   totalOf,
   type CountTrend,
+  type SnapshotPages,
 } from '@/lib/stats-trend-data';
 
 const nf = new Intl.NumberFormat('en-GB');
@@ -66,7 +70,46 @@ function chartNote(trend: CountTrend, range: StatsRange): string | undefined {
   if (trend.latest != null && range.bucket !== 'daily') {
     parts.push(`Latest point ${formatTrendLabel(trend.latest, range.bucket)}.`);
   }
+  if (range.window.partialEnd) parts.push('Change compares whole buckets; the one in progress is left out.');
   return parts.length ? parts.join(' ') : undefined;
+}
+
+/**
+ * Change against the previous period for a chart's headline. Fetches the previous window without Suspense (one request
+ * per stat type, sharing the cache with the chart's own key builder), so it never blanks the chart.
+ */
+function usePreviousPeriodDelta(args: {
+  statTypes: readonly string[];
+  pages: SnapshotPages;
+  scope: MeshStatsProtocolScope;
+  mtStat: StatsSnapshotStatType;
+  mcStat: StatsSnapshotStatType;
+  mode: 'sum' | 'average';
+  range: StatsRange;
+}): ReactNode {
+  const { statTypes, pages, scope, mtStat, mcStat, mode, range } = args;
+  const windows = useMemo(() => comparisonWindows(range.window, range.bucket), [range.window, range.bucket]);
+  const prevParams = useMemo(
+    () => snapshotParamsForRange(windows.previous, range.bucket),
+    [windows.previous, range.bucket]
+  );
+  const prev = useStatsSnapshotsForTypes(statTypes, prevParams);
+  return useMemo(() => {
+    const result = comparePeriods({
+      currentPages: pages,
+      previousPages: prev.pages,
+      scope,
+      mtStat,
+      mcStat,
+      mode,
+      windows,
+      bucket: range.bucket,
+    });
+    const text = formatDelta(result, range.label);
+    if (text === undefined) return null;
+    if (result.kind === 'none') return <span title={describeNoComparison(result)}>{text}</span>;
+    return text;
+  }, [pages, prev.pages, scope, mtStat, mcStat, mode, windows, range.bucket, range.label]);
 }
 
 /** A headline over a truncated range (the API ignored `bucket`) covers only part of it: say so. */
@@ -118,6 +161,15 @@ function NodesChart({
     metric === 'online_nodes' ? `avg ${nf.format(meanOf(trend.rows, keys))}` : nf.format(totalOf(trend.rows, keys)),
     trend
   );
+  const delta = usePreviousPeriodDelta({
+    statTypes,
+    pages,
+    scope,
+    mtStat: metric,
+    mcStat: metric === 'online_nodes' ? 'mc_online_nodes' : 'mc_new_nodes',
+    mode: metric === 'online_nodes' ? 'average' : 'sum',
+    range,
+  });
   const measure =
     metric === 'online_nodes'
       ? `Each point: nodes heard in the 2h around it${range.bucket === 'hourly' ? '' : ` · ${range.bucketLabel} mean`}`
@@ -127,6 +179,7 @@ function NodesChart({
     <ChartCard
       title={title}
       headline={headline}
+      delta={delta}
       measure={measure}
       note={chartNote(trend, range)}
       data-testid={`chart-${metric}`}
@@ -185,11 +238,21 @@ function PacketVolumeChart({ scope, range }: NodeChartProps) {
   const shown = split ?? total;
 
   const headline = withPartial(nf.format(totalOf(total.rows, keys)), total);
+  const delta = usePreviousPeriodDelta({
+    statTypes,
+    pages,
+    scope,
+    mtStat: 'packet_volume',
+    mcStat: 'mc_packet_volume',
+    mode: 'sum',
+    range,
+  });
 
   return (
     <ChartCard
       title="Packet volume"
       headline={headline}
+      delta={delta}
       measure={`Packets per ${bucketPhrase(range.bucket)}${byType ? ', by packet type' : ''}`}
       note={chartNote(shown, range)}
       data-testid="chart-packet_volume"

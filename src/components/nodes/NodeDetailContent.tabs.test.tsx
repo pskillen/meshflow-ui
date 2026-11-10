@@ -27,16 +27,29 @@ vi.mock('@/components/nodes/NodeMeshMonitoringSection', () => ({
   NodeMeshMonitoringSection: () => <div data-testid="mesh-monitoring-mock">Mesh monitoring</div>,
 }));
 
+vi.mock('@/components/nodes/NodeTracerouteLinksMap', () => ({
+  NodeTracerouteLinksMap: () => <div data-testid="links-map" />,
+}));
+
+vi.mock('@/components/nodes/LinkSNRCharts', () => ({
+  LinkSNRCharts: () => <div data-testid="link-snr-charts" />,
+}));
+
+vi.mock('@/hooks/api/useTraceroutes', () => ({
+  useTraceroutes: vi.fn(() => ({ data: undefined, isLoading: false })),
+}));
+
 vi.mock('@/components/nodes/NodeTracerouteHistorySection', () => ({
+  NODE_TRACEROUTE_HISTORY_PAGE_SIZE: 10,
   NodeTracerouteHistorySection: () => <div data-testid="traceroute-history-mock">Traceroutes to this node</div>,
 }));
 
 vi.mock('@/hooks/api/useNodeTracerouteLinks', () => ({
-  useNodeTracerouteLinks: () => ({
+  useNodeTracerouteLinks: vi.fn(() => ({
     data: { edges: [], nodes: [], snr_history: [] },
     isLoading: false,
     error: null,
-  }),
+  })),
 }));
 
 vi.mock('@/hooks/api/useNodes', () => ({
@@ -55,6 +68,8 @@ vi.mock('@/lib/auth/authService', () => ({
 }));
 
 import { useNodeSuspense, useManagedNodesSuspense } from '@/hooks/api/useNodes';
+import { useNodeTracerouteLinks } from '@/hooks/api/useNodeTracerouteLinks';
+import { useTraceroutes } from '@/hooks/api/useTraceroutes';
 import { TEST_OBSERVED_INTERNAL_ID } from '@/test/test-node-ids';
 
 const mockedUseNodeSuspense = vi.mocked(useNodeSuspense);
@@ -181,6 +196,62 @@ describe('NodeDetailContent tabbed layout', () => {
     expect(screen.queryByTestId('node-detail-tab-monitoring')).not.toBeInTheDocument();
     expect(screen.getByTestId('node-detail-panel-overview')).toBeInTheDocument();
     expect(screen.getByTestId('url-search')).toHaveTextContent('');
+  });
+
+  describe('Traceroutes tiles', () => {
+    const edge = { peer_node_id: 1, avg_snr_in: 5, avg_snr_out: null, count: 4 };
+    const renderTraceroutes = () =>
+      render(
+        <MemoryRouter initialEntries={[`/nodes/${TEST_OBSERVED_INTERNAL_ID}?tab=traceroutes&range=7d`]}>
+          <Routes>
+            <Route path="/nodes/:id" element={<PageWithSearchEcho />} />
+          </Routes>
+        </MemoryRouter>
+      );
+
+    beforeEach(() => {
+      vi.mocked(useNodeTracerouteLinks).mockReturnValue({
+        data: { edges: [edge], nodes: [], snr_history: [] },
+        isLoading: false,
+        error: null,
+      } as unknown as ReturnType<typeof useNodeTracerouteLinks>);
+    });
+
+    it('shows the count of traceroutes to this node, asked with the history table params', () => {
+      vi.mocked(useTraceroutes).mockReturnValue({
+        data: { count: 1234, results: [] },
+        isLoading: false,
+      } as unknown as ReturnType<typeof useTraceroutes>);
+      renderTraceroutes();
+      const tile = screen.getByTestId('node-traceroute-tile-traceroutes');
+      expect(tile).toHaveTextContent('Traceroutes');
+      expect(tile).toHaveTextContent((1234).toLocaleString());
+      expect(tile).toHaveTextContent('to this node');
+      expect(screen.queryByTestId('node-traceroute-tile-peers')).not.toBeInTheDocument();
+      expect(useTraceroutes).toHaveBeenLastCalledWith({
+        target_node: 100,
+        triggered_after: expect.stringMatching(/^\d{4}-\d\d-\d\dT/),
+        page_size: 10,
+      });
+    });
+
+    it('shows a dash while the count loads', () => {
+      vi.mocked(useTraceroutes).mockReturnValue({ data: undefined, isLoading: true } as unknown as ReturnType<
+        typeof useTraceroutes
+      >);
+      renderTraceroutes();
+      expect(screen.getByTestId('node-traceroute-tile-traceroutes')).toHaveTextContent('\u2014');
+    });
+
+    it('shows a dash, not 0, when the count query failed (no data, not loading)', () => {
+      vi.mocked(useTraceroutes).mockReturnValue({ data: undefined, isLoading: false } as unknown as ReturnType<
+        typeof useTraceroutes
+      >);
+      renderTraceroutes();
+      const tile = screen.getByTestId('node-traceroute-tile-traceroutes');
+      expect(tile).toHaveTextContent('\u2014');
+      expect(tile).not.toHaveTextContent('0');
+    });
   });
 
   describe('shared range', () => {

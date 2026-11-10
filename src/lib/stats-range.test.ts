@@ -5,7 +5,7 @@ import {
   defaultStatsRange,
   isStatsRangeKey,
   parseStatsRange,
-  previousStatsWindow,
+  comparisonWindows,
   statsRangeBucket,
   statsRangeWindow,
   windowStabilityTick,
@@ -140,12 +140,36 @@ describe('parseStatsRange / defaultStatsRange', () => {
   });
 });
 
-describe('previousStatsWindow', () => {
-  it('is the same length and ends where the window starts', () => {
-    const w = statsRangeWindow('24h', now);
-    const p = previousStatsWindow(w);
-    expect(p.end).toEqual(w.start);
-    expect(p.end.getTime() - p.start.getTime()).toBe(24 * 3600_000);
+describe('comparisonWindows', () => {
+  it('24h: 24 hourly buckets, previous is the 24 before', () => {
+    const c = comparisonWindows(statsRangeWindow('24h', now), 'hourly');
+    expect(c.buckets).toBe(24);
+    expect(c.current).toEqual({ start: utc(2026, 10, 8, 14), end: utc(2026, 10, 9, 14) });
+    expect(c.previous).toEqual({ start: utc(2026, 10, 7, 14), end: utc(2026, 10, 8, 14) });
+  });
+
+  it('7d at 14:20 UTC: 28 six-hour buckets, the one in progress left out', () => {
+    const c = comparisonWindows(statsRangeWindow('7d', utc(2026, 10, 9, 14, 20)), '6h');
+    expect(c.buckets).toBe(28);
+    expect(c.current).toEqual({ start: utc(2026, 10, 2, 12), end: utc(2026, 10, 9, 12) });
+    expect(c.previous).toEqual({ start: utc(2026, 9, 26, 12), end: utc(2026, 10, 2, 12) });
+  });
+
+  it('7d exactly on a bucket boundary keeps every bucket', () => {
+    const c = comparisonWindows(statsRangeWindow('7d', utc(2026, 10, 9, 12, 5)), '6h');
+    expect(c.buckets).toBe(28);
+    expect(c.current.end).toEqual(utc(2026, 10, 9, 12));
+  });
+
+  it('30d and 90d: whole UTC days', () => {
+    const c30 = comparisonWindows(statsRangeWindow('30d', now), 'daily');
+    expect(c30.buckets).toBe(30);
+    expect(c30.current).toEqual({ start: utc(2026, 9, 10), end: utc(2026, 10, 9) });
+    expect(c30.previous).toEqual({ start: utc(2026, 8, 10), end: utc(2026, 9, 10) });
+    const c90 = comparisonWindows(statsRangeWindow('90d', now), 'daily');
+    expect(c90.buckets).toBe(90);
+    expect(c90.previous.end).toEqual(c90.current.start);
+    expect(c90.previous.start.getUTCHours()).toBe(0);
   });
 });
 

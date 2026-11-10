@@ -77,10 +77,10 @@ export function MonitoredNodesChannelUtilChart({
       )
     ).sort((a, b) => a - b);
 
-    const nodeLookups: Record<string, Record<number, number>> = {};
+    const nodeLookups: Record<string, Record<number, number | null>> = {};
     nodes.forEach((node) => {
       const metrics = metricsMap[node.meshtastic_node_id] || [];
-      const lookup: Record<number, number> = {};
+      const lookup: Record<number, number | null> = {};
       metrics
         .filter((m) => m.reported_time != null)
         .forEach((m) => {

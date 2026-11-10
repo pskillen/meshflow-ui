@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import userEvent from '@testing-library/user-event';
 import { render, screen } from '@testing-library/react';
 import { TriggerTracerouteModal } from './TriggerTracerouteModal';
+import * as MapModule from '@/components/nodes/NodesAndConstellationsMap';
 import type { GeoClassification, ManagedNode, ObservedNode } from '@/lib/models';
 
 vi.mock('@/providers/ConfigProvider', () => ({
@@ -19,6 +20,12 @@ vi.mock('@/hooks/api/useNodes', () => ({
 vi.mock('@/components/traceroutes/AutoTargetPreviewMap', () => ({
   AutoTargetPreviewMap: () => <div data-testid="auto-target-preview-stub" />,
 }));
+
+// Pass through to the real map but record which managed nodes it is given.
+vi.mock('@/components/nodes/NodesAndConstellationsMap', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/components/nodes/NodesAndConstellationsMap')>();
+  return { ...actual, NodesAndConstellationsMap: vi.fn(actual.NodesAndConstellationsMap) };
+});
 
 function makeObservedNode(overrides: Partial<ObservedNode> = {}): ObservedNode {
   return {
@@ -198,5 +205,48 @@ describe('TriggerTracerouteModal with fixedTargetNode', () => {
       />
     );
     expect(screen.queryByTestId('trigger-traceroute-fixed-target')).not.toBeInTheDocument();
+  });
+});
+
+describe('TriggerTracerouteModal protocol filter', () => {
+  it('keeps MeshCore feeders off the map and out of the source list', async () => {
+    const mapSpy = vi.mocked(MapModule.NodesAndConstellationsMap);
+    mapSpy.mockClear();
+    const fixed = makeObservedNode();
+    const meshtastic = makeManagedNode({
+      meshtastic_node_id: 7,
+      node_id_str: '!00000007',
+      short_name: 'MT',
+      position: { latitude: 55, longitude: -4 },
+      last_packet_ingested_at: new Date('2026-01-01T00:00:00Z'),
+    });
+    const meshcore = makeManagedNode({
+      meshtastic_node_id: undefined as unknown as number,
+      node_id_str: 'mc:abcd',
+      short_name: 'MC',
+      protocol: 2,
+      position: { latitude: 56, longitude: -4 },
+    });
+    render(
+      <TriggerTracerouteModal
+        open={true}
+        onOpenChange={vi.fn()}
+        mode="user"
+        managedNodes={[meshtastic, meshcore]}
+        observedNodes={[fixed]}
+        onTrigger={vi.fn().mockResolvedValue(undefined)}
+        isSubmitting={false}
+        fixedTargetNode={fixed}
+      />
+    );
+
+    expect(mapSpy).toHaveBeenCalled();
+    for (const [props] of mapSpy.mock.calls) {
+      expect(props.managedNodes?.some((m) => m.node_id_str === 'mc:abcd')).toBe(false);
+    }
+
+    await userEvent.click(screen.getByRole('combobox', { name: /source node/i }));
+    expect(screen.getByRole('option', { name: /MT \(!00000007\)/ })).toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: /MC/ })).not.toBeInTheDocument();
   });
 });

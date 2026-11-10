@@ -12,7 +12,7 @@ vi.mock('@/hooks/api/useFeederReach', () => ({
 }));
 
 vi.mock('@/hooks/api/useObservedNodesHeard', () => ({
-  useObservedNodesHeard: vi.fn(() => ({ nodes: [], isLoading: false, isFetching: false })),
+  useObservedNodesHeard: vi.fn(() => ({ nodes: [], total: 0, truncated: false, isLoading: false, isFetching: false })),
 }));
 
 vi.mock('@/components/traceroutes/FeederCoverageMap', () => ({
@@ -42,10 +42,22 @@ vi.mock('@/components/traceroutes/FeederCoverageMap', () => ({
 
 import { useManagedNodes } from '@/hooks/api/useNodes';
 import { useFeederReach } from '@/hooks/api/useFeederReach';
+import { useObservedNodesHeard } from '@/hooks/api/useObservedNodesHeard';
 import { FeederCoveragePage } from './FeederCoveragePage';
 
 const mockedUseManagedNodes = vi.mocked(useManagedNodes);
 const mockedUseFeederReach = vi.mocked(useFeederReach);
+const mockedUseHeard = vi.mocked(useObservedNodesHeard);
+
+function mockHeard(truncated: boolean) {
+  mockedUseHeard.mockReturnValue({
+    nodes: [],
+    total: truncated ? 2500 : 0,
+    truncated,
+    isLoading: false,
+    isFetching: false,
+  } as unknown as ReturnType<typeof useObservedNodesHeard>);
+}
 
 function makeManagedNode(overrides: Partial<ManagedNode> = {}): ManagedNode {
   return {
@@ -213,5 +225,24 @@ describe('FeederCoveragePage', () => {
     expect(screen.queryByText(/Maps completed and failed/)).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'About this map' }));
     expect(screen.getByText(/Maps completed and failed/)).toBeInTheDocument();
+  });
+
+  it('shows the truncated notice only when the Heard layer is on and the list is truncated', () => {
+    setupHooks({ data: undefined });
+    mockHeard(true);
+    renderAt('/traceroutes/map/coverage?feeder=200');
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /toggle heard layer/i }));
+    const notice = screen.getByRole('status');
+    expect(notice).toHaveTextContent(/first/);
+    expect(notice).toHaveTextContent('2,500');
+  });
+
+  it('shows no truncated notice when the Heard layer is on but the list is complete', () => {
+    setupHooks({ data: undefined });
+    mockHeard(false);
+    renderAt('/traceroutes/map/coverage?feeder=200');
+    fireEvent.click(screen.getByRole('button', { name: /toggle heard layer/i }));
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
   });
 });

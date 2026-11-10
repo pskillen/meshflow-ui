@@ -8,6 +8,7 @@ The frame every stats chart sits in: title, a headline number for the range, a p
 
 - `title: string`
 - `headline?: ReactNode` – the one number for the range ("avg 88", "16,867"), right of the title.
+- `delta?: ReactNode` – change against the previous period ("+12% vs previous 7d"). A second line under the headline, inside the headline element so screen readers read it with the chart. Neutral colour: the sign and words carry the meaning. `null` keeps the line empty but reserves its height (loading); undefined draws no line. `data-testid` also sets `<id>-delta`.
 - `measure?: ReactNode` – pill text: "Packets per 6-hour bucket", "Each point: nodes heard in the 2h around it".
 - `actions?: ReactNode` – controls for this chart only (the Packet volume Total / By type toggle).
 - `note?: ReactNode` – small print under the chart (partial-bucket and latest-point notes).

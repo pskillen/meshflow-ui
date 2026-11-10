@@ -1,4 +1,5 @@
 import { ObservedNode } from '@/lib/models';
+import { formatBattery } from '@/lib/battery';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { X } from 'lucide-react';
@@ -57,9 +58,7 @@ export function MonitoredNodesTable({
                 <TableCell>{node.last_heard ? node.last_heard.toLocaleString() : 'Never'}</TableCell>
                 <TableCell>
                   <div className="space-y-1">
-                    <div>
-                      {node.latest_device_metrics?.battery_level ? `${node.latest_device_metrics.battery_level}%` : '-'}
-                    </div>
+                    <div>{formatBattery(node.latest_device_metrics?.battery_level)}</div>
                     <div className="text-xs text-muted-foreground">
                       {node.latest_device_metrics?.voltage ? `${node.latest_device_metrics.voltage.toFixed(2)}V` : '-'}
                     </div>

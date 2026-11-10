@@ -1,59 +1,46 @@
-import { useEffect, useMemo } from 'react';
-import { useInfiniteQuery, type InfiniteData } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 
 import { useMeshtasticApi } from './useApi';
 import type { ObservedNode, PaginatedResponse } from '@/lib/models';
 
+/** The API's maximum page size; the heard layer fetches this one page and no more. */
+export const OBSERVED_NODES_HEARD_PAGE_SIZE = 1000;
+
 export interface UseObservedNodesHeardOptions {
   lastHeardAfter: Date;
-  pageSize?: number;
   /** When false, no fetch (e.g. layer toggled off). */
   enabled?: boolean;
 }
 
+const NO_NODES: ObservedNode[] = [];
+
 /**
- * Paginated observed nodes with `last_heard` in range (same clock as coverage window).
- * Fetches every page of observed nodes — use sparingly (e.g. map overlays).
+ * One page (up to 1000) of observed nodes with `last_heard` in range (same clock as coverage window).
+ * Never walks further pages: when `total` exceeds the returned nodes, `truncated` is true.
  */
 export function useObservedNodesHeard(options: UseObservedNodesHeardOptions) {
   const api = useMeshtasticApi();
-  const pageSize = options.pageSize ?? 500;
   const enabled = options.enabled !== false;
   const lastHeardKey = Math.floor(options.lastHeardAfter.getTime() / (5 * 60 * 1000)).toString();
 
-  const query = useInfiniteQuery<
-    PaginatedResponse<ObservedNode>,
-    Error,
-    InfiniteData<PaginatedResponse<ObservedNode>>,
-    [string, number, string],
-    number
-  >({
-    queryKey: ['observed-nodes-heard', pageSize, lastHeardKey],
-    queryFn: async ({ pageParam = 1 }) =>
+  const query = useQuery<PaginatedResponse<ObservedNode>, Error>({
+    queryKey: ['observed-nodes-heard', OBSERVED_NODES_HEARD_PAGE_SIZE, lastHeardKey],
+    queryFn: () =>
       api.getNodes({
-        page: pageParam,
-        page_size: pageSize,
+        page: 1,
+        page_size: OBSERVED_NODES_HEARD_PAGE_SIZE,
         last_heard_after: options.lastHeardAfter,
       }),
-    initialPageParam: 1,
-    getNextPageParam: (lastPage, allPages) => {
-      if (!lastPage.next) return undefined;
-      return allPages.length + 1;
-    },
     enabled,
   });
 
-  useEffect(() => {
-    if (!enabled) return;
-    if (query.hasNextPage && !query.isFetchingNextPage && !query.isError) {
-      void query.fetchNextPage();
-    }
-  }, [enabled, query.hasNextPage, query.isFetchingNextPage, query.isError, query.fetchNextPage]);
-
-  const nodes = useMemo(() => query.data?.pages.flatMap((p) => p.results) ?? [], [query.data?.pages]);
+  const nodes = query.data?.results ?? NO_NODES;
+  const total = query.data?.count ?? 0;
 
   return {
     nodes,
+    total,
+    truncated: total > nodes.length,
     isLoading: query.isLoading,
     isFetching: query.isFetching,
   };

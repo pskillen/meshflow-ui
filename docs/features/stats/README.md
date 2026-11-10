@@ -32,6 +32,7 @@ The behaviour lives in sidecar docs next to the code. This page is the way in; f
 - **Range memory.** The range carries within an area only. The areas are `dashboards` (Home, Meshtastic, MeshCore), `traceroutes` (the stats page and the four traceroute maps) and `node-lists`. Node pages carry the range only through the URL, between tabs. The slide-over keeps its range local. A valid `?range=` always wins.
 - **Older pickers.** `Nd` keys in `src/lib/time-range.ts` are fixed N×24h blocks (`2d` is 48h hourly, `7d` is 168h at 6h buckets). `niceAxisMax` gives 1/2/5 ticks.
 - **Stat classes.** Live count (now), gauge (latest value), flow (rate over the range), events in range (counted in the window). See [`useStatsRange`](../../../src/hooks/useStatsRange.md).
+- **Previous-period change.** The Online nodes, New nodes and Packet volume headlines show the change against the previous period of the same length ("+12% vs previous 7d"), in a neutral colour. It compares whole buckets on the UTC grid, leaving out the bucket in progress on both sides, and gauges average while flows sum. It reads "No comparison" when either side has under 90% of its hourly snapshots, the previous total is 0, or a page was truncated. The previous window is one non-blocking request per stat type. Right now and firmware adoption have no delta: they are live counts with their own windows.
 - **Battery reading.** 101 reads "Powered", 0 is a real reading, and a missing reading is a dash.
 
 ## Decisions
@@ -46,14 +47,11 @@ Each was decided in https://github.com/pskillen/meshflow-ui/issues/407.
 - Dashboard charts share `ChartCard` and `TrendChart`, and 30d/90d ask for `bucket=1d`.
 - Home "Right now" shows the total with `MT n · MC n`. "All time" is not shown. There is one battery helper.
 - The firmware split is the latest snapshot, labelled with its own window. The trend follows the range on a daily grid. Phones show counts and the trend only. Home puts stats above the map, and on phones the map stays collapsed and unmounted until opened. Unknown firmware is dashed, so it is never told apart by colour alone.
-- Previous-period deltas were left out at first, with a follow-up ticket.
+- Dashboard headlines show the change against the previous period; there is no previous-period line on the trend charts.
 
 ## Known gaps
 
-- No change against the previous period on dashboard tiles: https://github.com/pskillen/meshflow-ui/issues/445
-- `useMeshCore.ts` and `useObservedNodesHeard.ts` still walk every page; the trigger-traceroute map shows feeders of both protocols; several battery displays still format the raw level: https://github.com/pskillen/meshflow-ui/issues/446
-- The node Traceroutes tab's Peers tile always equals Links, and link SNR shows bucket means only: https://github.com/pskillen/meshflow-ui/issues/447
-- The API stores missing device metrics as 0, so the battery chart drops 0 voltage, and drops 0 level when voltage is missing: https://github.com/pskillen/meshflow-api/issues/524 (bot follow-up: https://github.com/pskillen/meshflow-bot/issues/170)
+- Node updates from the bot still send 0 for a missing device metric, so the battery chart keeps dropping 0 voltage, and 0 level when voltage is missing: https://github.com/pskillen/meshflow-bot/issues/170
 
 ## Links
 

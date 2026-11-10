@@ -20,7 +20,11 @@ import { getRoleLabel, INFRASTRUCTURE_ROLE_IDS } from '@/lib/meshtastic';
 import type { EnvironmentExposureSlug, LatestEnvironmentMetrics, ObservedNode, WeatherUseSlug } from '@/lib/models';
 import { NodeEnvironmentSettingsDialog } from '@/components/nodes/NodeEnvironmentSettingsDialog';
 import { NodeMeshMonitoringSection } from '@/components/nodes/NodeMeshMonitoringSection';
-import { NodeTracerouteHistorySection } from '@/components/nodes/NodeTracerouteHistorySection';
+import { useTraceroutes } from '@/hooks/api/useTraceroutes';
+import {
+  NodeTracerouteHistorySection,
+  NODE_TRACEROUTE_HISTORY_PAGE_SIZE,
+} from '@/components/nodes/NodeTracerouteHistorySection';
 import { NodeOutgoingTraceroutesSection } from '@/components/nodes/NodeOutgoingTraceroutesSection';
 import { RfPropagationSection } from '@/components/nodes/RfPropagationSection';
 import { NodeRightNow } from '@/components/nodes/NodeRightNow';
@@ -154,6 +158,8 @@ function NodeLocationCard({
   );
 }
 
+const COUNT_FORMAT = new Intl.NumberFormat();
+
 function TracerouteLinksSection({
   internalId,
   meshtasticNodeId,
@@ -169,6 +175,12 @@ function TracerouteLinksSection({
   const triggeredAtAfter = range.window.start;
 
   const { data, isLoading, error } = useNodeTracerouteLinks(internalId, { triggeredAtAfter });
+  // Same params as NodeTracerouteHistorySection, so this is one request shared with the table and the count matches it.
+  const { data: tracerouteList } = useTraceroutes({
+    target_node: meshtasticNodeId,
+    triggered_after: range.window.start.toISOString(),
+    page_size: NODE_TRACEROUTE_HISTORY_PAGE_SIZE,
+  });
 
   // The API always lists the focus node in `nodes`, so a node with no peers in the range has nodes but no edges: that is no data.
   const hasData = data && data.edges.length > 0;
@@ -193,10 +205,10 @@ function TracerouteLinksSection({
             />
             <StatTile
               role="listitem"
-              label="Peers"
-              value={data.snr_history.length}
-              sub="seen in traceroutes"
-              data-testid="node-traceroute-tile-peers"
+              label="Traceroutes"
+              value={tracerouteList == null ? '—' : COUNT_FORMAT.format(tracerouteList.count)}
+              sub="to this node"
+              data-testid="node-traceroute-tile-traceroutes"
             />
             <StatTile
               role="listitem"
@@ -260,7 +272,6 @@ function TracerouteLinksSection({
               </div>
               {data.snr_history.length > 0 && (
                 <div>
-                  <h4 className="mb-3 text-sm font-medium">SNR over time by link</h4>
                   <LinkSNRCharts snrHistory={data.snr_history} range={range} />
                 </div>
               )}
