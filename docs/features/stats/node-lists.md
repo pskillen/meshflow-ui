@@ -39,10 +39,6 @@ Each was decided in https://github.com/pskillen/meshflow-ui/issues/407.
 4. Type in search: the map pins and list both narrow, the feeder pins stay.
 5. On a phone-width window: the map is short, search is in the first screen, and the key is behind "Map key".
 
-## Known gaps
-
-- Several battery displays still format the raw level: https://github.com/pskillen/meshflow-ui/issues/446
-
 ## Related
 
 - [Stats](README.md)

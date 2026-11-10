@@ -12,7 +12,7 @@ The one place that interprets a raw device-metrics `battery_level`. Meshtastic r
 
 ## Wiring
 
-`BatteryIndicator` in `NodeCard.tsx` and the `NodesTable` battery cell and sort rank use it. Other battery displays still format the raw level themselves (`MonitoredNodesTable` and `NodeSelector` hide a real 0): `InfrastructureNodeCard`, `MonitoredNodesTable`, `NodeSelector`, `MyNodeCard`, `WatchedNodesTable`, `NodeActivityTable`, `NodeDetailContent`, `MeshInfrastructure` and `infrastructure-export-rows`; `BatteryGauge` and the chart components clamp locally. They should move onto this helper.
+Every battery display reads through this helper: `BatteryIndicator` in `NodeCard.tsx`, `NodesTable` (cell and sort rank), `BatteryGauge` (and `MyNodeCard` through it), `InfrastructureNodeCard`, `MonitoredNodesTable`, `NodeSelector`, `WatchedNodesTable`, `NodeActivityTable` and the Mesh Infrastructure low-battery table (text and tone; "Powered" is neutral). `batteryToneClass(raw)` gives the icon colour class. The charts (`NodeMiniChart`, `MonitoredNodesBatteryChart`) plot `batteryChartValue(raw)`: the percentage, or a gap for "Powered" and missing. `infrastructure-low-battery.ts` decides low through `describeBattery`, so a missing level is never low and 101 is never low. The infrastructure export's Battery % column is the number for a level, `Powered` for 101 and blank for none. `DeviceMetrics.battery_level` (and voltage, channel utilisation, air util TX, uptime) are `number | null`, matching the API.
 
 ## Related
 
