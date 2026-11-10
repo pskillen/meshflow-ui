@@ -49,6 +49,22 @@ describe('TrendChart', () => {
     expect(Array.from(curves).some((c) => c.getAttribute('stroke-dasharray') === '4 3')).toBe(true);
   });
 
+  it('draws a series dashed when asked, and hides the legend when asked', () => {
+    const { w, rows } = rowsFor('30d');
+    const two = [...series, { key: 'v2', label: 'Other', color: 'hsl(var(--chart-2))', dashed: true }];
+    const both = rows.map((r) => ({ ...r, v2: 3 }));
+    const { container, rerender } = render(
+      <TrendChart kind="line" rows={both} series={two} window={w} bucket="daily" />
+    );
+    const dashed = Array.from(container.querySelectorAll('.recharts-line-curve')).filter(
+      (c) => c.getAttribute('stroke-dasharray') === '5 3'
+    );
+    expect(dashed).toHaveLength(1);
+    expect(container.querySelector('.recharts-legend-wrapper')).not.toBeNull();
+    rerender(<TrendChart kind="line" rows={both} series={two} window={w} bucket="daily" legend={false} />);
+    expect(container.querySelector('.recharts-legend-wrapper')).toBeNull();
+  });
+
   it('puts every bucket of the window on the x axis even when data is missing', () => {
     const w = statsRangeWindow('90d', NOW);
     const { container } = render(
