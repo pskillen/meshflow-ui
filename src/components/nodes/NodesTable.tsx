@@ -178,7 +178,9 @@ function NodeRow({ node, config }: { node: ObservedNode; config: ProtocolPageCon
           )}
         </Link>
       </TableCell>
-      <TableCell className="hidden py-1.5 font-mono text-xs lg:table-cell">{node.node_id_str}</TableCell>
+      <TableCell className="hidden whitespace-nowrap py-1.5 font-mono text-xs lg:table-cell">
+        {node.node_id_str}
+      </TableCell>
       {isMeshtastic ? (
         <>
           <TableCell className="hidden py-1.5 lg:table-cell">{getRoleLabel(node.meshtastic_role) ?? '—'}</TableCell>

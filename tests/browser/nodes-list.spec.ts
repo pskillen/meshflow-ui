@@ -166,8 +166,8 @@ test.describe('Meshtastic node list', () => {
     await expect(table.getByTestId('node-row').nth(2)).toContainText('5h ago');
   });
 
-  test('the table does not scroll sideways at 360px, 375px or 768px (sidebar open)', async ({ page }) => {
-    for (const width of [360, 375, 768]) {
+  test('the table does not scroll sideways at 360px, 375px, 768px or 1024px (sidebar open)', async ({ page }) => {
+    for (const width of [360, 375, 768, 1024]) {
       await page.setViewportSize({ width, height: 900 });
       await page.goto('/nodes');
       const table = page.getByTestId('nodes-table');
