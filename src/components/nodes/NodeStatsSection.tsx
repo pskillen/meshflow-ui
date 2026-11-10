@@ -1,9 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { windowForTimeRangeKey } from '@/lib/time-range';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { TimeRangeSelect, TimeRangeOption } from '@/components/TimeRangeSelect';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { BatteryChartShadcn, type BatteryDisplayMode } from '@/components/BatteryChartShadcn';
 import { EnvironmentMetricsChart } from '@/components/nodes/EnvironmentMetricsChart';
@@ -14,27 +12,25 @@ import { NeighbourPieChart } from '@/components/NeighbourPieChart';
 import { Button } from '@/components/ui/button';
 import { Suspense } from 'react';
 import type { ObservedNode } from '@/lib/models';
-
-const STATS_TIME_RANGE_OPTIONS: TimeRangeOption[] = [
-  { key: '24h', label: '24 hours' },
-  { key: '48h', label: '48 hours' },
-  { key: '7d', label: '7 days' },
-  { key: '14d', label: '14 days' },
-];
+import type { StatsRange } from '@/hooks/useStatsRange';
 
 interface NodeStatsSectionProps {
   internalId: string;
   node: ObservedNode;
   isManagedNode: boolean;
+  /** The page's shared range (`useStatsRange`); its bar is in the node header. */
+  range: StatsRange;
 }
 
-export function NodeStatsSection({ internalId, node, isManagedNode }: NodeStatsSectionProps) {
+export function NodeStatsSection({ internalId, node, isManagedNode, range }: NodeStatsSectionProps) {
   const meshtasticNodeId = node.meshtastic_node_id;
-  const [timeRange, setTimeRange] = React.useState('48h');
-  const [dateRange, setDateRange] = React.useState(() => windowForTimeRangeKey('48h'));
   const [batteryDisplayMode, setBatteryDisplayMode] = React.useState<BatteryDisplayMode>('voltage');
 
-  const controlledDateRange = { startDate: dateRange.startDate, endDate: dateRange.endDate };
+  // Stable object: the range window only moves when the key or the hour does.
+  const controlledDateRange = React.useMemo(
+    () => ({ startDate: range.window.start, endDate: range.window.end }),
+    [range.window]
+  );
 
   const chartFallback = (
     <Card>
@@ -55,21 +51,10 @@ export function NodeStatsSection({ internalId, node, isManagedNode }: NodeStatsS
       <Card>
         <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-4">
           <div>
-            <CardTitle>Node Statistics</CardTitle>
+            <CardTitle>Over the {range.longLabel}</CardTitle>
             <CardDescription>
-              Battery, environment, power, and packet metrics over time. Use the time range selector to filter all
-              charts.
+              Battery, environment, power, and packet metrics. All charts share the range chosen at the top of the page.
             </CardDescription>
-          </div>
-          <div className="w-full sm:w-auto sm:min-w-[140px]">
-            <TimeRangeSelect
-              options={STATS_TIME_RANGE_OPTIONS}
-              value={timeRange}
-              onChange={(value, range) => {
-                setTimeRange(value);
-                setDateRange(range);
-              }}
-            />
           </div>
         </CardHeader>
         <CardContent className="space-y-6">
