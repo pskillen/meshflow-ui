@@ -166,9 +166,24 @@ test.describe('Dashboard range charts', () => {
   test('previous-period change is neutral when the previous window has no data', async ({ page }) => {
     noPreviousData = true;
     await page.goto('/meshtastic/dashboard?range=7d');
-    await expect(page.getByTestId('chart-packet_volume-delta')).toHaveText('No comparison: too little data before');
+    await expect(page.getByTestId('chart-packet_volume-delta')).toHaveText('No comparison');
     await expect(page.getByTestId('chart-online_nodes-delta')).not.toContainText('%');
     await expect(page.getByTestId('trend-chart')).toHaveCount(3);
+  });
+
+  test('the neutral line stays on one row at 375px and the titles do not wrap', async ({ page }) => {
+    noPreviousData = true;
+    await page.setViewportSize({ width: 375, height: 800 });
+    await page.goto('/meshtastic/dashboard?range=7d');
+    for (const id of ['online_nodes', 'new_nodes', 'packet_volume']) {
+      const delta = page.getByTestId(`chart-${id}-delta`);
+      await expect(delta).toHaveText('No comparison');
+      const box = await delta.boundingBox();
+      expect(box!.height).toBeLessThan(20);
+      const title = await page.getByTestId(`chart-${id}`).getByRole('heading', { level: 3 }).boundingBox();
+      expect(title!.height).toBeLessThan(20);
+    }
+    await noHScroll(page);
   });
 
   test('makes one previous-window request per stat type per chart', async ({ page }) => {

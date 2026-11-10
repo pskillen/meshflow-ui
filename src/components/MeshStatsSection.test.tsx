@@ -184,7 +184,7 @@ describe('MeshStatsSection', () => {
     state.full = true;
     state.prevEmpty = true;
     renderSection('meshtastic', '/?range=30d');
-    expect(screen.getByTestId('chart-packet_volume-delta')).toHaveTextContent('No comparison: too little data before');
+    expect(screen.getByTestId('chart-packet_volume-delta')).toHaveTextContent(/^No comparison$/);
   });
 
   it('makes one previous-window request per stat type per chart', () => {

@@ -29,8 +29,9 @@ function measureSide(args: {
 }): Side {
   const { pages, scope, mtStat, mcStat, mode, start, end, buckets, bucket } = args;
   let value = 0;
-  let samples = 0;
+  let coverage = Infinity;
   let truncated = false;
+  const expectedPerProtocol = buckets * TREND_BUCKET_SAMPLES[bucket];
   const series = seriesForScope(scope);
   for (const s of series) {
     const page = pages[s.key === 'meshtastic' ? mtStat : mcStat];
@@ -47,16 +48,17 @@ function measureSide(args: {
       weighted += p.value * w;
       n += w;
     }
-    samples += n;
-    value += mode === 'sum' ? sum : n > 0 ? weighted / n : 0;
+    // Flows are scaled to the full window, so a side with a few missing hours is not read as a drop in traffic.
+    value += mode === 'sum' ? (n > 0 ? (sum * expectedPerProtocol) / n : 0) : n > 0 ? weighted / n : 0;
+    // Each protocol must be covered on its own: one full protocol must not hide a hole in the other.
+    coverage = Math.min(coverage, expectedPerProtocol > 0 ? n / expectedPerProtocol : 0);
   }
-  const expected = buckets * TREND_BUCKET_SAMPLES[bucket] * series.length;
-  return { value, coverage: expected > 0 ? samples / expected : 0, truncated };
+  return { value, coverage: Number.isFinite(coverage) ? coverage : 0, truncated };
 }
 
 /**
  * Change of the current period against the one before, from whole buckets on both sides. Works from the snapshot pages
- * (not the trend rows, which lose `samples`). Flows sum, gauges take the sample-weighted mean; protocols add up to
+ * (not the trend rows, which lose `samples`). Flows sum (scaled to the full window when some hours are missing), gauges take the sample-weighted mean; protocols add up to
  * match the headline. Neutral when either side has too little data, a page is truncated, or the previous value is 0.
  */
 export function comparePeriods(args: {
@@ -93,13 +95,25 @@ export function comparePeriods(args: {
   return { kind: 'change', pct, current: cur.value, previous: prev.value };
 }
 
+/** Why there is no comparison, for a tooltip beside the short "No comparison" text. */
+export function describeNoComparison(delta: Extract<PeriodDelta, { kind: 'none' }>): string | undefined {
+  switch (delta.reason) {
+    case 'truncated':
+      return 'The range only partly loaded, so it cannot be compared.';
+    case 'no-previous-data':
+      return 'There was nothing to compare against in the previous period.';
+    case 'thin-coverage':
+      return 'Too little data in one of the two periods to compare them.';
+    default:
+      return undefined;
+  }
+}
+
 /** "+12% vs previous 7d", "−4% vs previous 7d", "No change vs previous 7d", or a neutral no-comparison line. */
 export function formatDelta(delta: PeriodDelta, rangeLabel: string): string | undefined {
   if (delta.kind === 'none') {
     if (delta.reason === 'loading') return undefined;
-    return delta.reason === 'truncated'
-      ? 'No comparison: range only partly loaded'
-      : 'No comparison: too little data before';
+    return 'No comparison';
   }
   if (delta.pct === 0) return `No change vs previous ${rangeLabel}`;
   return `${delta.pct > 0 ? '+' : MINUS}${Math.abs(delta.pct)}% vs previous ${rangeLabel}`;

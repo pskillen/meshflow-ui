@@ -1,4 +1,4 @@
-import { Fragment, Suspense, useMemo, useState } from 'react';
+import { Fragment, Suspense, useMemo, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { ChartCard } from '@/components/stats/ChartCard';
 import { TrendChart, type TrendSeries } from '@/components/stats/TrendChart';
@@ -6,7 +6,7 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { useStatsSnapshotsForTypes, useStatsSnapshotsForTypesSuspense } from '@/hooks/api/useStatsSnapshots';
 import type { StatsRange } from '@/hooks/useStatsRange';
 import { PACKET_TYPE_DISPLAY_NAMES } from '@/lib/stats-aggregation';
-import { comparePeriods, formatDelta } from '@/lib/stats-delta';
+import { comparePeriods, describeNoComparison, formatDelta } from '@/lib/stats-delta';
 import { comparisonWindows } from '@/lib/stats-range';
 import {
   MC_PACKET_TYPE_DISPLAY_NAMES,
@@ -86,7 +86,7 @@ function usePreviousPeriodDelta(args: {
   mcStat: StatsSnapshotStatType;
   mode: 'sum' | 'average';
   range: StatsRange;
-}): string | undefined {
+}): ReactNode {
   const { statTypes, pages, scope, mtStat, mcStat, mode, range } = args;
   const windows = useMemo(() => comparisonWindows(range.window, range.bucket), [range.window, range.bucket]);
   const prevParams = useMemo(
@@ -94,21 +94,22 @@ function usePreviousPeriodDelta(args: {
     [windows.previous, range.bucket]
   );
   const prev = useStatsSnapshotsForTypes(statTypes, prevParams);
-  return useMemo(
-    () =>
-      formatDelta(
-        comparePeriods({
-          currentPages: pages,
-          previousPages: prev.pages,
-          scope,
-          mtStat,
-          mcStat,
-          mode,
-          windows,
-          bucket: range.bucket,
-        }),
-        range.label
-      ),
+  return useMemo(() => {
+    const result = comparePeriods({
+      currentPages: pages,
+      previousPages: prev.pages,
+      scope,
+      mtStat,
+      mcStat,
+      mode,
+      windows,
+      bucket: range.bucket,
+    });
+    const text = formatDelta(result, range.label);
+    if (text === undefined) return null;
+    if (result.kind === 'none') return <span title={describeNoComparison(result)}>{text}</span>;
+    return text;
+  },
     [pages, prev.pages, scope, mtStat, mcStat, mode, windows, range.bucket, range.label]
   );
 }

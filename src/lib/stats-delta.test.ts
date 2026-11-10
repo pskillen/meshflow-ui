@@ -94,10 +94,40 @@ describe('comparePeriods', () => {
     expect(d).toEqual({ kind: 'none', reason: 'thin-coverage' });
   });
 
-  it('exactly 90% coverage still compares', () => {
+  it('just over 90% coverage (22 of 24) still compares', () => {
     const cur = hourly(c24.current.start, c24.current.end, 10);
     const prev = hourly(c24.previous.start, c24.previous.end, 10).slice(0, 22); // 22/24 = 91.7%
     expect(run({ cur, prev }).kind).toBe('change');
+  });
+
+  it('flows are scaled to the full window, so missing hours are not read as change', () => {
+    const cur = hourly(c24.current.start, c24.current.end, 10);
+    const prev = hourly(c24.previous.start, c24.previous.end, 10).slice(0, 22); // 22/24, same rate
+    expect(run({ cur, prev })).toMatchObject({ kind: 'change', pct: 0, current: 240, previous: 240 });
+  });
+
+  it('both scope needs each protocol covered, not the pooled total', () => {
+    const both = (mcPrev: Row[]) =>
+      comparePeriods({
+        currentPages: {
+          packet_volume: page('packet_volume', hourly(c24.current.start, c24.current.end, 10)),
+          mc_packet_volume: page('mc_packet_volume', hourly(c24.current.start, c24.current.end, 5)),
+        },
+        previousPages: {
+          packet_volume: page('packet_volume', hourly(c24.previous.start, c24.previous.end, 10)),
+          mc_packet_volume: page('mc_packet_volume', mcPrev),
+        },
+        scope: 'both',
+        mtStat: 'packet_volume',
+        mcStat: 'mc_packet_volume',
+        mode: 'sum',
+        windows: c24,
+        bucket: 'hourly',
+      });
+    const mcFull = hourly(c24.previous.start, c24.previous.end, 5);
+    // MC at 20/24 (83%) while MT is full: pooled would be 44/48 (92%) and pass.
+    expect(both(mcFull.slice(0, 20))).toEqual({ kind: 'none', reason: 'thin-coverage' });
+    expect(both(mcFull)).toMatchObject({ kind: 'change', pct: 0 });
   });
 
   it('previous = 0 is neutral', () => {
@@ -147,6 +177,25 @@ describe('comparePeriods', () => {
     expect(d).toMatchObject({ kind: 'change', pct: 0, current: 360, previous: 360 });
   });
 
+  it('the 90% boundary is inclusive: 27 of 30 days compares, 26 does not', () => {
+    const w = statsRangeWindow('30d', now);
+    const c = comparisonWindows(w, 'daily');
+    const days = (start: Date, end: Date): Row[] => {
+      const rows: Row[] = [];
+      for (let t = start.getTime(); t < end.getTime(); t += 24 * HOUR) rows.push({ at: t, count: 100, samples: 24 });
+      return rows;
+    };
+    const base = { stat: 'online_nodes' as const, mtStat: 'online_nodes' as const, mode: 'average' as const };
+    const cur = days(c.current.start, c.current.end);
+    const prev = days(c.previous.start, c.previous.end);
+    expect(c.buckets).toBe(30);
+    expect(run({ ...base, windows: c, bucket: 'daily', cur, prev: prev.slice(0, 27) }).kind).toBe('change');
+    expect(run({ ...base, windows: c, bucket: 'daily', cur, prev: prev.slice(0, 26) })).toEqual({
+      kind: 'none',
+      reason: 'thin-coverage',
+    });
+  });
+
   it('daily rollups count value.samples for coverage and weight gauges by it', () => {
     const w = statsRangeWindow('30d', now);
     const c = comparisonWindows(w, 'daily');
@@ -187,7 +236,8 @@ describe('formatDelta', () => {
     expect(formatDelta(ch(0), '7d')).toBe('No change vs previous 7d');
   });
   it('neutral states', () => {
-    expect(formatDelta({ kind: 'none', reason: 'thin-coverage' }, '7d')).toBe('No comparison: too little data before');
+    expect(formatDelta({ kind: 'none', reason: 'thin-coverage' }, '7d')).toBe('No comparison');
+    expect(formatDelta({ kind: 'none', reason: 'truncated' }, '7d')).toBe('No comparison');
     expect(formatDelta({ kind: 'none', reason: 'loading' }, '7d')).toBeUndefined();
   });
 });
