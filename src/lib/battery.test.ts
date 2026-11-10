@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { batteryTone, describeBattery, formatBattery } from './battery';
+import { batteryChartValue, batteryToneClass, batteryTone, describeBattery, formatBattery } from './battery';
 
 describe('describeBattery', () => {
   it('treats null, undefined and NaN as no data', () => {
@@ -46,5 +46,23 @@ describe('formatBattery', () => {
     expect(formatBattery(101)).toBe('Powered');
     expect(formatBattery(0)).toBe('0%');
     expect(formatBattery(87)).toBe('87%');
+  });
+});
+
+describe('batteryToneClass and batteryChartValue', () => {
+  it.each([
+    [87, 'text-green-500', 87],
+    [61, 'text-green-500', 61],
+    [60, 'text-yellow-500', 60],
+    [21, 'text-yellow-500', 21],
+    [20, 'text-red-500', 20],
+    [0, 'text-red-500', 0],
+    [101, 'text-muted-foreground', null],
+    [null, 'text-muted-foreground', null],
+    [undefined, 'text-muted-foreground', null],
+    [NaN, 'text-muted-foreground', null],
+  ])('%s -> %s, chart %s', (raw, cls, chart) => {
+    expect(batteryToneClass(raw)).toBe(cls);
+    expect(batteryChartValue(raw)).toBe(chart);
   });
 });
