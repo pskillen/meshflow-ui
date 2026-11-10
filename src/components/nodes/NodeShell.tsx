@@ -54,8 +54,8 @@ export function NodeShell({
           <Link
             to={backTo}
             replace={true}
-            aria-label="Back to Nodes"
-            className="text-teal-600 hover:underline dark:text-teal-400"
+            aria-label="Back to nodes"
+            className="-ml-1 inline-flex min-h-9 min-w-9 items-center justify-center rounded-md p-1 text-teal-600 hover:bg-muted dark:text-teal-400"
           >
             ←
           </Link>
