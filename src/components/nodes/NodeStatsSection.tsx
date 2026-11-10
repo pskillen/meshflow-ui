@@ -2,8 +2,8 @@
 
 import * as React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-import { BatteryChartShadcn, type BatteryDisplayMode } from '@/components/BatteryChartShadcn';
+import { BatteryChartShadcn } from '@/components/BatteryChartShadcn';
+import { ChannelAirChart } from '@/components/nodes/ChannelAirChart';
 import { EnvironmentMetricsChart } from '@/components/nodes/EnvironmentMetricsChart';
 import { PowerMetricsChart } from '@/components/nodes/PowerMetricsChart';
 import { PacketTypeChart } from '@/components/PacketTypeChart';
@@ -24,7 +24,6 @@ interface NodeStatsSectionProps {
 
 export function NodeStatsSection({ internalId, node, isManagedNode, range }: NodeStatsSectionProps) {
   const meshtasticNodeId = node.meshtastic_node_id;
-  const [batteryDisplayMode, setBatteryDisplayMode] = React.useState<BatteryDisplayMode>('voltage');
 
   // Stable object: the range window only moves when the key or the hour does. The old charts round `endDate` up to
   // the next hour; `window.end` is the top of the current hour, so without the extra hour they would stop short of
@@ -60,53 +59,24 @@ export function NodeStatsSection({ internalId, node, isManagedNode, range }: Nod
           </div>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="space-y-3">
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-medium text-muted-foreground">Battery chart</span>
-              <ToggleGroup
-                type="single"
-                value={batteryDisplayMode}
-                onValueChange={(v) => v && setBatteryDisplayMode(v as BatteryDisplayMode)}
-                variant="outline"
-                size="sm"
-              >
-                <ToggleGroupItem value="voltage" aria-label="Show voltage (V)">
-                  Voltage
-                </ToggleGroupItem>
-                <ToggleGroupItem value="percentage" aria-label="Show percentage (%)">
-                  Percentage
-                </ToggleGroupItem>
-              </ToggleGroup>
-            </div>
+          <div className="grid gap-3 md:grid-cols-2" data-testid="node-metric-charts">
             <Suspense fallback={chartFallback}>
-              <BatteryChartShadcn
-                internalId={internalId}
-                defaultTimeRange="48h"
-                controlledDateRange={controlledDateRange}
-                displayMode={batteryDisplayMode}
-              />
+              <BatteryChartShadcn internalId={internalId} range={range} />
             </Suspense>
+            <Suspense fallback={chartFallback}>
+              <ChannelAirChart internalId={internalId} range={range} />
+            </Suspense>
+            {node.latest_environment_metrics && (
+              <Suspense fallback={chartFallback}>
+                <EnvironmentMetricsChart internalId={internalId} range={range} />
+              </Suspense>
+            )}
+            {node.latest_power_metrics && (
+              <Suspense fallback={chartFallback}>
+                <PowerMetricsChart internalId={internalId} range={range} />
+              </Suspense>
+            )}
           </div>
-
-          {node.latest_environment_metrics && (
-            <Suspense fallback={chartFallback}>
-              <EnvironmentMetricsChart
-                internalId={internalId}
-                defaultTimeRange="48h"
-                controlledDateRange={controlledDateRange}
-              />
-            </Suspense>
-          )}
-
-          {node.latest_power_metrics && (
-            <Suspense fallback={chartFallback}>
-              <PowerMetricsChart
-                internalId={internalId}
-                defaultTimeRange="48h"
-                controlledDateRange={controlledDateRange}
-              />
-            </Suspense>
-          )}
 
           <Suspense fallback={chartFallback}>
             <PacketTypeChart

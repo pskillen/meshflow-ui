@@ -2,14 +2,11 @@ import { Link } from 'react-router-dom';
 import { useNodeSuspense, useManagedNodesSuspense } from '@/hooks/api/useNodes';
 import { useNodeTracerouteLinks } from '@/hooks/api/useNodeTracerouteLinks';
 import { useRecentNodes } from '@/hooks/useRecentNodes';
-import { formatUptimeSeconds } from '@/lib/utils';
 import { NodeStatsSection } from '@/components/nodes/NodeStatsSection';
 import { NodesMap } from '@/components/nodes/NodesMap';
 import { NodeTracerouteLinksMap } from '@/components/nodes/NodeTracerouteLinksMap';
 import { LinkSNRCharts } from '@/components/nodes/LinkSNRCharts';
-import { BatteryGauge } from '@/components/nodes/BatteryGauge';
 import { MetricsCard } from '@/components/nodes/MetricsCard';
-import { PercentGauge } from '@/components/nodes/PercentGauge';
 import { FirmwareBadge } from '@/components/nodes/FirmwareBadge';
 import { hasFirmwareBadge } from '@/lib/firmware';
 import { StaleReportedTime } from '@/components/nodes/StaleReportedTime';
@@ -434,39 +431,6 @@ export function NodeDetailContent({ internalId, compact = false, activeTab, onTa
           </div>
         </CardContent>
       </Card>
-
-      {node.latest_device_metrics && (
-        <Card>
-          <CardHeader>
-            <div>
-              <CardTitle>Device Metrics</CardTitle>
-              <CardDescription>
-                Battery, voltage, channel utilisation — last reported{' '}
-                <StaleReportedTime at={node.latest_device_metrics.reported_time} />
-              </CardDescription>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <BatteryGauge
-                batteryLevel={node.latest_device_metrics.battery_level ?? null}
-                voltage={node.latest_device_metrics.voltage ?? null}
-              />
-              <PercentGauge
-                value={node.latest_device_metrics.meshtastic_channel_utilization ?? null}
-                label="Channel Utilization"
-              />
-              <PercentGauge value={node.latest_device_metrics.meshtastic_air_util_tx ?? null} label="Air Utilization" />
-              <p>
-                <span className="font-medium">Uptime:</span>{' '}
-                {node.latest_device_metrics.uptime_seconds != null
-                  ? formatUptimeSeconds(node.latest_device_metrics.uptime_seconds)
-                  : '—'}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       {hasEnvironmentSensorMetrics(node.latest_environment_metrics) && (
         <>
