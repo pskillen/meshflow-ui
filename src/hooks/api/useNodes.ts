@@ -12,14 +12,15 @@ import {
 import { useMeshflowApi } from './useApi';
 import {
   DeviceMetrics,
-  EnvironmentMetrics,
+  DeviceMetricBucket,
+  EnvironmentMetricBucket,
   ObservedNode,
   Position,
-  PowerMetrics,
+  PowerMetricBucket,
   ManagedNode,
   OwnedManagedNode,
 } from '@/lib/models';
-import { DateRangeParams } from '@/lib/types';
+import { DateRangeParams, NodeMetricBucketParams } from '@/lib/types';
 import { PaginatedResponse } from '@/lib/models';
 import { getKeyValue, roundDateParams } from './hooks-utils';
 
@@ -497,19 +498,19 @@ export function useMyClaimedNodesSuspense(pageSize = 500) {
 }
 
 /**
- * Suspense-enabled hook to fetch device metrics for a node
+ * Suspense-enabled hook to fetch device metrics for a node, one mean row per bucket (`bucket` is required)
  * Use inside a <Suspense> boundary. No isLoading or error states are returned.
  */
-export function useNodeMetricsSuspense(internalId: string, params?: DateRangeParams) {
+export function useNodeMetricsSuspense(internalId: string, params: NodeMetricBucketParams) {
   const api = useMeshflowApi();
-  params = roundDateParams(params);
-  const keyValue = getKeyValue(params);
-  const key = ['nodes', internalId, 'metrics', keyValue];
+  const rounded = roundDateParams(params);
+  const keyValue = `${getKeyValue(rounded)}-${params.bucket}`;
+  const key = ['nodes', internalId, 'metrics', 'bucketed', keyValue];
 
-  const query = useSuspenseQuery<DeviceMetrics[], Error>({
+  const query = useSuspenseQuery<DeviceMetricBucket[], Error>({
     refetchInterval: 1000 * 60, // 1 minute
     queryKey: key,
-    queryFn: () => api.getNodeDeviceMetrics(internalId, params),
+    queryFn: () => api.getNodeDeviceMetrics(internalId, { ...rounded, bucket: params.bucket }),
   });
   return { metrics: query.data };
 }
@@ -518,16 +519,16 @@ export function useNodeMetricsSuspense(internalId: string, params?: DateRangePar
  * Suspense-enabled hook to fetch environment metrics for a node
  * Use inside a <Suspense> boundary. No isLoading or error states are returned.
  */
-export function useNodeEnvironmentMetricsSuspense(internalId: string, params?: DateRangeParams) {
+export function useNodeEnvironmentMetricsSuspense(internalId: string, params: NodeMetricBucketParams) {
   const api = useMeshflowApi();
-  params = roundDateParams(params);
-  const keyValue = getKeyValue(params);
-  const key = ['nodes', internalId, 'environment-metrics', keyValue];
+  const rounded = roundDateParams(params);
+  const keyValue = `${getKeyValue(rounded)}-${params.bucket}`;
+  const key = ['nodes', internalId, 'environment-metrics', 'bucketed', keyValue];
 
-  const query = useSuspenseQuery<EnvironmentMetrics[], Error>({
+  const query = useSuspenseQuery<EnvironmentMetricBucket[], Error>({
     refetchInterval: 1000 * 60, // 1 minute
     queryKey: key,
-    queryFn: () => api.getNodeEnvironmentMetrics(internalId, params),
+    queryFn: () => api.getNodeEnvironmentMetrics(internalId, { ...rounded, bucket: params.bucket }),
   });
   return { metrics: query.data };
 }
@@ -536,16 +537,16 @@ export function useNodeEnvironmentMetricsSuspense(internalId: string, params?: D
  * Suspense-enabled hook to fetch power metrics for a node
  * Use inside a <Suspense> boundary. No isLoading or error states are returned.
  */
-export function useNodePowerMetricsSuspense(internalId: string, params?: DateRangeParams) {
+export function useNodePowerMetricsSuspense(internalId: string, params: NodeMetricBucketParams) {
   const api = useMeshflowApi();
-  params = roundDateParams(params);
-  const keyValue = getKeyValue(params);
-  const key = ['nodes', internalId, 'power-metrics', keyValue];
+  const rounded = roundDateParams(params);
+  const keyValue = `${getKeyValue(rounded)}-${params.bucket}`;
+  const key = ['nodes', internalId, 'power-metrics', 'bucketed', keyValue];
 
-  const query = useSuspenseQuery<PowerMetrics[], Error>({
+  const query = useSuspenseQuery<PowerMetricBucket[], Error>({
     refetchInterval: 1000 * 60, // 1 minute
     queryKey: key,
-    queryFn: () => api.getNodePowerMetrics(internalId, params),
+    queryFn: () => api.getNodePowerMetrics(internalId, { ...rounded, bucket: params.bucket }),
   });
   return { metrics: query.data };
 }

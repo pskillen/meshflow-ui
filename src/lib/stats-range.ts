@@ -11,6 +11,16 @@ export const DEFAULT_STATS_RANGE: StatsPresetKey = '7d';
 
 export type StatsBucket = 'hourly' | '6h' | 'daily';
 
+/** The API's `bucket` query value for a node metric request (`1h`, `6h`, `1d`). */
+export type MetricApiBucket = '1h' | '6h' | '1d';
+
+const METRIC_API_BUCKET: Record<StatsBucket, MetricApiBucket> = { hourly: '1h', '6h': '6h', daily: '1d' };
+
+/** Map a range's bucket to the `bucket` the node metric endpoints expect, so a chart never picks it by hand. */
+export function metricApiBucket(bucket: StatsBucket): MetricApiBucket {
+  return METRIC_API_BUCKET[bucket];
+}
+
 export interface StatsRangeDef {
   key: StatsRangeKey;
   /** Short label for the range bar. */
