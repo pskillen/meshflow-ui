@@ -40,30 +40,30 @@ Browser tests use Playwright to run end-to-end tests in a real Chromium instance
 Protected routes normally require authentication. For browser tests, auth is bypassed when the app is built with `VITE_BROWSER_TEST=true`.
 
 - **Implementation**: `ProtectedRoute` checks `import.meta.env.VITE_BROWSER_TEST === 'true'` and, when set, renders children without requiring login.
-- **Usage**: The `browser:dev` script runs Vite with this env var on port 5174:
+- **Usage**: The `test:browser:dev` script runs Vite with this env var on port 5174:
 
   ```bash
-  npm run browser:dev   # VITE_BROWSER_TEST=true vite --port 5174
+  npm run test:browser:dev   # VITE_BROWSER_TEST=true vite --port 5174
   ```
 
-Playwright’s `webServer` config uses `browser:dev`, so the dev server started for tests automatically has auth bypass enabled. You can also run `browser:dev` manually to develop against protected routes without logging in.
+Playwright’s `webServer` config uses `test:browser:dev`, so the dev server started for tests automatically has auth bypass enabled. You can also run `test:browser:dev` manually to develop against protected routes without logging in.
 
 ### Running browser tests
 
 ```bash
-npm run browser
+npm run test:browser
 ```
 
 This will:
 
-1. Start the dev server with `browser:dev` (auth bypass on port 5174) if not already running
+1. Start the dev server with `test:browser:dev` (auth bypass on port 5174) if not already running
 2. Run all tests in `tests/browser/`
 
 Other commands:
 
 ```bash
-npm run browser:ui       # Playwright UI mode
-npm run browser:headed   # Run with visible browser window
+npm run test:browser:ui       # Playwright UI mode
+npm run test:browser:headed   # Run with visible browser window
 ```
 
 ### Test structure
