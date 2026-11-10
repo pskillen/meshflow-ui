@@ -10,12 +10,14 @@ This directory contains React hooks for interacting with the Meshtastic API. The
 
 ### Node Hooks
 
-- `useNodes`: Fetches and manages a list of observed nodes with pagination.
+- `useNodesSuspense`: Suspense hook for observed nodes; one page per request, more via `fetchNextPage`.
+- `useManagedNodes`: Managed nodes (feeders) only, first page, outside Suspense. Does not fetch observed nodes.
 - `useNode`: Fetches a single node by ID.
 - `useManagedNode`: Fetches a single managed node by ID.
 - `useNodeMetrics`: Fetches device metrics for a node.
 - `useNodePositions`: Fetches positions for a node.
-- `useNodeSearch`: Provides a mutation for searching nodes.
+- `useNodeSearch`: Provides a mutation for searching nodes. Fires only when `searchNodes` is called; used by `NodeSearch` in the sidebar on every page, so it must stay request-free until the user types.
+- `useProtocolObservedNodesSuspense`: Observed nodes per protocol for the node list pages. One page per request; further pages only when the page calls `fetchNextPage` ("Load more"). The page asks for 1000 rows (API maximum).
 - `useMultiNodeMetrics`: Fetches metrics for multiple nodes in parallel.
 
 ### Node Management Hooks
@@ -47,23 +49,27 @@ This directory contains React hooks for interacting with the Meshtastic API. The
 ### Fetching Nodes
 
 ```tsx
-import { useNodes } from '@/hooks/api';
+import { useNodesSuspense } from '@/hooks/api/useNodes';
 
 function NodesList() {
-  const { nodes, isLoading, error } = useNodes();
-
-  if (isLoading) return <div>Loading...</div>;
-  if (error) return <div>Error: {error.message}</div>;
+  // Inside a <Suspense> boundary. Loads one page; call fetchNextPage() for more.
+  const { nodes, hasNextPage, fetchNextPage } = useNodesSuspense();
 
   return (
-    <ul>
-      {nodes.map((node) => (
-        <li key={node.internal_id}>{node.short_name || node.node_id_str}</li>
-      ))}
-    </ul>
+    <>
+      <ul>
+        {nodes.map((node) => (
+          <li key={node.internal_id}>{node.short_name || node.node_id_str}</li>
+        ))}
+      </ul>
+      {hasNextPage && <button onClick={() => fetchNextPage()}>Load more</button>}
+    </>
   );
 }
 ```
+
+Hooks must not walk every page of a list automatically: a list of observed nodes runs to thousands of rows, and a
+refetch interval re-requests every loaded page. Fetch the next page on demand.
 
 ### Fetching a Single Node
 

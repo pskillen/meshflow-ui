@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { useNodes } from '@/hooks/api/useNodes';
+import { useNodeSearch } from '@/hooks/api/useNodes';
 import { SearchIcon, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -32,7 +32,7 @@ export function NodeSearch({ onNodeSelect, displayValue, onClearSelection, lastH
   const [query, setQuery] = useState('');
   const [isOpen, setIsOpen] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
-  const { searchNodes, searchResults, isSearching } = useNodes();
+  const { searchNodes, results: searchResults, isSearching } = useNodeSearch();
 
   const filteredSearchResults = useMemo(() => {
     const raw = searchResults ?? [];
