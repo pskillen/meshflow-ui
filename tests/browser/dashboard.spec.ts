@@ -47,4 +47,30 @@ test.describe('Dashboard', () => {
     await dashboard.clickNodesPageLink();
     await expect(page).toHaveURL(/\/nodes/);
   });
+
+  test('stats come before the map on desktop', async ({ page }) => {
+    const dashboard = new DashboardPage(page);
+    await dashboard.goto();
+    const stats = page.getByTestId('dashboard-mesh-stats');
+    const map = page.getByTestId('dashboard-meshflow-map');
+    await expect(stats).toBeVisible();
+    await expect(map.getByText('Meshflow Map')).toBeVisible();
+    const statsBox = await stats.boundingBox();
+    const mapBox = await map.boundingBox();
+    expect(statsBox!.y + statsBox!.height).toBeLessThanOrEqual(mapBox!.y + 1);
+    await expect(page.getByTestId('dashboard-map-toggle')).toHaveCount(0);
+  });
+
+  test('the map is collapsed on phones until asked for', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 800 });
+    const dashboard = new DashboardPage(page);
+    await dashboard.goto();
+    const map = page.getByTestId('dashboard-meshflow-map');
+    await expect(page.getByTestId('dashboard-mesh-stats')).toBeVisible();
+    await expect(map.locator('.leaflet-container')).toHaveCount(0);
+    await map.getByTestId('dashboard-map-toggle').click();
+    await expect(map.locator('.leaflet-container')).toBeVisible();
+    await map.getByTestId('dashboard-map-toggle').click();
+    await expect(map.locator('.leaflet-container')).toHaveCount(0);
+  });
 });
