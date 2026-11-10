@@ -1,5 +1,4 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { getAggregationWindow } from '@/lib/stats-aggregation';
 import {
   STATS_PRESET_KEYS,
   STATS_RANGES,
@@ -117,13 +116,6 @@ describe('buckets', () => {
     expect(statsRangeBucket('7d')).toBe('6h');
     expect(statsRangeBucket('30d')).toBe('daily');
     expect(statsRangeBucket('90d')).toBe('daily');
-  });
-
-  it('agrees with getAggregationWindow for every window', () => {
-    for (const key of Object.keys(STATS_RANGES) as StatsRangeKey[]) {
-      const w = statsRangeWindow(key, now);
-      expect(getAggregationWindow(w.start, w.end)).toBe(statsRangeBucket(key));
-    }
   });
 });
 

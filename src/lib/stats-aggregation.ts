@@ -2,19 +2,6 @@ import type { PaginatedResponse, StatsSnapshot } from '@/lib/models';
 
 export type AggregationWindow = 'hourly' | '6h' | 'daily';
 
-/**
- * Determine aggregation window based on time range span.
- * - <= 2 days: hourly (no aggregation)
- * - > 2 days and <= 8 days: 6-hour windows ("7 days" is exactly 168h; the margin tolerates custom ranges)
- * - > 8 days: daily (UTC midnight)
- */
-export function getAggregationWindow(startDate: Date, endDate: Date): AggregationWindow {
-  const spanHours = (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60);
-  if (spanHours <= 48) return 'hourly';
-  if (spanHours <= 192) return '6h'; // 8 days = 192h
-  return 'daily';
-}
-
 const HOUR_MS = 3_600_000;
 
 /**
@@ -119,29 +106,6 @@ export function snapshotsToCountSeries(rows: StatsSnapshot[]): RawDataPoint[] {
       // Present only on rolled-up rows (bucket=1d): how many hourly samples the day covers.
       ...(typeof s.value?.samples === 'number' ? { samples: s.value.samples } : {}),
     }));
-}
-
-/** Merge MT and MC count series on timestamp for overlaid bar charts. */
-export function mergeMeshtasticMeshcoreSeries(
-  mt: RawDataPoint[],
-  mc: RawDataPoint[]
-): { timestamp: number; meshtastic: number; meshcore: number; samples?: number }[] {
-  const byTs = new Map<number, { meshtastic: number; meshcore: number; samples?: number }>();
-  for (const p of mt) {
-    const row = byTs.get(p.timestamp) ?? { meshtastic: 0, meshcore: 0 };
-    row.meshtastic = p.value;
-    if (p.samples != null) row.samples = p.samples;
-    byTs.set(p.timestamp, row);
-  }
-  for (const p of mc) {
-    const row = byTs.get(p.timestamp) ?? { meshtastic: 0, meshcore: 0 };
-    row.meshcore = p.value;
-    if (p.samples != null) row.samples = Math.min(row.samples ?? p.samples, p.samples);
-    byTs.set(p.timestamp, row);
-  }
-  return Array.from(byTs.entries())
-    .map(([timestamp, vals]) => ({ timestamp, ...vals }))
-    .sort((a, b) => a.timestamp - b.timestamp);
 }
 
 /** Display names for packet types in charts */
