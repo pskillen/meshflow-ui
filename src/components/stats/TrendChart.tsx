@@ -229,7 +229,8 @@ export function TrendChart({
       }
     />
   );
-  const legend = showLegend && series.length > 1 ? <ChartLegend content={<ChartLegendContent />} /> : null;
+  const legend =
+    showLegend && series.length > 1 ? <ChartLegend itemSorter={null} content={<ChartLegendContent />} /> : null;
 
   return (
     <>
