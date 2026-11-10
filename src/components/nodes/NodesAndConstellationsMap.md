@@ -8,6 +8,7 @@ The shared Leaflet map for managed (constellation) nodes and observed nodes. Con
 
 - `managedNodes`, `observedNodes`: what to draw. The component does not filter by protocol; each page decides what to pass (see Wiring).
 - `showConstellation`, `filterConstellationIds`: draw constellation-coloured managed pins, optionally limited to some constellations. With `showConstellation={false}` there are no managed pins and no constellation key.
+- `legendLayout`: `'constellation'` (default) draws a constellation column plus an "Other mesh nodes (by role)" column. `'role'` draws one "Node role" key like the MeshCore list's, with a single "Monitoring node" row (spectrum swatch, because monitoring pins take their constellation's colour) when any constellation pin is drawn. Only the Meshtastic node list uses `'role'`; Home, Infrastructure, Managed status and Trigger traceroute keep the default.
 - `showMapLegend`, `showRoleLegendSwatches`: control the colour key. When `showMapLegend` is unset the key is hidden if `getMarkerColor` or `getManagedNodeMarkerColor` is set, because pin colours then mean something other than constellation.
 - Marker colour/opacity callbacks, `getNodeAlertRing`, selection and move callbacks.
 

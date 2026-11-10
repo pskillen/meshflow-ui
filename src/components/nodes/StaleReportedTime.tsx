@@ -1,7 +1,7 @@
 import { enGB } from 'date-fns/locale';
 import { format } from 'date-fns';
 import { reportedTimeFreshness, type ReportedTimeFreshnessOptions } from '@/lib/reported-time-stale';
-import { formatRecencyRelative } from '@/lib/reported-time-format';
+import { formatRecencyCompact, formatRecencyRelative } from '@/lib/reported-time-format';
 import { cn } from '@/lib/utils';
 
 const enGbDateTime = new Intl.DateTimeFormat('en-GB', {
@@ -26,6 +26,8 @@ export type StaleReportedTimeProps = {
   dangerAfterHours?: number;
   /** `stale` = yellow/red bands; `neutral` = relative time only (e.g. message sent). */
   variant?: 'stale' | 'neutral';
+  /** Short form ("14m ago") for tight layouts; the title still carries the full date. */
+  compact?: boolean;
 };
 
 /**
@@ -41,6 +43,7 @@ export function StaleReportedTime({
   warningAfterHours,
   dangerAfterHours,
   variant = 'stale',
+  compact = false,
 }: StaleReportedTimeProps) {
   const freshnessOpts: ReportedTimeFreshnessOptions | undefined =
     warningAfterHours != null || dangerAfterHours != null ? { warningAfterHours, dangerAfterHours } : undefined;
@@ -54,7 +57,7 @@ export function StaleReportedTime({
     return <span className={className}>{fallback}</span>;
   }
 
-  const relative = formatRecencyRelative(d, fallback);
+  const relative = compact ? formatRecencyCompact(d, fallback) : formatRecencyRelative(d, fallback);
   const absoluteEn = formatAbsoluteEnGb(d);
   const freshness = reportedTimeFreshness(d, freshnessOpts);
 

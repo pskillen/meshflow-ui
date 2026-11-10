@@ -1,3 +1,4 @@
+import { cn } from '@/lib/utils';
 import { ObservedNode, ManagedNode } from '@/lib/models';
 import L from 'leaflet';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -51,6 +52,11 @@ export interface NodesAndConstellationsMapProps {
   managedNodes?: ManagedNode[];
   observedNodes?: ObservedNode[];
   showConstellation?: boolean;
+  /**
+   * Key layout. 'constellation' (default): a constellation column plus a role column. 'role': one key by role,
+   * like the MeshCore list, with a single "Monitoring node" row when constellation pins are drawn.
+   */
+  legendLayout?: 'constellation' | 'role';
   showUnmanagedNodes?: boolean;
   drawBoundingBox?: boolean;
   constellationNodeRadiusKm?: number;
@@ -84,12 +90,18 @@ export interface NodesAndConstellationsMapProps {
   showRoleLegendSwatches?: boolean;
   /** Optional alert ring around standard pins (e.g. Mesh Infra ops); constellation fill colour unchanged. */
   getNodeAlertRing?: (nodeId: number) => 'diamond' | 'rounded-square' | null | undefined;
+  /** Tailwind min-height class for the map (outer box and map pane). Default `min-h-[400px]`. */
+  minHeightClassName?: string;
 }
+
+/** Monitoring pins take their constellation's colour, so the key shows a spectrum swatch. */
+const MONITORING_SWATCH = 'conic-gradient(#ef4444, #eab308, #22c55e, #3b82f6, #a855f7, #ef4444)';
 
 export function NodesAndConstellationsMap({
   managedNodes = [],
   observedNodes = [],
   showConstellation = true,
+  legendLayout = 'constellation',
   showUnmanagedNodes = true,
   drawBoundingBox = true,
   constellationNodeRadiusKm = 2,
@@ -109,6 +121,7 @@ export function NodesAndConstellationsMap({
   showMapLegend,
   showRoleLegendSwatches = true,
   getNodeAlertRing,
+  minHeightClassName = 'min-h-[400px]',
 }: NodesAndConstellationsMapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
@@ -134,6 +147,15 @@ export function NodesAndConstellationsMap({
   const legendConstellationItems = useMemo(
     () => drawnConstellationLegendItems(constellationGroups),
     [constellationGroups]
+  );
+
+  const byRoleLegend = legendLayout === 'role';
+  const roleLegendRows = useMemo(
+    () =>
+      byRoleLegend && showConstellation && legendConstellationItems.length > 0
+        ? [{ key: 'monitoring', label: 'Monitoring node', color: MONITORING_SWATCH }, ...roleLegendData]
+        : roleLegendData,
+    [byRoleLegend, showConstellation, legendConstellationItems, roleLegendData]
   );
 
   const showLegendResolved =
@@ -526,19 +548,19 @@ export function NodesAndConstellationsMap({
   ]);
 
   return (
-    <div className="relative h-full w-full min-h-[400px]">
+    <div className={cn('relative h-full w-full', minHeightClassName)}>
       {showLegendResolved ? (
         <MapMarkerLegend
-          constellationItems={showConstellation ? legendConstellationItems : []}
+          constellationItems={showConstellation && !byRoleLegend ? legendConstellationItems : []}
           showRoleSwatches={showRoleLegendSwatches && getMarkerColor == null}
-          roleSwatches={roleLegendData}
-          roleSectionTitle={showConstellation ? 'Other mesh nodes (by role)' : 'Node role'}
+          roleSwatches={roleLegendRows}
+          roleSectionTitle={showConstellation && !byRoleLegend ? 'Other mesh nodes (by role)' : 'Node role'}
         />
       ) : null}
       <div
         ref={mapRef}
-        style={{ height: '100%', minHeight: '400px', position: 'relative', zIndex: 1 }}
-        className="map-container"
+        style={{ height: '100%', position: 'relative', zIndex: 1 }}
+        className={cn('map-container', minHeightClassName)}
       />
     </div>
   );

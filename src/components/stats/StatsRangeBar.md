@@ -25,7 +25,7 @@ The one time-range control for stats screens: a segmented set of presets, option
 
 ## Wiring
 
-Used by `TracerouteStatsPage` (first adopter). Later stats screens (dashboards, node pages, node lists) place it at the top of the page.
+Used by `TracerouteStatsPage` and `ProtocolNodesPage` (node lists, where it shares a sticky wrapper with the search row and is rendered with `sticky={false}`). Later stats screens (dashboards, node pages) place it at the top of the page.
 
 ## Related
 

@@ -34,7 +34,7 @@ src/
 - **ObservedNode**: Node seen on the mesh. Has `last_heard`, `node_id_str`, `latest_position`, `latest_device_metrics`.
 - **ManagedNode**: Meshtastic radio node, ppart of the MeshFlow infrastructure. Reports packets to central API.
 - **Constellation**: Regional subset of nodes. Used for grouping on maps and message channels.
-- **Recent nodes**: UI focuses on "recently seen" nodes; time ranges: 2h, 24h, 7d, 30d, all time.
+- **Recent nodes**: UI focuses on "recently seen" nodes; node lists offer Online (2h), 24h, 7d, 30d, 90d (shared range bar, no "all time").
 
 ## API Integration
 
