@@ -15,10 +15,15 @@ export function metricQueryEnd(window: Pick<StatsRangeWindow, 'end'>): Date {
 
 const num = (v: unknown): number | null => (typeof v === 'number' && Number.isFinite(v) ? v : null);
 
+/** Ingestion stores a missing voltage or battery level as 0, so a 0 here is not a reading. */
+const ZERO_MEANS_MISSING = new Set(['voltage', 'battery_level']);
+
 /**
  * One value per bucket start for each field. Rows the API already bucketed (they carry `samples`) pass through.
- * Raw rows (an API without `bucket`) are rolled up the way the API does: mean of the non-null readings, except
- * `battery_level`, which ignores 101 ("Powered") unless every reading was 101.
+ * Raw rows (an API without `bucket`) are rolled up as the API does: mean of the non-null readings, except that
+ * `battery_level` ignores 101 ("Powered") unless every reading was 101, and voltage and level ignore 0 (a missing
+ * reading) unless every reading was 0, so one empty report does not drag the mean down. A bucketed response is
+ * used as it comes: api#514 excludes those zeros itself.
  */
 export function bucketMetricRows(
   rows: readonly MetricHistoryRow[],
@@ -45,6 +50,10 @@ export function bucketMetricRows(
           continue;
         }
         let values = group.map((r) => num(r[f])).filter((v): v is number => v != null);
+        if (ZERO_MEANS_MISSING.has(f)) {
+          const nonZero = values.filter((v) => v !== 0);
+          values = nonZero.length ? nonZero : values;
+        }
         if (f === 'battery_level') {
           const real = values.filter((v) => v < POWERED_BATTERY_LEVEL);
           values = real.length ? real : values;

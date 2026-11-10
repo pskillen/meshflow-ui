@@ -22,8 +22,10 @@ export interface MetricTrendCardProps {
   note?: ReactNode;
   /** Controls for this chart only (the battery's Voltage / Percentage toggle). */
   actions?: ReactNode;
-  /** Replaces the chart when there is nothing to plot. */
+  /** Replaces the chart when there is nothing to plot. The headline is hidden with it unless `keepHeadline`. */
   empty?: ReactNode;
+  /** Keep the headline when `empty` replaces the chart (the battery's "Powered"). */
+  keepHeadline?: boolean;
   'data-testid'?: string;
 }
 
@@ -44,19 +46,20 @@ export function MetricTrendCard({
   note,
   actions,
   empty,
+  keepHeadline,
   'data-testid': testId,
 }: MetricTrendCardProps) {
   const hasPartial = rows.some((r) => r.partial);
   const latest = [...rows].reverse().find((r) => series.some((s) => typeof r[s.key] === 'number'));
   const notes = [
     note,
-    hasPartial ? 'Dashed: the bucket in progress.' : null,
+    hasPartial && !empty ? 'Dashed: the bucket in progress.' : null,
     latest && range.bucket !== 'daily' ? `Latest point ${formatTrendLabel(latest.timestamp, range.bucket)}.` : null,
   ].filter((n) => n != null && n !== '');
   return (
     <ChartCard
       title={title}
-      headline={empty ? undefined : headline}
+      headline={empty && !keepHeadline ? undefined : headline}
       measure={measure}
       actions={actions}
       note={

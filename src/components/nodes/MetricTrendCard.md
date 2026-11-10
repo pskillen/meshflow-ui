@@ -6,13 +6,13 @@ A node metric chart in one piece: a [`ChartCard`](../stats/ChartCard.md) around 
 
 ## Props
 
-`title`, `headline?` (the latest value: "3.87 V", "Powered"), `measure` (what a point is: unit and bucket), `range: StatsRange`, `rows`, `series`, `yRange?`, `formatValue?`, `legend?`, `note?`, `actions?`, `empty?`, `data-testid?`. `rows` and `series` are the `TrendChart` ones.
+`title`, `headline?` (the latest value: "3.87 V", "Powered"), `measure` (what a point is: unit and bucket), `range: StatsRange`, `rows`, `series`, `yRange?`, `formatValue?`, `legend?`, `note?`, `actions?`, `empty?`, `keepHeadline?`, `data-testid?`. `rows` and `series` are the `TrendChart` ones.
 
 ## Behaviour
 
 - Always a line chart, with the sync id `node-metrics`, so every metric card on a page shares hover.
-- The small print adds "Dashed: the bucket in progress." when the last bucket is partial and, for hourly and 6-hour buckets, the time of the latest point.
-- `empty` replaces the chart (and the headline) with a message when there is nothing to plot.
+- The small print adds "Dashed: the bucket in progress." when the last bucket is partial and a chart is drawn (not under an empty message), and, for hourly and 6-hour buckets, the time of the latest point.
+- `empty` replaces the chart (and the headline, unless `keepHeadline`) with a message when there is nothing to plot.
 
 ## Wiring
 

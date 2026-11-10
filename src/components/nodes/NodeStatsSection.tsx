@@ -41,7 +41,7 @@ export function NodeStatsSection({ internalId, node, isManagedNode, range }: Nod
       </CardHeader>
       <CardContent>
         <div className="h-[200px] flex items-center justify-center bg-muted rounded-md">
-          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-teal-500" />
+          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary" />
         </div>
       </CardContent>
     </Card>
