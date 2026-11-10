@@ -18,6 +18,8 @@ export interface MetricTrendCardProps {
   yRange?: TrendChartProps['yRange'];
   formatValue?: TrendChartProps['formatValue'];
   legend?: boolean;
+  /** A dot on every point, for sparse data where a lone point would not show (traceroute SNR). */
+  dots?: boolean;
   /** Extra small print before the standard partial-bucket note. */
   note?: ReactNode;
   /** Controls for this chart only (the battery's Voltage / Percentage toggle). */
@@ -43,6 +45,7 @@ export function MetricTrendCard({
   yRange,
   formatValue,
   legend,
+  dots,
   note,
   actions,
   empty,
@@ -95,6 +98,7 @@ export function MetricTrendCard({
           yRange={yRange}
           formatValue={formatValue}
           legend={legend}
+          dots={dots}
           label={`${title}, ${range.longLabel}`}
           headline={headline}
         />

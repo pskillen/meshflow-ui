@@ -25,6 +25,8 @@ import { NodeOutgoingTraceroutesSection } from '@/components/nodes/NodeOutgoingT
 import { RfPropagationSection } from '@/components/nodes/RfPropagationSection';
 import { NodeRightNow } from '@/components/nodes/NodeRightNow';
 import { NodeShell, type NodeShellTab } from '@/components/nodes/NodeShell';
+import { StatTile } from '@/components/stats/StatTile';
+import { bestEdgeSnr } from '@/lib/node-traceroute-snr';
 import { STATS_PRESET_KEYS } from '@/lib/stats-range';
 import { useStatsRange, type StatsRange } from '@/hooks/useStatsRange';
 import { isRangedNodeDetailTab, type NodeDetailTab } from '@/lib/node-detail-tab';
@@ -170,8 +172,41 @@ function TracerouteLinksSection({
 
   const hasData = data && (data.edges.length > 0 || data.nodes.length > 0);
 
+  const bestSnr = data ? bestEdgeSnr(data.edges) : null;
+
   return (
     <div className="mb-6">
+      {hasData && data && (
+        <section className="mb-6 space-y-2 md:space-y-3" aria-labelledby="node-traceroutes-heading">
+          <h2 id="node-traceroutes-heading" className="text-sm font-semibold md:text-base">
+            Over the {range.longLabel}
+          </h2>
+          <div className="grid grid-cols-3 gap-2 md:gap-3" role="list" data-testid="node-traceroute-tiles">
+            <StatTile
+              role="listitem"
+              hero
+              label="Links"
+              value={data.edges.length}
+              sub="with this node"
+              data-testid="node-traceroute-tile-links"
+            />
+            <StatTile
+              role="listitem"
+              label="Peers"
+              value={data.snr_history.length}
+              sub="seen in traceroutes"
+              data-testid="node-traceroute-tile-peers"
+            />
+            <StatTile
+              role="listitem"
+              label="Best SNR"
+              value={bestSnr != null ? bestSnr.toFixed(1) : '\u2014'}
+              sub="dB, best link average"
+              data-testid="node-traceroute-tile-best-snr"
+            />
+          </div>
+        </section>
+      )}
       <Card>
         <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-4">
           <div>
@@ -225,12 +260,7 @@ function TracerouteLinksSection({
               {data.snr_history.length > 0 && (
                 <div>
                   <h4 className="mb-3 text-sm font-medium">SNR over time by link</h4>
-                  <LinkSNRCharts
-                    snrHistory={data.snr_history}
-                    initialVisible={3}
-                    timeRangeStart={triggeredAtAfter}
-                    timeRangeEnd={range.window.end}
-                  />
+                  <LinkSNRCharts snrHistory={data.snr_history} range={range} />
                 </div>
               )}
             </>
@@ -288,7 +318,12 @@ function NodeTraceroutesPanel({
         {isManagedNode && managedForThisNode ? (
           <NodeOutgoingTraceroutesSection nodeId={meshtasticNodeId} managed={managedForThisNode} />
         ) : null}
-        <NodeTracerouteHistorySection nodeId={meshtasticNodeId} observedNode={node} />
+        <NodeTracerouteHistorySection
+          nodeId={meshtasticNodeId}
+          observedNode={node}
+          since={range.window.start}
+          rangeLabel={range.longLabel}
+        />
       </Suspense>
     </>
   );
