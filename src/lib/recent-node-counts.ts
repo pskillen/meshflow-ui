@@ -11,12 +11,17 @@ export const COUNT_COLUMNS = [
 
 export type CountColumnKey = (typeof COUNT_COLUMNS)[number]['key'];
 
-/** Count for a window; a missing key counts as 0. */
-export function countFor(counts: RecentNodeCounts | undefined, key: string): number {
-  return counts?.[key] ?? 0;
+/** Count for a window; `undefined` when the API did not report that window. */
+export function countFor(counts: RecentNodeCounts | undefined, key: string): number | undefined {
+  return counts?.[key];
 }
 
-/** Sum of two protocols' counts for one window. */
-export function sumCounts(a: RecentNodeCounts | undefined, b: RecentNodeCounts | undefined, key: string): number {
-  return countFor(a, key) + countFor(b, key);
+/** Sum of two protocols' counts for one window, over the parts that are present; `undefined` when neither is. */
+export function sumCounts(
+  a: RecentNodeCounts | undefined,
+  b: RecentNodeCounts | undefined,
+  key: string
+): number | undefined {
+  const parts = [countFor(a, key), countFor(b, key)].filter((v): v is number => v != null);
+  return parts.length === 0 ? undefined : parts.reduce((x, y) => x + y, 0);
 }

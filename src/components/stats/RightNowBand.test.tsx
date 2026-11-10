@@ -8,12 +8,13 @@ const MC = { '2': 2, '24': 3, '168': 4, '720': 6, '2160': 8, all: 888 };
 
 vi.mock('@/hooks/api/useNodes', () => ({
   useRecentNodeCountsSuspense: (p: string) => (p === 'meshcore' ? MC : MT),
+  useRecentNodeCountsBothSuspense: () => ({ meshtastic: MT, meshcore: MC }),
 }));
 
 const tile = (k: string) => screen.getByTestId(`right-now-tile-${k}`);
 const rowCells = (name: string) => {
-  const row = within(screen.getByTestId('right-now-table')).getByText(name).closest('tr')!;
-  return within(row).getAllByRole('cell').map((c) => c.textContent);
+  const row = within(screen.getByTestId('right-now-table')).getByRole('rowheader', { name }).closest('tr')!;
+  return [...row.children].map((c) => c.textContent);
 };
 
 describe('RightNowBand', () => {
@@ -48,9 +49,31 @@ describe('RightNowBand', () => {
     expect(screen.queryByText('999')).toBeNull();
   });
 
-  it('missing windows count as 0', () => {
-    render(<RightNowCounts scope="meshcore" meshcore={{}} />);
-    expect(tile('2').textContent).toContain('0');
+  it('a missing window shows an em dash, not 0', () => {
+    render(<RightNowCounts scope="meshcore" meshcore={{ '24': 3 }} />);
+    expect(tile('2').textContent).toContain('—');
+    expect(tile('24').textContent).toContain('3');
+    expect(rowCells('Nodes')).toEqual(['Nodes', '—', '3', '—', '—', '—']);
+  });
+
+  it('both: sums only the present parts, and shows a dash when neither is present', () => {
+    render(<RightNowCounts scope="both" meshtastic={{ '2': 5 }} meshcore={{ '24': 3 }} />);
+    expect(tile('2').textContent).toContain('5');
+    expect(tile('2').textContent).toContain('MT 5 · MC —');
+    expect(tile('24').textContent).toContain('MT — · MC 3');
+    expect(within(tile('168')).getByText('—', { selector: 'div' })).toBeTruthy();
+  });
+
+  it('is accessible: captioned table with scoped headers, labelled section, tiles as a list', () => {
+    render(<RightNowBand scope="both" />);
+    const table = within(screen.getByTestId('right-now-table')).getByRole('table', {
+      name: 'Nodes heard in each recent window',
+    });
+    expect(within(table).getAllByRole('columnheader')).toHaveLength(6);
+    expect(within(table).getByRole('columnheader', { name: 'Online now, heard in last 2h' })).toBeTruthy();
+    expect(within(table).getAllByRole('rowheader').map((h) => h.textContent)).toEqual(['Meshtastic', 'MeshCore']);
+    expect(screen.getByRole('region', { name: 'Right now' })).toBeTruthy();
+    expect(within(screen.getByTestId('right-now-tiles')).getAllByRole('listitem')).toHaveLength(5);
   });
 });
 
