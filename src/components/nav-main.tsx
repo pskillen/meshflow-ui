@@ -32,6 +32,7 @@ import { useWebSocket } from '@/providers/WebSocketProvider';
 import type { MessageProtocolSlug } from '@/lib/message-protocol';
 import { authService } from '@/lib/auth/authService';
 import { useMeshInfraMonitoringAlertsSummary } from '@/hooks/api/useNodeWatches';
+import type { MeshInfraProtocol } from '@/lib/models';
 
 type NavChild = {
   title: string;
@@ -169,18 +170,25 @@ function messagesProtocolForUrl(url: string): MessageProtocolSlug | null {
   return null;
 }
 
+/** Nav child URLs that carry a Mesh infra alert badge, and the protocol each counts. */
+const INFRA_BADGE_PROTOCOL_BY_URL: Record<string, MeshInfraProtocol> = {
+  '/nodes/infrastructure': 'meshtastic',
+  '/meshcore/infrastructure': 'meshcore',
+};
+
 function NavMenuItems({
   items,
   pathname,
   onMessagesClick,
-  infraAlertCount,
+  infraAlertCountForUrl,
   unreadCountForProtocol,
   hasUnreadForProtocol,
 }: {
   items: NavItem[];
   pathname: string;
   onMessagesClick: (protocol: MessageProtocolSlug, url: string) => (e: React.MouseEvent<HTMLAnchorElement>) => void;
-  infraAlertCount: number;
+  /** Badge count for a nav child URL; 0 hides the badge. */
+  infraAlertCountForUrl: (url: string) => number;
   unreadCountForProtocol: (protocol: MessageProtocolSlug) => number;
   hasUnreadForProtocol: (protocol: MessageProtocolSlug) => boolean;
 }) {
@@ -216,17 +224,14 @@ function NavMenuItems({
                 {item.children.map((child) => {
                   const ChildIcon = child.icon;
                   const childIsActive = navSubItemActive(pathname, child.url);
-                  const isMeshInfra = child.title === 'Mesh infra';
+                  const infraAlertCount = infraAlertCountForUrl(child.url);
                   return (
                     <SidebarMenuSubItem key={child.title}>
                       <SidebarMenuSubButton asChild isActive={childIsActive}>
-                        <Link
-                          to={child.url}
-                          className={isMeshInfra && infraAlertCount > 0 ? 'relative pr-8' : undefined}
-                        >
+                        <Link to={child.url} className={infraAlertCount > 0 ? 'relative pr-8' : undefined}>
                           <ChildIcon />
                           <span>{child.title}</span>
-                          {isMeshInfra && infraAlertCount > 0 ? (
+                          {infraAlertCount > 0 ? (
                             <span
                               className="absolute right-1 top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-600 px-1 text-[10px] font-semibold leading-none text-white shadow-sm"
                               title="Mesh infrastructure monitoring alerts"
@@ -254,8 +259,17 @@ export function NavMain() {
   const { pathname } = useLocation();
   const currentUser = authService.getCurrentUser();
   const showDxMonitoring = Boolean(currentUser?.is_staff);
-  const infraAlerts = useMeshInfraMonitoringAlertsSummary(Boolean(currentUser));
-  const infraAlertCount = infraAlerts.data?.mesh_infra.alerting_nodes_count ?? 0;
+  const mtInfraAlerts = useMeshInfraMonitoringAlertsSummary('meshtastic', Boolean(currentUser));
+  const mcInfraAlerts = useMeshInfraMonitoringAlertsSummary('meshcore', Boolean(currentUser));
+  const infraAlertCountForUrl = (url: string): number => {
+    const protocol = INFRA_BADGE_PROTOCOL_BY_URL[url];
+    if (!protocol) return 0;
+    const summary = (protocol === 'meshtastic' ? mtInfraAlerts : mcInfraAlerts).data?.mesh_infra;
+    if (!summary) return 0;
+    // Older APIs omit `supported`: Meshtastic was always monitored, MeshCore never.
+    const supported = summary.supported ?? protocol === 'meshtastic';
+    return supported ? (summary.alerting_nodes_count ?? 0) : 0;
+  };
 
   const handleMessagesClick =
     (protocol: MessageProtocolSlug, url: string) => (e: React.MouseEvent<HTMLAnchorElement>) => {
@@ -277,7 +291,7 @@ export function NavMain() {
                 items={section.items}
                 pathname={pathname}
                 onMessagesClick={handleMessagesClick}
-                infraAlertCount={infraAlertCount}
+                infraAlertCountForUrl={infraAlertCountForUrl}
                 unreadCountForProtocol={unreadCountForProtocol}
                 hasUnreadForProtocol={hasUnreadForProtocol}
               />

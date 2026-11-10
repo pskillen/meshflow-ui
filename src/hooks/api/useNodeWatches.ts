@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMeshtasticApi } from './useApi';
 import type {
   MeshInfraMonitoringAlertSummary,
+  MeshInfraProtocol,
   NodeMonitoringConfig,
   NodeMonitoringConfigPatch,
   NodeWatch,
@@ -55,11 +56,11 @@ export function useNodeWatches(pageSize = 500) {
   });
 }
 
-export function useMeshInfraMonitoringAlertsSummary(enabled = true) {
+export function useMeshInfraMonitoringAlertsSummary(protocol: MeshInfraProtocol = 'meshtastic', enabled = true) {
   const api = useMeshtasticApi();
   return useQuery<{ mesh_infra: MeshInfraMonitoringAlertSummary }>({
-    queryKey: meshInfraAlertsSummaryKey,
-    queryFn: () => api.getMeshInfraMonitoringAlertsSummary(),
+    queryKey: [...meshInfraAlertsSummaryKey, protocol],
+    queryFn: () => api.getMeshInfraMonitoringAlertsSummary(protocol),
     enabled,
     staleTime: 60_000,
     refetchInterval: 120_000,

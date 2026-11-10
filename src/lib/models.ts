@@ -886,8 +886,15 @@ export type NodeMonitoringConfigPatch = Partial<
   >
 >;
 
-/** GET `/api/monitoring/alerts/summary/?scope=mesh_infra` */
+/** Radio protocol an infra alert summary is scoped to. */
+export type MeshInfraProtocol = 'meshtastic' | 'meshcore';
+
+/** GET `/api/monitoring/alerts/summary/?scope=mesh_infra&protocol=...` */
 export interface MeshInfraMonitoringAlertSummary {
+  /** Absent on older APIs (Meshtastic only). */
+  protocol?: MeshInfraProtocol;
+  /** False when presence monitoring does not run for this protocol. Absent on older APIs. */
+  supported?: boolean;
   alerting_nodes_count: number;
   offline_count: number;
   battery_count: number;
