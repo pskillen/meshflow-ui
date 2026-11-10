@@ -553,13 +553,6 @@ export function NodeDetailContent({ internalId, compact = false, activeTab, onTa
     </div>
   );
 
-  const renderLegacyLocationBlock = () => (
-    <div className={showRfPropagation ? 'mb-6 grid grid-cols-1 gap-6 lg:grid-cols-2' : 'mb-6'}>
-      <NodeLocationCard node={node} internalId={internalId} compact={compact} />
-      {showRfPropagation ? <RfPropagationSection node={node} className="mb-0" /> : null}
-    </div>
-  );
-
   const claimBadge =
     hasPendingClaim || hasApprovedClaim || (node.owner && (!currentUser || node.owner.id !== currentUser.id)) ? (
       hasPendingClaim ? (
@@ -687,17 +680,12 @@ export function NodeDetailContent({ internalId, compact = false, activeTab, onTa
     );
   }
 
+  // Not a full page with tabs: the compact view in the slide-over (NodeDetailSheet). No back link, no ranged content.
   return (
-    <div className={compact ? 'px-2' : 'container mx-auto px-4 py-8'}>
-      {!compact && (
-        <Link to="/nodes" replace={true} className="mb-4 inline-block text-teal-600 hover:underline dark:text-teal-400">
-          ← Back to Nodes
-        </Link>
-      )}
-
-      <div className={`flex items-start justify-between ${compact ? 'mb-4' : 'mb-6'}`}>
+    <div className="px-2">
+      <div className="mb-4 flex items-start justify-between">
         <div>
-          <h1 className={`font-bold ${compact ? 'text-xl' : 'text-3xl'}`}>{node.short_name}</h1>
+          <h1 className="text-xl font-bold">{node.short_name}</h1>
           <p className="text-slate-600 dark:text-slate-400">{node.long_name}</p>
           {claimBadge ? <div className="mt-2 flex items-center">{claimBadge}</div> : null}
         </div>
@@ -705,31 +693,13 @@ export function NodeDetailContent({ internalId, compact = false, activeTab, onTa
       </div>
 
       {renderMetricsGrid()}
-      {renderLegacyLocationBlock()}
+      <div className="mb-6">
+        <NodeLocationCard node={node} internalId={internalId} compact />
+      </div>
 
-      {!compact && (
-        <>
-          {showMonitoringTab ? <NodeMeshMonitoringSection node={node} /> : null}
-          {showTraceroutesTab ? (
-            <NodeTraceroutesPanel
-              internalId={internalId}
-              meshtasticNodeId={meshtasticNodeId ?? 0}
-              isManagedNode={isManagedNode}
-              managedForThisNode={managedForThisNode}
-              node={node}
-              range={range}
-            />
-          ) : null}
-          <NodeStatsSection internalId={internalId} node={node} isManagedNode={isManagedNode} range={range} />
-        </>
-      )}
-
-      {compact && (
-        <Link to={`/nodes/${internalId}`} className="text-sm text-teal-600 hover:underline dark:text-teal-400">
-          View full details →
-        </Link>
-      )}
-      {recentlyViewed}
+      <Link to={`/nodes/${internalId}`} className="text-sm text-teal-600 hover:underline dark:text-teal-400">
+        View full details →
+      </Link>
     </div>
   );
 }
