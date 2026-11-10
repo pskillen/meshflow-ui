@@ -36,21 +36,38 @@ const test = base.extend({
 });
 
 test.describe('Meshtastic dashboard firmware adoption', () => {
-  test('renders pie and line in light and dark mode', async ({ page }) => {
+  test('renders the split bar and trend in light and dark mode', async ({ page }) => {
     await page.goto('/meshtastic/dashboard');
     const card = page.getByTestId('firmware-adoption-card');
     await expect(card).toBeVisible();
-    await expect(card.locator('.recharts-pie-sector').first()).toBeVisible();
+    await expect(card.getByTestId('firmware-split-bar')).toBeVisible();
     await expect(card.locator('.recharts-line-curve').first()).toBeVisible();
+    await expect(card.getByText(/Split: nodes heard in the last 7d/)).toBeVisible();
     const breakdown = card.getByRole('list', { name: 'Firmware breakdown' });
     await expect(breakdown.getByText('2.7 or earlier')).toBeVisible();
     await expect(breakdown.getByText('Unknown', { exact: true })).toBeVisible();
-    // Line chart legend repeats the labels, so series are identifiable without colour.
-    await expect(card.getByText('Unknown', { exact: true })).toHaveCount(2);
 
     await page.evaluate(() => document.documentElement.classList.add('dark'));
-    await expect(card.locator('.recharts-pie-sector').first()).toBeVisible();
+    await expect(card.getByTestId('firmware-split-bar')).toBeVisible();
     await expect(card.locator('.recharts-line-curve').first()).toBeVisible();
+  });
+
+  test('a phone gets counts and the trend, no split graphic', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 812 });
+    await page.goto('/meshtastic/dashboard');
+    const card = page.getByTestId('firmware-adoption-card');
+    await expect(card.getByRole('list', { name: 'Firmware breakdown' })).toBeVisible();
+    await expect(card.getByTestId('firmware-split-bar')).toBeHidden();
+    await expect(card.locator('.recharts-pie-sector')).toHaveCount(0);
+    await expect(card.locator('.recharts-line-curve').first()).toBeVisible();
+  });
+
+  test('the trend follows the range and the split does not', async ({ page }) => {
+    await page.goto('/meshtastic/dashboard?range=24h');
+    const card = page.getByTestId('firmware-adoption-card');
+    await expect(card.getByText(/Split: nodes heard in the last 7d/)).toBeVisible();
+    await expect(card.getByText(/daily snapshots? in this range/)).toBeVisible();
+    await expect(card.getByRole('img', { name: /Firmware adoption, last 24 hours/ })).toBeVisible();
   });
 
   test('a single snapshot still draws the line dots', async ({ context, page }) => {

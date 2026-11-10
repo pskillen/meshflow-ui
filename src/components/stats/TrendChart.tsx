@@ -45,6 +45,8 @@ export interface TrendChartProps {
   stacked?: boolean;
   /** Charts with the same id share their hover cursor. */
   syncId?: string;
+  /** Lines only: draw a dot on every point. For sparse data (one snapshot a day) where a lone point has no line. */
+  dots?: boolean;
   /** Pixel height. Default 190. */
   height?: number;
   /**
@@ -92,6 +94,7 @@ export function TrendChart({
   stacked = true,
   syncId,
   height = 190,
+  dots = false,
   label,
   headline,
   className,
@@ -198,7 +201,7 @@ export function TrendChart({
                 name={s.label}
                 stroke={`var(--color-${s.key})`}
                 strokeWidth={2}
-                dot={false}
+                dot={dots ? { r: 2.5, fill: `var(--color-${s.key})`, strokeWidth: 0 } : false}
                 isAnimationActive={false}
               />
             ))}

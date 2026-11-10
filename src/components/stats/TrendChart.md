@@ -11,7 +11,7 @@ One line or bar chart over a stats range window. Online nodes is a line (a point
 - `series: { key, label, color }[]` – colours are chart tokens (`hsl(var(--chart-1))`), by protocol: Meshtastic `--chart-1`, MeshCore `--chart-4`.
 - `window: { start, end }` – from `useStatsRange().window`. Fixes the x-axis.
 - `bucket: 'hourly' | '6h' | 'daily'` – from `useStatsRange().bucket`.
-- `stacked?` (bars, default true), `syncId?`, `height?` (default 190), `label?` (the title and range: "Online nodes, last 7 days"), `headline?` (the card's headline text), `className?`.
+- `stacked?` (bars, default true), `dots?` (lines: a dot on every point, for sparse daily data such as firmware), `syncId?`, `height?` (default 190), `label?` (the title and range: "Online nodes, last 7 days"), `headline?` (the card's headline text), `className?`.
 
 Helpers in `src/lib/stats-trend.ts`: `markPartialBuckets(rows, window, bucket)` sets `partial` from the range window and each row's `samples`; `buildBucketGrid`, `densifyTrendRows`, `evenTrendTicks`, `describeTrend`, `splitPartialLine`, `formatTrendTick`, `formatTrendLabel`.
 

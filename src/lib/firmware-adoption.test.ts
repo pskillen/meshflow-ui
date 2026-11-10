@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { StatsSnapshot } from '@/lib/models';
-import { buildFirmwareAdoption } from './firmware-adoption';
+import { buildFirmwareAdoption, buildFirmwareTrend } from './firmware-adoption';
 
 function row(day: number, by_type?: Record<string, number>): StatsSnapshot {
   return {
@@ -74,5 +74,22 @@ describe('buildFirmwareAdoption', () => {
   it('computes percentages', () => {
     const r = buildFirmwareAdoption([row(1, { '2.7': 3, unknown: 1 })]);
     expect(r.pie.map((p) => p.percent)).toEqual([75, 25]);
+  });
+});
+
+describe('buildFirmwareTrend', () => {
+  const adoption = buildFirmwareAdoption([row(1, { '2.7': 9 }), row(5, { '2.7': 8 }), row(8, { '2.7': 7 })]);
+  const window = { start: new Date('2026-11-04T06:00:00Z'), end: new Date('2026-11-09T10:00:00Z') };
+
+  it('keeps one row per UTC day inside the window and floors the start to its day', () => {
+    const trend = buildFirmwareTrend(adoption, window);
+    expect(trend.rows.map((r) => r.timestamp)).toEqual([Date.UTC(2026, 10, 5), Date.UTC(2026, 10, 8)]);
+    expect(trend.window.start.toISOString()).toBe('2026-11-04T00:00:00.000Z');
+    expect(trend.window.end).toEqual(window.end);
+  });
+
+  it('is empty when no snapshot falls in the window', () => {
+    const trend = buildFirmwareTrend(adoption, { start: new Date('2026-11-09T00:00:00Z'), end: window.end });
+    expect(trend.rows).toEqual([]);
   });
 });
