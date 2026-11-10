@@ -8,7 +8,7 @@ import { EnvironmentMetricsChart } from '@/components/nodes/EnvironmentMetricsCh
 import { PowerMetricsChart } from '@/components/nodes/PowerMetricsChart';
 import { PacketTypeChart } from '@/components/PacketTypeChart';
 import { ReceivedPacketTypeChart } from '@/components/ReceivedPacketTypeChart';
-import { NeighbourPieChart } from '@/components/NeighbourPieChart';
+import { NeighbourSourceBars } from '@/components/nodes/NeighbourSourceBars';
 import { Button } from '@/components/ui/button';
 import { Suspense } from 'react';
 import type { ObservedNode } from '@/lib/models';
@@ -24,14 +24,6 @@ interface NodeStatsSectionProps {
 
 export function NodeStatsSection({ internalId, node, isManagedNode, range }: NodeStatsSectionProps) {
   const meshtasticNodeId = node.meshtastic_node_id;
-
-  // Stable object: the range window only moves when the key or the hour does. The old charts round `endDate` up to
-  // the next hour; `window.end` is the top of the current hour, so without the extra hour they would stop short of
-  // the newest data.
-  const controlledDateRange = React.useMemo(
-    () => ({ startDate: range.window.start, endDate: new Date(range.window.end.getTime() + 60 * 60 * 1000) }),
-    [range.window]
-  );
 
   const chartFallback = (
     <Card>
@@ -87,7 +79,7 @@ export function NodeStatsSection({ internalId, node, isManagedNode, range }: Nod
               <Suspense fallback={chartFallback}>
                 <ReceivedPacketTypeChart nodeId={meshtasticNodeId} range={range} />
               </Suspense>
-              <NeighbourStatsWithLoad nodeId={meshtasticNodeId} controlledDateRange={controlledDateRange} />
+              <NeighbourStatsWithLoad nodeId={meshtasticNodeId} range={range} />
             </>
           )}
         </CardContent>
@@ -96,27 +88,21 @@ export function NodeStatsSection({ internalId, node, isManagedNode, range }: Nod
   );
 }
 
-function NeighbourStatsWithLoad({
-  nodeId,
-  controlledDateRange,
-}: {
-  nodeId: number;
-  controlledDateRange: { startDate: Date; endDate: Date };
-}) {
+function NeighbourStatsWithLoad({ nodeId, range }: { nodeId: number; range: StatsRange }) {
   const [showChart, setShowChart] = React.useState(false);
 
   if (!showChart) {
     return (
       <div className="rounded-lg border border-dashed border-muted-foreground/25 p-6">
         <p className="text-sm text-muted-foreground mb-3">
-          Packets received from each neighbour (direct or last hop). Click to load.
+          Which neighbours this node heard most from (direct or last hop). Click to load.
         </p>
         <Button onClick={() => setShowChart(true)} variant="outline">
-          Load packets by source
+          Load “Heard most from”
         </Button>
       </div>
     );
   }
 
-  return <NeighbourPieChart nodeId={nodeId} defaultTimeRange="48h" controlledDateRange={controlledDateRange} />;
+  return <NeighbourSourceBars nodeId={nodeId} range={range} />;
 }

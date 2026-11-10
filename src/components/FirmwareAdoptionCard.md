@@ -29,4 +29,4 @@ Rendered in `MeshtasticDashboardContent` (`src/pages/meshtastic/MeshtasticDashbo
 ## Related
 
 - API stat `node_firmware` in meshflow-api (`GET /api/stats/snapshots/`; value has `count`, `window_hours`, `by_type`, `by_basis`). `by_basis` is typed but not charted.
-- `NeighbourPieChart` for the card/loading/error precedent.
+- `NeighbourSourceBars` for the card/loading/error precedent.

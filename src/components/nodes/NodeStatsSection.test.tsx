@@ -1,33 +1,23 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import type { ObservedNode } from '@/lib/models';
 import { statsRangeWindow } from '@/lib/stats-range';
 import type { StatsRange } from '@/hooks/useStatsRange';
 import { NodeStatsSection } from './NodeStatsSection';
 
-const chartMock = vi.hoisted(
+const rangeMock = vi.hoisted(
   () =>
     (testId: string) =>
-    ({ controlledDateRange }: { controlledDateRange?: { startDate: Date; endDate: Date } }) => (
-      <div
-        data-testid={testId}
-        data-start={controlledDateRange?.startDate.toISOString()}
-        data-end={controlledDateRange?.endDate.toISOString()}
-      />
-    )
+    ({ range }: { range?: StatsRange }) => <div data-testid={testId} data-range={range?.key} />
 );
 
-vi.mock('@/components/nodes/ChannelAirChart', () => ({ ChannelAirChart: chartMock('channel-air-chart') }));
-vi.mock('@/components/BatteryChartShadcn', () => ({ BatteryChartShadcn: chartMock('battery-chart') }));
-vi.mock('@/components/nodes/EnvironmentMetricsChart', () => ({ EnvironmentMetricsChart: chartMock('env-chart') }));
-vi.mock('@/components/nodes/PowerMetricsChart', () => ({ PowerMetricsChart: chartMock('power-chart') }));
-const rangeMock = vi.hoisted(() =>
-  (testId: string) =>
-  ({ range }: { range?: StatsRange }) => <div data-testid={testId} data-range={range?.key} />
-);
+vi.mock('@/components/nodes/ChannelAirChart', () => ({ ChannelAirChart: rangeMock('channel-air-chart') }));
+vi.mock('@/components/BatteryChartShadcn', () => ({ BatteryChartShadcn: rangeMock('battery-chart') }));
+vi.mock('@/components/nodes/EnvironmentMetricsChart', () => ({ EnvironmentMetricsChart: rangeMock('env-chart') }));
+vi.mock('@/components/nodes/PowerMetricsChart', () => ({ PowerMetricsChart: rangeMock('power-chart') }));
 vi.mock('@/components/PacketTypeChart', () => ({ PacketTypeChart: rangeMock('packet-chart') }));
 vi.mock('@/components/ReceivedPacketTypeChart', () => ({ ReceivedPacketTypeChart: rangeMock('received-chart') }));
-vi.mock('@/components/NeighbourPieChart', () => ({ NeighbourPieChart: chartMock('neighbour-chart') }));
+vi.mock('@/components/nodes/NeighbourSourceBars', () => ({ NeighbourSourceBars: rangeMock('neighbour-chart') }));
 
 const node = { meshtastic_node_id: 100, latest_environment_metrics: null, latest_power_metrics: null } as ObservedNode;
 
@@ -44,5 +34,15 @@ describe('NodeStatsSection', () => {
     rerender(<NodeStatsSection internalId="x" node={node} isManagedNode={false} range={range} />);
     expect(screen.queryByTestId('received-chart')).toBeNull();
     expect(screen.getByTestId('packet-chart')).toBeTruthy();
+  });
+
+  it('keeps "Heard most from" behind a click for managed nodes only, and gives it the range', () => {
+    const range = rangeAt(new Date('2026-11-10T09:37:00Z'));
+    const { rerender } = render(<NodeStatsSection internalId="x" node={node} isManagedNode range={range} />);
+    expect(screen.queryByTestId('neighbour-chart')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /Heard most from/ }));
+    expect(screen.getByTestId('neighbour-chart').getAttribute('data-range')).toBe('7d');
+    rerender(<NodeStatsSection internalId="x" node={node} isManagedNode={false} range={range} />);
+    expect(screen.queryByRole('button', { name: /Heard most from/ })).toBeNull();
   });
 });

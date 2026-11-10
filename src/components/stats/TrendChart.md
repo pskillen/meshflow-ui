@@ -36,7 +36,7 @@ A new chart passes `label` and `headline` and gets all of this; it does not writ
 
 ## Wiring
 
-`MeshStatsSection` builds rows from stats snapshots and renders three of these. The node Statistics charts reach it through [`MetricTrendCard`](../nodes/MetricTrendCard.md).
+`MeshStatsSection` builds rows from stats snapshots and renders three of these. The node Statistics charts reach it through [`MetricTrendCard`](../nodes/MetricTrendCard.md); the node packet charts use it as stacked bars ([`NodePacketTypeCard`](../nodes/NodePacketTypeCard.md)).
 
 ## Related
 

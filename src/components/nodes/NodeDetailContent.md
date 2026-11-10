@@ -15,7 +15,7 @@ The body of a node page. It is used in two ways:
 
 - Tabs: Overview, Map, Traceroutes (Meshtastic only), Statistics, Monitoring (signed in, not MeshCore). A tab that does not apply falls back to Overview.
 - **Shared range.** One `useStatsRange` per page (no `area`, so a different node never inherits it; presets only). It lives in `?range=` on the full page, and in component state when compact so the host page's URL is never touched. The bar shows on Statistics and Traceroutes only; switching between them keeps the range.
-- Statistics: `NodeStatsSection` gets the range; the battery, channel and air, environment and power charts take `range` directly and ask the API for the bucket that matches it (packet charts still take a date window until phase 14). Traceroutes: the links section uses `range.window.start` for the API call and the SNR chart axis. The individual charts are replaced in later phases; until then they still draw raw rows.
+- Statistics: `NodeStatsSection` gets the range; the battery, channel and air, environment and power charts take `range` directly and ask the API for the bucket that matches it. The packet charts ([`NodePacketTypeCard`](./NodePacketTypeCard.md)) and "Heard most from" ([`NeighbourSourceBars`](./NeighbourSourceBars.md)) take `range` too. Traceroutes: the links section uses `range.window.start` for the API call and the SNR chart axis.
 - **Right now** ([`NodeRightNow`](./NodeRightNow.md)) tops Overview and Statistics.
 - Recently viewed chips sit at the bottom of the page; the back link is the arrow in the header.
 - The Device Metrics card is gone from Overview: [`NodeRightNow`](./NodeRightNow.md) carries the latest battery, channel use, air time and uptime, and the history is under Statistics.
