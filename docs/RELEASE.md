@@ -62,6 +62,8 @@ Use this to build and push from the current `main` branch without merging new co
 
 Docker layer cache lives in the GitHub Actions cache under the `meshflow-ui` scope. Only builds on `main` write it (`mode=max`); pull request builds read it but never write, because each PR ref writing ~1.8 GB pushed the repo over the 10 GB Actions cache limit and evicted the layers.
 
+The `warm-caches` job in [main.yaml](../.github/workflows/main.yaml) also saves the npm cache and the Playwright browsers cache on every push to `main`; pull requests only read them (the Playwright step uses `actions/cache/restore`), so a new PR hits both on its first run.
+
 ---
 
 ## Registry cleanup

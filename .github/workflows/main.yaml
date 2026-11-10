@@ -25,6 +25,39 @@ jobs:
     outputs:
       VERSION_LABEL: ${{ steps.get_sha.outputs.VERSION_LABEL }}
 
+  warm-caches:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v7
+
+      - name: Setup Node
+        id: setup-node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 26
+          cache: npm
+
+      # Only needed to fill the npm cache; on a hit there is nothing to save, so skip it.
+      - name: Install Dependencies
+        if: steps.setup-node.outputs.cache-hit != 'true'
+        run: npm ci
+
+      - name: Get Playwright version
+        id: playwright-version
+        run: echo "version=$(node -p "require('./package-lock.json').packages['node_modules/@playwright/test'].version")" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Playwright Browsers
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
+
+      - name: Install Playwright Browsers
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: npx playwright@${{ steps.playwright-version.outputs.version }} install chromium
+
   build:
     needs:
       - extract-dev-tag
