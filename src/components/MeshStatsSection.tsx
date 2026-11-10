@@ -109,9 +109,7 @@ function usePreviousPeriodDelta(args: {
     if (text === undefined) return null;
     if (result.kind === 'none') return <span title={describeNoComparison(result)}>{text}</span>;
     return text;
-  },
-    [pages, prev.pages, scope, mtStat, mcStat, mode, windows, range.bucket, range.label]
-  );
+  }, [pages, prev.pages, scope, mtStat, mcStat, mode, windows, range.bucket, range.label]);
 }
 
 /** A headline over a truncated range (the API ignored `bucket`) covers only part of it: say so. */
