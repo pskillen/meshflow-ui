@@ -154,6 +154,34 @@ test.describe('Node Traceroutes tab', () => {
     await expect(page.getByTestId('link-snr-charts').getByRole('heading', { level: 3 })).toHaveCount(6);
   });
 
+  for (const range of ['7d', '90d']) {
+    test(`${range}: the SNR view toggles to Raw samples and back to Means`, async ({ page }) => {
+      await page.goto(`/nodes/${NODE_ID}?tab=traceroutes&range=${range}`);
+      const card = page.getByTestId('chart-link-snr-1001');
+      await expect(page.getByRole('radio', { name: 'Bucket means' })).toBeChecked();
+      await expect(card.getByTestId('chart-link-snr-1001-measure')).toContainText('Mean SNR');
+
+      await page.getByRole('radio', { name: 'Raw samples' }).click();
+      await expect(card.getByTestId('chart-link-snr-1001-measure')).toContainText("one traceroute's SNR");
+      await expect(card.getByTestId('snr-points-chart')).toBeVisible();
+      await expect(card.getByTestId('snr-points-legend')).toContainText('SNR out (dB)');
+      // inbound circles and outbound triangles are drawn, one mark per sample
+      await expect(card.locator('.recharts-scatter circle').first()).toBeVisible();
+      await expect(card.locator('.recharts-scatter polygon').first()).toBeVisible();
+      await expect(card.getByTestId('chart-link-snr-1001-headline')).toContainText('avg in');
+      await expect(card.locator('.recharts-yAxis-tick-labels .recharts-cartesian-axis-tick-value')).toHaveText([
+        '-20',
+        '-10',
+        '0',
+        '10',
+      ]);
+
+      await page.getByRole('radio', { name: 'Bucket means' }).click();
+      await expect(card.getByTestId('chart-link-snr-1001-measure')).toContainText('Mean SNR');
+      await expect(card.getByTestId('snr-points-chart')).toHaveCount(0);
+    });
+  }
+
   test('a link whose only sample is in the bucket in progress still draws its point (30d)', async ({ page }) => {
     await page.route(`**/api/nodes/observed-nodes/${NODE_ID}/traceroute-links/**`, (route) =>
       route.fulfill({
@@ -232,6 +260,10 @@ test.describe('Node Traceroutes tab', () => {
     await expect(page.getByTestId('chart-link-snr-1001').getByTestId('trend-chart')).toBeVisible();
     await page.getByRole('button', { name: /show all links/i }).click();
     await expect(page.getByTestId('chart-link-snr-1003').getByTestId('trend-chart')).toBeVisible();
+    expect(await noPageScroll(page)).toBe(true);
+    await page.getByRole('radio', { name: 'Raw samples' }).click();
+    await expect(page.getByTestId('chart-link-snr-1003').getByTestId('snr-points-chart')).toBeVisible();
+    await expect(page.getByTestId('chart-link-snr-1001').getByTestId('snr-points-chart')).toBeVisible();
     expect(await noPageScroll(page)).toBe(true);
   });
 });

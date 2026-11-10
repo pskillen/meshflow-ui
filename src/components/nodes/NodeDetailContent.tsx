@@ -272,7 +272,6 @@ function TracerouteLinksSection({
               </div>
               {data.snr_history.length > 0 && (
                 <div>
-                  <h4 className="mb-3 text-sm font-medium">SNR over time by link</h4>
                   <LinkSNRCharts snrHistory={data.snr_history} range={range} />
                 </div>
               )}

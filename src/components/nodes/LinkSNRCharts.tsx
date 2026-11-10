@@ -2,6 +2,9 @@ import * as React from 'react';
 import { ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { MetricTrendCard } from '@/components/nodes/MetricTrendCard';
+import { SnrPointsChart } from '@/components/nodes/SnrPointsChart';
+import { ChartCard } from '@/components/stats/ChartCard';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import type { StatsRange } from '@/hooks/useStatsRange';
 import type { NodeTracerouteLinkSnrHistory } from '@/hooks/api/useNodeTracerouteLinks';
 import {
@@ -9,8 +12,11 @@ import {
   SNR_OUT,
   bucketLinkSnr,
   countOffScale,
+  countRawOffScale,
   meanOfDrawn,
+  meanOfRaw,
   peerLabel,
+  rawLinkSnr,
   sortLinksByActivity,
 } from '@/lib/node-traceroute-snr';
 import { markPartialBuckets, bucketPhrase } from '@/lib/stats-trend';
@@ -45,6 +51,50 @@ function headlineFor(rows: Array<Record<string, unknown>>): string | undefined {
   return parts.length ? `avg ${parts.join(' / ')} dB` : undefined;
 }
 
+export type SnrView = 'means' | 'raw';
+
+const offScaleNote = (n: number) => (n > 0 ? `${n} ${n === 1 ? 'point' : 'points'} off the scale.` : undefined);
+
+function RawLinkCard({ link, range }: { link: NodeTracerouteLinkSnrHistory; range: StatsRange }) {
+  const points = React.useMemo(() => rawLinkSnr(link, range.window, range.bucket), [link, range.window, range.bucket]);
+  const label = peerLabel(link);
+  const inbound = meanOfRaw(points, SNR_IN);
+  const outbound = meanOfRaw(points, SNR_OUT);
+  const parts = [
+    inbound != null ? `in ${inbound.toFixed(1)}` : null,
+    outbound != null ? `out ${outbound.toFixed(1)}` : null,
+  ].filter(Boolean);
+  const empty = points.length === 0;
+  return (
+    <ChartCard
+      title={`SNR with ${label}`}
+      headline={parts.length ? `avg ${parts.join(' / ')} dB` : undefined}
+      measure="Each dot: one traceroute's SNR in dB"
+      note={offScaleNote(countRawOffScale(points, SNR_Y_RANGE))}
+      data-testid={`chart-link-snr-${link.peer_node_id}`}
+    >
+      {empty ? (
+        <div
+          className="flex items-center justify-center rounded-md bg-muted/40 px-3 text-center text-sm text-muted-foreground"
+          style={{ height: 190 }}
+          data-testid={`chart-link-snr-${link.peer_node_id}-empty`}
+        >
+          No SNR samples from traceroutes in this range.
+        </div>
+      ) : (
+        <SnrPointsChart
+          points={points}
+          window={range.window}
+          bucket={range.bucket}
+          yRange={SNR_Y_RANGE}
+          yTickStep={SNR_TICK_STEP}
+          label={`SNR with ${label}, ${range.longLabel}`}
+        />
+      )}
+    </ChartCard>
+  );
+}
+
 function LinkCard({ link, range }: { link: NodeTracerouteLinkSnrHistory; range: StatsRange }) {
   const rows = React.useMemo(
     () => markPartialBuckets(bucketLinkSnr(link, range.window, range.bucket), range.window, range.bucket),
@@ -63,7 +113,7 @@ function LinkCard({ link, range }: { link: NodeTracerouteLinkSnrHistory; range: 
       series={series.length ? series : SNR_SERIES}
       yRange={SNR_Y_RANGE}
       yTickStep={SNR_TICK_STEP}
-      note={offScale > 0 ? `${offScale} ${offScale === 1 ? 'point' : 'points'} off the scale.` : undefined}
+      note={offScaleNote(offScale)}
       formatValue={formatDb}
       dots
       empty={series.length === 0 ? 'No SNR samples from traceroutes in this range.' : undefined}
@@ -75,6 +125,7 @@ function LinkCard({ link, range }: { link: NodeTracerouteLinkSnrHistory; range: 
 /** SNR per link: one chart card per peer on the shared range, inbound and outbound together. See LinkSNRCharts.md. */
 export function LinkSNRCharts({ snrHistory, range, initialVisible = 4 }: LinkSNRChartsProps) {
   const [expanded, setExpanded] = React.useState(false);
+  const [view, setView] = React.useState<SnrView>('means');
   const sorted = React.useMemo(() => sortLinksByActivity(snrHistory), [snrHistory]);
 
   if (sorted.length === 0) {
@@ -90,10 +141,33 @@ export function LinkSNRCharts({ snrHistory, range, initialVisible = 4 }: LinkSNR
 
   return (
     <div className="space-y-3" data-testid="link-snr-charts">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h4 className="text-sm font-medium">SNR over time by link</h4>
+        <ToggleGroup
+          type="single"
+          value={view}
+          onValueChange={(v) => v && setView(v as SnrView)}
+          variant="outline"
+          size="sm"
+          aria-label="SNR view"
+          data-testid="link-snr-view-toggle"
+        >
+          <ToggleGroupItem value="means" aria-label="Bucket means">
+            Means
+          </ToggleGroupItem>
+          <ToggleGroupItem value="raw" aria-label="Raw samples">
+            Raw
+          </ToggleGroupItem>
+        </ToggleGroup>
+      </div>
       <div className="grid gap-3 md:grid-cols-2">
-        {shown.map((link) => (
-          <LinkCard key={link.peer_node_id} link={link} range={range} />
-        ))}
+        {shown.map((link) =>
+          view === 'raw' ? (
+            <RawLinkCard key={link.peer_node_id} link={link} range={range} />
+          ) : (
+            <LinkCard key={link.peer_node_id} link={link} range={range} />
+          )
+        )}
       </div>
       {hidden > 0 && (
         <Button variant="outline" size="sm" onClick={() => setExpanded(true)} className="w-full sm:w-auto">

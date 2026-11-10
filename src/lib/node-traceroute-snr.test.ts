@@ -1,6 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import { STATS_RANGES, statsRangeWindow } from '@/lib/stats-range';
-import { bestEdgeSnr, bucketLinkSnr, countOffScale, meanOfDrawn, peerLabel, sortLinksByActivity } from './node-traceroute-snr';
+import {
+  bestEdgeSnr,
+  bucketLinkSnr,
+  countOffScale,
+  countRawOffScale,
+  meanOfDrawn,
+  meanOfRaw,
+  peerLabel,
+  rawLinkSnr,
+  sortLinksByActivity,
+} from './node-traceroute-snr';
 
 const NOW = new Date('2026-11-10T09:37:00Z');
 const window7d = statsRangeWindow('7d', NOW);
@@ -127,5 +137,38 @@ describe('peerLabel and sortLinksByActivity', () => {
       link(3, 'C', ['2026-11-05T00:00:00Z']),
     ]);
     expect(sorted.map((l) => l.peer_short_name)).toEqual(['B', 'C', 'A']);
+  });
+});
+
+describe('rawLinkSnr, meanOfRaw and countRawOffScale', () => {
+  const link = {
+    inbound: [
+      { triggered_at: '2026-11-10T11:30:00Z', snr: -4 }, // inside: the 6h bucket in progress runs to 12:00
+      { triggered_at: '2026-11-10T12:00:00Z', snr: 9 }, // at the end of the last bucket: dropped
+      { triggered_at: '2026-11-03T05:00:00Z', snr: 9 }, // before the window: dropped
+      { triggered_at: '2026-11-09T00:00:00Z', snr: -12 },
+    ],
+    outbound: [{ triggered_at: '2026-11-09T06:00:00Z', snr: 3 }],
+  };
+
+  it('uses the same bounds as bucketLinkSnr and sorts by time', () => {
+    const raw = rawLinkSnr(link, window7d, bucket);
+    expect(raw.map((p) => [new Date(p.t).toISOString(), p.dir, p.snr])).toEqual([
+      ['2026-11-09T00:00:00.000Z', 'inbound', -12],
+      ['2026-11-09T06:00:00.000Z', 'outbound', 3],
+      ['2026-11-10T11:30:00.000Z', 'inbound', -4],
+    ]);
+    // every raw sample lands in a bucket row, and nothing else does
+    const rows = bucketLinkSnr(link, window7d, bucket);
+    const inRows = rows.filter((r) => typeof r.inbound === 'number').length;
+    expect(inRows).toBe(raw.filter((p) => p.dir === 'inbound').length);
+  });
+
+  it('means and off-scale counts work on raw points', () => {
+    const raw = rawLinkSnr(link, window7d, bucket);
+    expect(meanOfRaw(raw, 'inbound')).toBe(-8);
+    expect(meanOfRaw(raw, 'outbound')).toBe(3);
+    expect(meanOfRaw([], 'inbound')).toBeNull();
+    expect(countRawOffScale(raw, [-10, 10])).toBe(1);
   });
 });

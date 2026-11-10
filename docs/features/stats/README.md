@@ -51,7 +51,6 @@ Each was decided in https://github.com/pskillen/meshflow-ui/issues/407.
 ## Known gaps
 
 - No change against the previous period on dashboard tiles: https://github.com/pskillen/meshflow-ui/issues/445
-- The node Traceroutes tab's Peers tile always equals Links, and link SNR shows bucket means only: https://github.com/pskillen/meshflow-ui/issues/447
 - Node updates from the bot still send 0 for a missing device metric, so the battery chart keeps dropping 0 voltage, and 0 level when voltage is missing: https://github.com/pskillen/meshflow-bot/issues/170
 
 ## Links
