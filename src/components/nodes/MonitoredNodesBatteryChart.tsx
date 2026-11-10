@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { batteryChartValue } from '@/lib/battery';
 import { Line, LineChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend, ReferenceArea } from 'recharts';
 import { useMultiNodeMetricsSuspense } from '@/hooks/api/useMultiNodeMetrics';
 import { DeviceMetrics, ObservedNode } from '@/lib/models';
@@ -93,10 +94,10 @@ export function MonitoredNodesBatteryChart({
     ).sort((a, b) => a - b);
 
     // 2. Build a lookup for each node
-    const nodeLookups: Record<string, Record<number, number>> = {};
+    const nodeLookups: Record<string, Record<number, number | null>> = {};
     nodes.forEach((node) => {
       const metrics = metricsMap[node.meshtastic_node_id] || [];
-      const lookup: Record<number, number> = {};
+      const lookup: Record<number, number | null> = {};
       metrics
         .filter((m) => m.reported_time != null)
         .forEach((m) => {
@@ -162,14 +163,14 @@ export function MonitoredNodesBatteryChart({
     // For percentage, build a similar pivoted array but with battery_level
     // Build lookups for percentage
     const allTimestamps = pivotedData.map((row) => row.timestamp);
-    const nodeLookups: Record<string, Record<number, number>> = {};
+    const nodeLookups: Record<string, Record<number, number | null>> = {};
     nodes.forEach((node) => {
       const metrics = metricsMap[node.meshtastic_node_id] || [];
-      const lookup: Record<number, number> = {};
+      const lookup: Record<number, number | null> = {};
       metrics
         .filter((m) => m.reported_time != null)
         .forEach((m) => {
-          lookup[new Date(m.reported_time!).getTime()] = m.battery_level;
+          lookup[new Date(m.reported_time!).getTime()] = batteryChartValue(m.battery_level);
         });
       const name = node.short_name || node.node_id_str || String(node.meshtastic_node_id);
       nodeLookups[name] = lookup;

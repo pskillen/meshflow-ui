@@ -1,4 +1,5 @@
 import { useMemo, useState, useCallback, Suspense } from 'react';
+import { describeBattery, formatBattery } from '@/lib/battery';
 import { Link } from 'react-router-dom';
 import { subDays, subHours, format } from 'date-fns';
 import { enGB } from 'date-fns/locale';
@@ -622,9 +623,9 @@ function MeshInfrastructureContent({ protocol }: { protocol: InfraProtocol }) {
                         </TableCell>
                         <TableCell>
                           <div className="flex flex-col">
-                            {level != null ? (
+                            {describeBattery(level).kind !== 'none' ? (
                               <>
-                                <span>{level}%</span>
+                                <span>{formatBattery(level)}</span>
                                 {reportedAt ? (
                                   <>
                                     <span className="text-xs text-muted-foreground">

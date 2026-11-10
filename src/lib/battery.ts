@@ -30,3 +30,20 @@ export function formatBattery(raw: number | null | undefined): string {
   if (d.kind === 'powered') return 'Powered';
   return `${d.pct}%`;
 }
+
+/**
+ * Text colour class for a raw level on an icon or label: tone colour for a level, neutral for "Powered" or no data.
+ */
+export function batteryToneClass(raw: number | null | undefined): string {
+  const d = describeBattery(raw);
+  if (d.kind !== 'level') return 'text-muted-foreground';
+  if (d.tone === 'good') return 'text-green-500';
+  if (d.tone === 'warn') return 'text-yellow-500';
+  return 'text-red-500';
+}
+
+/** Chart value for a raw level: the percentage, or null (a gap) for "Powered" and no data. */
+export function batteryChartValue(raw: number | null | undefined): number | null {
+  const d = describeBattery(raw);
+  return d.kind === 'level' ? d.pct : null;
+}

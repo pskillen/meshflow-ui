@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { batteryToneClass, formatBattery } from '@/lib/battery';
 import { Link } from 'react-router-dom';
 import {
   createPaginatedRowModel,
@@ -82,18 +83,11 @@ const columns: ColumnDef<typeof features, ObservedNode>[] = [
       if (!metrics) return <span className="text-muted-foreground">Unknown</span>;
 
       const batteryLevel = metrics.battery_level;
-      let batteryColor = 'text-red-500';
-
-      if (batteryLevel > 70) {
-        batteryColor = 'text-green-500';
-      } else if (batteryLevel > 30) {
-        batteryColor = 'text-yellow-500';
-      }
 
       return (
         <div className="flex items-center gap-2">
-          <BatteryIcon className={`h-4 w-4 ${batteryColor}`} />
-          <span>{batteryLevel}%</span>
+          <BatteryIcon className={`h-4 w-4 ${batteryToneClass(batteryLevel)}`} />
+          <span>{formatBattery(batteryLevel)}</span>
         </div>
       );
     },

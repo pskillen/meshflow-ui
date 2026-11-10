@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { batteryToneClass, formatBattery } from '@/lib/battery';
 import { useMemo } from 'react';
 import { format, subDays } from 'date-fns';
 import { enGB } from 'date-fns/locale';
@@ -162,20 +163,12 @@ function BatteryBlock({ node }: { node: ObservedNode }) {
     return <span className="text-muted-foreground">—</span>;
   }
   const batteryLevel = m.battery_level != null ? Number(m.battery_level) : null;
-  let batteryColor = 'text-red-500';
-  if (batteryLevel != null) {
-    if (batteryLevel > 70) {
-      batteryColor = 'text-green-500';
-    } else if (batteryLevel > 30) {
-      batteryColor = 'text-yellow-500';
-    }
-  }
   return (
     <div className="space-y-1.5">
       <div className="flex items-center gap-2 flex-wrap">
-        <BatteryIcon className={`h-4 w-4 shrink-0 ${batteryColor}`} aria-hidden />
+        <BatteryIcon className={`h-4 w-4 shrink-0 ${batteryToneClass(batteryLevel)}`} aria-hidden />
         <span className="text-sm tabular-nums">
-          {batteryLevel != null ? `${Math.round(batteryLevel)}%` : '—'}
+          {formatBattery(batteryLevel)}
           {m.voltage != null && ` · ${Number(m.voltage).toFixed(2)} V`}
         </span>
       </div>

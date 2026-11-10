@@ -518,11 +518,11 @@ export interface TextMessageResponse {
 export interface DeviceMetrics {
   reported_time: Date | null;
   logged_time: Date | null;
-  battery_level: number;
-  voltage: number;
-  meshtastic_channel_utilization: number; // Changed from chUtil
-  meshtastic_air_util_tx: number; // Changed from airUtil
-  uptime_seconds: number; // Changed from uptime
+  battery_level: number | null;
+  voltage: number | null;
+  meshtastic_channel_utilization: number | null; // Changed from chUtil
+  meshtastic_air_util_tx: number | null; // Changed from airUtil
+  uptime_seconds: number | null; // Changed from uptime
 }
 
 /**

@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { formatBattery } from '@/lib/battery';
 import { DeviceMetrics, ManagedNode, ObservedNode, NodeWatch, PaginatedResponse } from '@/lib/models';
 import { StaleReportedTime } from '@/components/nodes/StaleReportedTime';
 import { MeshWatchControls } from '@/components/nodes/MeshWatchControls';
@@ -118,10 +119,7 @@ function InfrastructureNodeCardInner({
         {node.owner && <p className="text-slate-600 dark:text-slate-400">Owner: {node.owner.username}</p>}
         {node.latest_device_metrics && (
           <div className="flex flex-wrap gap-3 text-sm">
-            <span>
-              Battery:{' '}
-              {node.latest_device_metrics.battery_level != null ? `${node.latest_device_metrics.battery_level}%` : '—'}
-            </span>
+            <span>Battery: {formatBattery(node.latest_device_metrics.battery_level)}</span>
             <span>
               Ch. util:{' '}
               {node.latest_device_metrics.meshtastic_channel_utilization != null

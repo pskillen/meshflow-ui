@@ -1,4 +1,5 @@
 import type { ManagedNode, ObservedNode } from '@/lib/models';
+import { describeBattery } from '@/lib/battery';
 import { getRoleLabel } from '@/lib/meshtastic';
 
 export interface InfrastructureExportRow {
@@ -39,6 +40,14 @@ function formatMetric(value: number | null | undefined): string {
   return String(value);
 }
 
+/** Battery % column: the number for a level, "Powered" for an externally powered node, blank for no reading. */
+function formatBatteryExport(raw: number | null | undefined): string {
+  const d = describeBattery(raw);
+  if (d.kind === 'none') return '';
+  if (d.kind === 'powered') return 'Powered';
+  return String(d.pct);
+}
+
 export function buildInfrastructureExportRow(
   node: ObservedNode,
   managedNode?: ManagedNode | null
@@ -57,7 +66,7 @@ export function buildInfrastructureExportRow(
     latitude: formatCoord(pos?.latitude),
     longitude: formatCoord(pos?.longitude),
     altitude: formatMetric(pos?.altitude),
-    battery_percent: formatMetric(metrics?.battery_level),
+    battery_percent: formatBatteryExport(metrics?.battery_level),
     channel_util_percent: formatMetric(metrics?.meshtastic_channel_utilization),
     owner_username: node.owner?.username ?? '',
     is_managed_feeder: managedNode != null,

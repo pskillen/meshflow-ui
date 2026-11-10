@@ -268,3 +268,28 @@ describe('WatchedNodesTable', () => {
     expect(screen.getByRole('button', { name: /Trigger traceroute/i })).toBeDisabled();
   });
 });
+
+describe('WatchedNodesTable battery', () => {
+  it.each([
+    ['a level', 87, '87%'],
+    ['zero', 0, '0%'],
+    ['powered (101)', 101, 'Powered'],
+    ['missing', null, '—'],
+  ])('shows %s', (_label, battery_level, text) => {
+    const recent = new Date(Date.now() - 10 * 60 * 1000);
+    renderTable({
+      watches: [
+        makeWatch({
+          id: 7,
+          node: {
+            meshtastic_node_id: 7,
+            short_name: 'Batt',
+            last_heard: recent,
+            latest_device_metrics: { battery_level, voltage: null, reported_time: null },
+          } as never,
+        }),
+      ],
+    });
+    expect(screen.getByText((c) => c.replace(/\s+/g, ' ').trim() === text)).toBeInTheDocument();
+  });
+});
