@@ -1,4 +1,4 @@
-import { useQuery, useSuspenseQueries, useSuspenseQuery } from '@tanstack/react-query';
+import { useQueries, useQuery, useSuspenseQueries, useSuspenseQuery } from '@tanstack/react-query';
 import { useMeshtasticApi } from './useApi';
 import { PaginatedResponse, StatsSnapshot } from '@/lib/models';
 import type { StatsSnapshotsParams } from '@/lib/types';
@@ -78,4 +78,37 @@ export function useStatsSnapshotsForTypesSuspense(
     (typeof statTypes)[number],
     Awaited<ReturnType<typeof api.getStatsSnapshots>>
   >;
+}
+
+/**
+ * Non-Suspense twin of `useStatsSnapshotsForTypesSuspense`, with the same query keys (so it shares the cache) and
+ * refetch. For secondary data such as the previous-period comparison: a slow or failed request never blanks the
+ * chart. `pages` is undefined until every stat type has loaded.
+ */
+export function useStatsSnapshotsForTypes(
+  statTypes: readonly string[],
+  params: Omit<NonNullable<Parameters<typeof useStatsSnapshotsSuspense>[0]>, 'statType'>
+) {
+  const api = useMeshtasticApi();
+
+  const queries = useQueries({
+    queries: statTypes.map((statType) => {
+      const st = statType as NonNullable<StatsSnapshotsParams['statType']>;
+      const fullParams: StatsSnapshotsParams = { ...params, statType: st };
+      return {
+        queryKey: ['stats-snapshots', getStatsSnapshotsKey(fullParams)],
+        queryFn: () => api.getStatsSnapshots(fullParams),
+        refetchInterval: 5 * 1000 * 60,
+      };
+    }),
+  });
+
+  const loaded = queries.every((q) => q.data !== undefined);
+  const pages = loaded
+    ? (Object.fromEntries(statTypes.map((statType, i) => [statType, queries[i].data])) as Record<
+        (typeof statTypes)[number],
+        Awaited<ReturnType<typeof api.getStatsSnapshots>>
+      >)
+    : undefined;
+  return { pages, isLoading: queries.some((q) => q.isLoading) };
 }

@@ -15,28 +15,60 @@ vi.mock('recharts', async (importOriginal) => {
 });
 
 type Params = Record<string, unknown>;
-const state = vi.hoisted(() => ({ truncate: false }));
+const state = vi.hoisted(() => ({ truncate: false, full: false, prevEmpty: false }));
 const calls: { types: readonly string[]; params: Params }[] = [];
+const prevCalls: { types: readonly string[]; params: Params }[] = [];
 
 function snap(stat: string, iso: string, count: number, extra: Record<string, unknown> = {}) {
   return { id: 1, recorded_at: iso, stat_type: stat, constellation_id: null, value: { count, ...extra } };
 }
 
+/** Every hourly row (or UTC day when `bucket` is set) in [after, before), with a count that depends on `perHour`. */
+function fullRows(stat: string, params: Params, perHour: number) {
+  const HOUR = 3_600_000;
+  const after = (params.recordedAtAfter as Date).getTime();
+  const before = (params.recordedAtBefore as Date).getTime();
+  const step = params.bucket ? 24 * HOUR : HOUR;
+  const flow = /packet_volume|new_nodes/.test(stat);
+  const rows = [];
+  for (let t = Math.ceil(after / step) * step; t < before; t += step) {
+    const hours = params.bucket ? Math.min(24, Math.floor((before - t) / HOUR)) : 1;
+    rows.push(
+      snap(stat, new Date(t).toISOString(), flow ? perHour * hours : perHour, params.bucket ? { samples: hours } : {})
+    );
+  }
+  return rows;
+}
+
+function pagesFor(types: readonly string[], rowsFor: (t: string) => unknown[]) {
+  return Object.fromEntries(
+    types.map((t) => {
+      const rows = rowsFor(t);
+      return [t, { count: state.truncate ? rows.length + 500 : rows.length, next: null, previous: null, results: rows }];
+    })
+  );
+}
+
 vi.mock('@/hooks/api/useStatsSnapshots', () => ({
   useStatsSnapshotsForTypesSuspense: (types: readonly string[], params: Params) => {
     calls.push({ types, params });
-    const day = '2026-11-08T00:00:00Z';
-    return Object.fromEntries(
-      types.map((t) => {
-        const rows = [
-          snap(t, day, 10, {
-            by_type: { text_message: 4, position: 6 },
-            ...(params.bucket ? { samples: 24 } : {}),
-          }),
-        ];
-        return [t, { count: state.truncate ? rows.length + 500 : rows.length, next: null, previous: null, results: rows }];
-      })
+    return pagesFor(types, (t) =>
+      state.full
+        ? fullRows(t, params, 12)
+        : [
+            snap(t, '2026-11-08T00:00:00Z', 10, {
+              by_type: { text_message: 4, position: 6 },
+              ...(params.bucket ? { samples: 24 } : {}),
+            }),
+          ]
     );
+  },
+  useStatsSnapshotsForTypes: (types: readonly string[], params: Params) => {
+    prevCalls.push({ types, params });
+    return {
+      pages: state.prevEmpty ? pagesFor(types, () => []) : pagesFor(types, (t) => fullRows(t, params, 10)),
+      isLoading: false,
+    };
   },
 }));
 
@@ -68,7 +100,10 @@ const lastParamsFor = (type: string) => [...calls].reverse().find((c) => c.types
 describe('MeshStatsSection', () => {
   beforeEach(() => {
     calls.length = 0;
+    prevCalls.length = 0;
     state.truncate = false;
+    state.full = false;
+    state.prevEmpty = false;
     window.sessionStorage.clear();
   });
 
@@ -135,6 +170,34 @@ describe('MeshStatsSection', () => {
   it('has no by-type toggle when both protocols are overlaid', () => {
     renderSection('both');
     expect(screen.queryByRole('radio', { name: 'Packets by type' })).toBeNull();
+  });
+
+  it('shows the change against the previous period on all three headlines', () => {
+    state.full = true;
+    renderSection('meshtastic', '/?range=24h');
+    for (const id of ['online_nodes', 'new_nodes', 'packet_volume']) {
+      expect(screen.getByTestId(`chart-${id}-delta`)).toHaveTextContent('+20% vs previous 24h');
+    }
+  });
+
+  it('shows a neutral line when the previous period has no data', () => {
+    state.full = true;
+    state.prevEmpty = true;
+    renderSection('meshtastic', '/?range=30d');
+    expect(screen.getByTestId('chart-packet_volume-delta')).toHaveTextContent('No comparison: too little data before');
+  });
+
+  it('makes one previous-window request per stat type per chart', () => {
+    state.full = true;
+    renderSection('both', '/?range=24h');
+    const keys = prevCalls.map((c) => c.types.join('+'));
+    expect(new Set(keys)).toEqual(
+      new Set(['online_nodes+mc_online_nodes', 'new_nodes+mc_new_nodes', 'packet_volume+mc_packet_volume'])
+    );
+    // previous window ends where the current one starts
+    const cur = lastParamsFor('online_nodes');
+    const prev = prevCalls.find((c) => c.types.includes('online_nodes'))!.params;
+    expect((prev.recordedAtBefore as Date).getTime()).toBe((cur.recordedAtAfter as Date).getTime());
   });
 
   it('draws Online nodes as a line and the other two as bars', () => {
