@@ -7,6 +7,7 @@ import { eventService } from '@/lib/events/eventService';
 import { WebSocketEventType } from '@/lib/websocket/websocketService';
 import type { TextMessage } from '@/lib/models';
 import { NotFoundError } from '@/lib/types';
+import { unreadCountsQueryKey } from '@/hooks/api/useUnreadCounts';
 
 const mockConfig = { apis: { meshBot: { baseUrl: 'http://127.0.0.1:8000' } } };
 
@@ -128,6 +129,7 @@ function renderWithRoutes(initialPath: string, withProbe = false) {
 
   return {
     ...utils,
+    queryClient,
     navigate: (path: string) => {
       if (!navigateFn) throw new Error('navigate not ready');
       act(() => navigateFn!(path));
@@ -152,11 +154,29 @@ function serverCounts(mt: Record<string, number> = {}, mc: Record<string, number
   };
 }
 
+/**
+ * Wait until the provider has rendered with the first unread-counts snapshot.
+ *
+ * Frames emitted before that are tagged with the pre-snapshot fetch id and are dropped when the snapshot lands, so
+ * asserting earlier races React Query's result delivery (meshflow-ui#459). React Query notifies observers on a 0ms
+ * timer scheduled when the query settles; waiting for `success` and then one later timer guarantees that has run.
+ */
+async function waitForSnapshot(queryClient: QueryClient) {
+  await waitFor(() => expect(queryClient.getQueryState(unreadCountsQueryKey)?.status).toBe('success'));
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
+}
+
+/** Resolve after a short delay so tests always exercise the "snapshot not here yet" path, not just fast machines. */
+function resolveLater<T>(value: T, ms = 10): Promise<T> {
+  return new Promise((resolve) => setTimeout(() => resolve(value), ms));
+}
+
 async function renderSeeded(path: string, counts = serverCounts()) {
-  getUnreadCounts.mockResolvedValue(counts);
+  getUnreadCounts.mockImplementation(() => resolveLater(counts));
   const utils = renderWithRoutes(path, true);
-  await waitFor(() => expect(getUnreadCounts).toHaveBeenCalled());
-  await act(async () => {});
+  await waitForSnapshot(utils.queryClient);
   return utils;
 }
 
@@ -348,13 +368,14 @@ describe('WebSocketProvider', () => {
 
   describe('API without the unread-counts endpoint (404)', () => {
     beforeEach(() => {
-      getUnreadCounts.mockRejectedValue(new NotFoundError('Not Found'));
+      getUnreadCounts.mockImplementation(() =>
+        resolveLater(null).then(() => Promise.reject(new NotFoundError('Not Found')))
+      );
     });
 
     it('falls back to counting WS frames only', async () => {
-      renderWithRoutes('/', true);
-      await waitFor(() => expect(getUnreadCounts).toHaveBeenCalled());
-      await act(async () => {});
+      const { queryClient } = renderWithRoutes('/', true);
+      await waitForSnapshot(queryClient);
 
       emit(sampleMessage);
       emit(makeMessage({ id: 'mc-1', channel: 3, protocol: 'meshcore' }));
@@ -363,9 +384,8 @@ describe('WebSocketProvider', () => {
     });
 
     it('still excludes the viewed channel but never calls mark-read', async () => {
-      renderWithRoutes('/messages', true);
-      await waitFor(() => expect(getUnreadCounts).toHaveBeenCalled());
-      await act(async () => {});
+      const { queryClient } = renderWithRoutes('/messages', true);
+      await waitForSnapshot(queryClient);
 
       act(() => screen.getByText('set-active-ch1').click());
       act(() => screen.getByText('shown-ch1').click());
