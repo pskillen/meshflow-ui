@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { buildPacketTypeRows, packetIntervalType } from '@/lib/node-packet-series';
+import { buildPacketTypeRows, packetIntervalType, packetTypeSeries } from '@/lib/node-packet-series';
 import { statsRangeWindow } from '@/lib/stats-range';
+import { densifyTrendRows } from '@/lib/stats-trend';
 
 const NOW = new Date('2026-11-10T09:37:00Z');
 const HOUR = 3_600_000;
@@ -75,5 +76,33 @@ describe('buildPacketTypeRows', () => {
     );
     expect(total).toBe(0);
     expect(rows.every((r) => r.position == null)).toBe(true);
+  });
+
+  it('headline total equals the drawn sum when window.end sits on a bucket boundary', () => {
+    // 10:00 is a bucket boundary at 24h (hourly) and at 7d (6h buckets at 12:00); the query runs an hour past it.
+    for (const [now, range, bucket] of [
+      ['2026-11-10T10:34:00Z', '24h', 'hourly'],
+      ['2026-11-10T12:30:00Z', '7d', '6h'],
+      ['2026-11-10T00:30:00Z', '30d', 'daily'],
+    ] as const) {
+      const w = statsRangeWindow(range, new Date(now));
+      const { rows, total } = buildPacketTypeRows(
+        hourly(w.start, new Date(w.end.getTime() + HOUR), [['position', 1]]),
+        w,
+        bucket
+      );
+      const drawn = densifyTrendRows(rows, w, bucket).reduce((n, r) => n + ((r.position as number | undefined) ?? 0), 0);
+      expect(total).toBe(drawn);
+      expect(total).toBe((w.end.getTime() - w.start.getTime()) / HOUR);
+    }
+  });
+});
+
+describe('packetTypeSeries', () => {
+  it('drops Other when it has no packets, keeps it (last) when it has some, in stack order', () => {
+    expect(packetTypeSeries([{ timestamp: 1, position: 3, OTHER: 0 }]).map((s) => s.key)).not.toContain('OTHER');
+    const withOther = packetTypeSeries([{ timestamp: 1, OTHER: 2 }]).map((s) => s.key);
+    expect(withOther[withOther.length - 1]).toBe('OTHER');
+    expect(withOther[0]).toBe('text_message');
   });
 });

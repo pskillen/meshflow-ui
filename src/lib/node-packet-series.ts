@@ -1,6 +1,12 @@
 import type { GlobalStats, PacketStatsInterval } from '@/lib/models';
 import type { StatsBucket, StatsRangeWindow } from '@/lib/stats-range';
-import { markPartialBuckets, TREND_BUCKET_MS, type TrendInputRow, type TrendRow } from '@/lib/stats-trend';
+import {
+  densifyTrendRows,
+  markPartialBuckets,
+  TREND_BUCKET_MS,
+  type TrendInputRow,
+  type TrendRow,
+} from '@/lib/stats-trend';
 
 /** One stack segment of a node's packet chart. Colours are the long-standing per-type colours, not chart tokens. */
 export interface PacketTypeSeries {
@@ -21,6 +27,13 @@ export const NODE_PACKET_TYPE_SERIES: PacketTypeSeries[] = [
 ];
 
 const KNOWN = new Set(NODE_PACKET_TYPE_SERIES.map((s) => s.key));
+const OTHER = 'OTHER';
+
+/** The series to draw: stack order, without `OTHER` when it has no packets (the server only sends known types). */
+export function packetTypeSeries(rows: TrendRow[]): PacketTypeSeries[] {
+  const hasOther = rows.some((r) => typeof r[OTHER] === 'number' && (r[OTHER] as number) > 0);
+  return hasOther ? NODE_PACKET_TYPE_SERIES : NODE_PACKET_TYPE_SERIES.filter((s) => s.key !== OTHER);
+}
 
 /**
  * The `interval_type` to ask for. Daily ranges ask for days; 24h and 7d ask for hours and are rolled up here,
@@ -33,7 +46,8 @@ export function packetIntervalType(bucket: StatsBucket): 'hour' | 'day' {
 /**
  * Roll the API's intervals up into one row per range bucket, a count per packet type. An interval lands in the
  * bucket that contains its start, so hourly rows fold into 6-hour buckets. Types outside the known set add to
- * `OTHER`. Rows outside the window's grid are dropped later by the chart.
+ * `OTHER`. `total` is the sum of the bars the chart draws: intervals outside the window's bucket grid (the query
+ * runs an hour past `window.end`) are left out of the rows and the total, as the chart would drop them anyway.
  */
 export function buildPacketTypeRows(
   stats: Pick<GlobalStats, 'intervals'> | null | undefined,
@@ -43,7 +57,6 @@ export function buildPacketTypeRows(
   const step = TREND_BUCKET_MS[bucket];
   const lo = window.start.getTime();
   const byTs = new Map<number, TrendInputRow>();
-  let total = 0;
   for (const interval of (stats?.intervals ?? []) as unknown as PacketStatsInterval[]) {
     const ms = new Date(interval.start_date).getTime();
     if (!Number.isFinite(ms) || ms < lo) continue;
@@ -53,10 +66,16 @@ export function buildPacketTypeRows(
       if (typeof count !== 'number' || !Number.isFinite(count)) continue;
       const key = KNOWN.has(packet_type) ? packet_type : 'OTHER';
       row[key] = (row[key] ?? 0) + count;
-      total += count;
     }
     byTs.set(ts, row);
   }
-  const rows = [...byTs.values()].sort((a, b) => a.timestamp - b.timestamp);
-  return { rows: markPartialBuckets(rows, window, bucket), total };
+  const sorted = [...byTs.values()].sort((a, b) => a.timestamp - b.timestamp);
+  const marked = markPartialBuckets(sorted, window, bucket);
+  const grid = new Set(densifyTrendRows([], window, bucket).map((r) => r.timestamp));
+  const rows = marked.filter((r) => grid.has(r.timestamp));
+  let total = 0;
+  for (const row of rows) {
+    for (const s of NODE_PACKET_TYPE_SERIES) total += typeof row[s.key] === 'number' ? (row[s.key] as number) : 0;
+  }
+  return { rows, total };
 }

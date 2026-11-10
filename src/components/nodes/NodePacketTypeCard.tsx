@@ -6,7 +6,7 @@ import { TrendChart } from '@/components/stats/TrendChart';
 import { usePacketStatsSuspense, useReceivedPacketStatsSuspense } from '@/hooks/api/usePacketStats';
 import type { StatsRange } from '@/hooks/useStatsRange';
 import type { GlobalStats } from '@/lib/models';
-import { buildPacketTypeRows, NODE_PACKET_TYPE_SERIES, packetIntervalType } from '@/lib/node-packet-series';
+import { buildPacketTypeRows, packetIntervalType, packetTypeSeries } from '@/lib/node-packet-series';
 import { metricQueryEnd } from '@/lib/node-metric-series';
 import { bucketPhrase, formatTrendLabel } from '@/lib/stats-trend';
 
@@ -83,6 +83,7 @@ function PacketTypeBody({
 }) {
   const { window, bucket } = range;
   const { rows, total } = React.useMemo(() => buildPacketTypeRows(stats, window, bucket), [stats, window, bucket]);
+  const series = React.useMemo(() => packetTypeSeries(rows), [rows]);
   const copy = COPY[direction];
   const hasPartial = rows.some((r) => r.partial);
   const latest = rows.length ? rows[rows.length - 1]! : undefined;
@@ -106,7 +107,7 @@ function PacketTypeBody({
         <TrendChart
           kind="bar"
           rows={rows}
-          series={NODE_PACKET_TYPE_SERIES}
+          series={series}
           window={window}
           bucket={bucket}
           label={`${copy.title}, ${range.longLabel}`}
