@@ -1,4 +1,4 @@
-import { useContext, useMemo } from 'react';
+import { useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { Bar, BarChart, CartesianGrid, Line, LineChart, Rectangle, XAxis, YAxis } from 'recharts';
 import {
   ChartContainer,
@@ -19,6 +19,7 @@ import {
   formatCompact,
   formatTrendLabel,
   formatTrendTick,
+  maxTrendTicks,
   splitPartialLine,
   type TrendRow,
 } from '@/lib/stats-trend';
@@ -70,6 +71,10 @@ export interface TrendChartProps {
   headline?: string;
   className?: string;
 }
+
+const Y_AXIS_WIDTH = 44;
+/** Width assumed before the chart is measured (and where there is no layout, as in tests). */
+const DEFAULT_WIDTH = 800;
 
 function numericValues(rows: TrendRow[], keys: string[]): number[] {
   return rows.flatMap((r) => keys.map((k) => r[k]).filter((v): v is number => typeof v === 'number'));
@@ -152,7 +157,30 @@ export function TrendChart({
     return { min: 0, ...niceAxisMax(max) };
   }, [dense, keys, kind, stacked, yRange]);
 
-  const ticks = useMemo(() => evenTrendTicks(dense.map((r) => r.timestamp)), [dense]);
+  // Fewer x labels on a narrow chart (a phone, a card in a column) so they do not run into each other.
+  const boxRef = useRef<HTMLDivElement>(null);
+  const [width, setWidth] = useState(DEFAULT_WIDTH);
+  useEffect(() => {
+    const el = boxRef.current;
+    if (!el) return;
+    const read = () => {
+      const w = el.getBoundingClientRect().width;
+      if (w > 0) setWidth(w);
+    };
+    read();
+    if (typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(read);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  const ticks = useMemo(
+    () =>
+      evenTrendTicks(
+        dense.map((r) => r.timestamp),
+        maxTrendTicks(width - Y_AXIS_WIDTH)
+      ),
+    [dense, width]
+  );
   const description = useMemo(
     () => describeTrend({ label, headline, bucket, rows: dense, series, format: formatValue }),
     [label, headline, bucket, dense, series, formatValue]
@@ -160,7 +188,8 @@ export function TrendChart({
 
   const common = {
     syncId,
-    margin: { top: 8, right: 8, left: 0, bottom: 0 },
+    // The right margin leaves room for half of the last x label ("10 Nov"), which is centred on its tick.
+    margin: { top: 8, right: 20, left: 0, bottom: 0 },
   };
 
   const xAxis = (
@@ -176,7 +205,7 @@ export function TrendChart({
   );
   const yAxis = (
     <YAxis
-      width={44}
+      width={Y_AXIS_WIDTH}
       tickLine={false}
       axisLine={false}
       domain={[axis.min, axis.max]}
@@ -205,6 +234,7 @@ export function TrendChart({
   return (
     <>
       <ChartContainer
+        ref={boxRef}
         config={config}
         className={className ?? 'aspect-auto w-full'}
         style={{ height }}
