@@ -4,7 +4,12 @@ import { useStatsSnapshots } from '@/hooks/api/useStatsSnapshots';
 import { ChartCard } from '@/components/stats/ChartCard';
 import { TrendChart } from '@/components/stats/TrendChart';
 import type { StatsRange } from '@/hooks/useStatsRange';
-import { ADOPTION_SPLIT_LOOKBACK_DAYS, buildFirmwareAdoption, buildFirmwareTrend } from '@/lib/firmware-adoption';
+import {
+  ADOPTION_SPLIT_LOOKBACK_DAYS,
+  buildFirmwareAdoption,
+  buildFirmwareTrend,
+  describeWindow,
+} from '@/lib/firmware-adoption';
 import { globalSnapshotRows } from '@/lib/stats-aggregation';
 
 const TITLE = 'Firmware adoption';
@@ -20,12 +25,6 @@ function buildNote(labels: string[]): string {
 
 function formatPercent(percent: number): string {
   return percent > 0 && percent < 1 ? '<1%' : `${percent.toFixed(0)}%`;
-}
-
-/** "last 7d" / "last 36h": the window the snapshot's counts cover. */
-function describeWindow(windowHours: number | null): string {
-  if (!windowHours) return 'recently';
-  return windowHours % 24 === 0 ? `last ${windowHours / 24}d` : `last ${windowHours}h`;
 }
 
 export interface FirmwareAdoptionCardProps {
@@ -53,7 +52,7 @@ export function FirmwareAdoptionCard({ range }: FirmwareAdoptionCardProps) {
     [adoption, startMs, endMs]
   );
   const trendSeries = React.useMemo(
-    () => adoption.series.map((s) => ({ key: s.id, label: s.label, color: s.color })),
+    () => adoption.series.map((s) => ({ key: s.id, label: s.label, color: s.color, dashed: s.dashed })),
     [adoption.series]
   );
 
@@ -85,13 +84,18 @@ export function FirmwareAdoptionCard({ range }: FirmwareAdoptionCardProps) {
 
   const windowText = describeWindow(adoption.windowHours);
   const days = trend.rows.length;
-  const sparse = days < 3 ? ` Only ${days} daily ${days === 1 ? 'snapshot' : 'snapshots'} in this range.` : '';
+  const sparse =
+    days === 0
+      ? ' No snapshots in this range.'
+      : days < 3
+        ? ` Only ${days} daily ${days === 1 ? 'snapshot' : 'snapshots'} in this range.`
+        : '';
 
   return (
     <ChartCard
       title={TITLE}
       headline={`${nf.format(adoption.total)} nodes`}
-      measure={`Split: nodes heard in the ${windowText} · ${TREND_MEASURE}`}
+      measure={`Split: ${windowText} · ${TREND_MEASURE}`}
       note={`${buildNote(adoption.series.map((s) => s.label))}${sparse}`}
       data-testid="firmware-adoption-card"
     >
@@ -99,9 +103,9 @@ export function FirmwareAdoptionCard({ range }: FirmwareAdoptionCardProps) {
         <div className="space-y-2.5">
           {/* The stacked bar is the graphic for the split; phones get the counts only. */}
           <div
-            className="hidden h-3 w-full gap-0.5 md:flex"
+            className="hidden h-3 w-full gap-[3px] md:flex"
             role="img"
-            aria-label={`Firmware split, nodes heard in the ${windowText}: ${adoption.pie
+            aria-label={`Firmware split, ${windowText}: ${adoption.pie
               .map((s) => `${s.label} ${formatPercent(s.percent)}`)
               .join(', ')}`}
             data-testid="firmware-split-bar"
@@ -110,7 +114,14 @@ export function FirmwareAdoptionCard({ range }: FirmwareAdoptionCardProps) {
               <div
                 key={s.id}
                 className="first:rounded-l last:rounded-r"
-                style={{ width: `${s.percent}%`, backgroundColor: s.color }}
+                style={{
+                  width: `${s.percent}%`,
+                  backgroundColor: s.color,
+                  // Unknown is striped, as it is dashed in the trend, so it never relies on colour alone.
+                  ...(s.dashed && {
+                    backgroundImage: 'repeating-linear-gradient(135deg, transparent 0 3px, hsl(var(--card)) 3px 5px)',
+                  }),
+                }}
               />
             ))}
           </div>
@@ -138,7 +149,7 @@ export function FirmwareAdoptionCard({ range }: FirmwareAdoptionCardProps) {
           series={trendSeries}
           window={trend.window}
           bucket="daily"
-          syncId="mesh-stats"
+          legend={false}
           height={150}
           dots
           label={`Firmware adoption, ${range.longLabel}`}

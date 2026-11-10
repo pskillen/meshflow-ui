@@ -20,6 +20,8 @@ export interface FirmwareSeries {
 
 export interface FirmwarePieSlice {
   id: string;
+  /** Unknown: the bar stripes it, as the trend dashes it. */
+  dashed: boolean;
   key: string;
   label: string;
   color: string;
@@ -48,6 +50,13 @@ function compareParts(a: number[], b: number[]): number {
     if (d !== 0) return d;
   }
   return 0;
+}
+
+/** The split's window as a whole phrase: "nodes heard in the last 7d", "... last 24h", "nodes heard recently". */
+export function describeWindow(windowHours: number | null): string {
+  if (!windowHours) return 'nodes heard recently';
+  const span = windowHours > 24 && windowHours % 24 === 0 ? `${windowHours / 24}d` : `${windowHours}h`;
+  return `nodes heard in the last ${span}`;
 }
 
 export function buildFirmwareAdoption(rows: StatsSnapshot[]): FirmwareAdoption {
@@ -88,6 +97,7 @@ export function buildFirmwareAdoption(rows: StatsSnapshot[]): FirmwareAdoption {
           key: s.key,
           label: s.label,
           color: s.color,
+          dashed: s.dashed,
           count: newest.value.by_type![s.key] ?? 0,
           percent: 0,
         }))

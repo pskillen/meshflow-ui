@@ -129,6 +129,39 @@ describe('FirmwareAdoptionCard', () => {
     expect(screen.getByText(/Only 2 daily snapshots in this range/)).toBeInTheDocument();
   });
 
+  it('draws more trend points on a longer range than on 24h', () => {
+    // Snapshots on Nov 9, 8 and 1; NOW is Nov 9 10:30, so 24h holds the first two and 90d all three.
+    withRows([row(9, { '2.7': 5, '2.8': 5 }), row(8, { '2.7': 6, '2.8': 4 }), row(1, { '2.7': 9, '2.8': 1 })]);
+    const pointRows = () =>
+      within(screen.getByTestId('trend-chart-table'))
+        .getAllByRole('row')
+        .filter((r) => within(r).queryAllByText(/^\d+$/).length > 0).length;
+    const { unmount } = render(<FirmwareAdoptionCard range={rangeFor('24h')} />);
+    const short = pointRows();
+    expect(short).toBe(2);
+    unmount();
+    render(<FirmwareAdoptionCard range={rangeFor('90d')} />);
+    expect(pointRows()).toBe(3);
+    expect(screen.queryByText(/Only \d daily/)).not.toBeInTheDocument();
+  });
+
+  it('says so when the range holds no snapshot', () => {
+    withRows([row(1, { '2.7': 5, '2.8': 5 })]);
+    render(<FirmwareAdoptionCard range={rangeFor('24h')} />);
+    expect(screen.getByText(/No snapshots in this range\./)).toBeInTheDocument();
+    expect(screen.queryByText(/Only 0/)).not.toBeInTheDocument();
+  });
+
+  it('writes the split as a whole phrase when the window is unknown', () => {
+    withRows([{ ...row(9, { '2.7': 5 }), value: { count: 5, window_hours: 0, by_type: { '2.7': 5 } } }]);
+    render(<FirmwareAdoptionCard range={rangeFor('7d')} />);
+    expect(screen.getByText(/Split: nodes heard recently/)).toBeInTheDocument();
+    expect(screen.getByTestId('firmware-split-bar')).toHaveAttribute(
+      'aria-label',
+      expect.stringContaining('Firmware split, nodes heard recently:')
+    );
+  });
+
   it('reaches back to the range start on long ranges and three days on short ones', () => {
     withRows([row(9, { '2.7': 5 })]);
     const { unmount } = render(<FirmwareAdoptionCard range={rangeFor('90d')} />);
