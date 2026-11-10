@@ -8,10 +8,10 @@ One line or bar chart over a stats range window. Online nodes is a line (a point
 
 - `kind: 'line' | 'bar'`
 - `rows: TrendRow[]` – `{ timestamp (bucket start, ms), <seriesKey>: number, partial?: boolean }`. Missing buckets and values are fine.
-- `series: { key, label, color }[]` – colours are chart tokens (`hsl(var(--chart-1))`), by protocol: Meshtastic `--chart-1`, MeshCore `--chart-4`.
+- `series: { key, label, color, dashed? }[]` – `dashed` draws that line dashed (lines only), so two series differ without colour; colours are chart tokens (`hsl(var(--chart-1))`), by protocol: Meshtastic `--chart-1`, MeshCore `--chart-4`.
 - `window: { start, end }` – from `useStatsRange().window`. Fixes the x-axis.
 - `bucket: 'hourly' | '6h' | 'daily'` – from `useStatsRange().bucket`.
-- `stacked?` (bars, default true), `dots?` (lines: a dot on every point, for sparse daily data such as firmware), `legend?` (default true; false where the card already lists the series), `syncId?`, `height?` (default 190), `label?` (the title and range: "Online nodes, last 7 days"), `headline?` (the card's headline text), `className?`.
+- `stacked?` (bars, default true), `dots?` (lines: a dot on every point, for sparse daily data such as firmware), `legend?` (default true; only drawn with more than one series; false where the card already lists the series), `yRange?` (`'zero'` default: 0 to a nice top with whole-number ticks, for counts; `'fit'`: hug the data with decimal ticks, for volts and temperatures; `[min, max]`: fixed, for percent), `formatValue?` (y ticks and the screen-reader name and table; default compact whole numbers), `syncId?`, `height?` (default 190), `label?` (the title and range: "Online nodes, last 7 days"), `headline?` (the card's headline text), `className?`.
 
 Helpers in `src/lib/stats-trend.ts`: `markPartialBuckets(rows, window, bucket)` sets `partial` from the range window and each row's `samples`; `buildBucketGrid`, `densifyTrendRows`, `evenTrendTicks`, `describeTrend`, `splitPartialLine`, `formatTrendTick`, `formatTrendLabel`.
 
@@ -35,7 +35,7 @@ A new chart passes `label` and `headline` and gets all of this; it does not writ
 
 ## Wiring
 
-`MeshStatsSection` builds rows from stats snapshots and renders three of these.
+`MeshStatsSection` builds rows from stats snapshots and renders three of these. The node Statistics charts reach it through [`MetricTrendCard`](../nodes/MetricTrendCard.md).
 
 ## Related
 
