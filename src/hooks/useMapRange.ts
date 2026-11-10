@@ -9,12 +9,16 @@ export const MAP_SINCE_PARAM = 'since';
 
 const CLEAR_ON_PRESET = [MAP_SINCE_PARAM] as const;
 
-/** Parse `YYYY-MM-DD` as UTC midnight (the stats windows are UTC-aligned); null if malformed or not a real date. */
-export function parseSinceParam(raw: string | null): Date | null {
+/**
+ * Parse `YYYY-MM-DD` as UTC midnight (the stats windows are UTC-aligned); null if malformed, not a real date, or
+ * after today (UTC): a future start would show an empty map with no explanation.
+ */
+export function parseSinceParam(raw: string | null, now: Date = new Date()): Date | null {
   if (!raw || !/^\d{4}-\d{2}-\d{2}$/.test(raw)) return null;
   const [y, m, d] = raw.split('-').map(Number);
   const date = new Date(Date.UTC(y, m - 1, d));
-  return date.getUTCFullYear() === y && date.getUTCMonth() === m - 1 && date.getUTCDate() === d ? date : null;
+  const real = date.getUTCFullYear() === y && date.getUTCMonth() === m - 1 && date.getUTCDate() === d;
+  return real && date.getTime() <= now.getTime() ? date : null;
 }
 
 export interface MapRange {
