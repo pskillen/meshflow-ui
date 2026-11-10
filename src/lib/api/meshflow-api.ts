@@ -22,6 +22,8 @@ import {
   MessageChannel,
   TextMessage,
   TextMessageResponse,
+  UnreadCountsResponse,
+  MarkChannelReadResponse,
   NodeClaim,
   CreateMeshtasticManagedNode,
   CreateMeshCoreManagedNode,
@@ -846,6 +848,25 @@ export class MeshflowApi extends BaseApi {
    */
   async getTextMessage(id: string): Promise<TextMessage> {
     return this.get<TextMessage>(`/messages/text/${id}/`);
+  }
+
+  /**
+   * Unread text-message counts per protocol and channel for the current user.
+   * Absent (404) on API versions older than meshflow-api#527.
+   */
+  async getUnreadCounts(): Promise<UnreadCountsResponse> {
+    return this.get<UnreadCountsResponse>('/messages/unread-counts/');
+  }
+
+  /**
+   * Advance the user's read cursor for a channel. `upTo` is an ISO timestamp or message UUID; omitted = now.
+   * The cursor never moves backwards.
+   */
+  async markChannelRead(channelId: number, upTo?: string): Promise<MarkChannelReadResponse> {
+    return this.post<MarkChannelReadResponse>(
+      `/messages/channels/${channelId}/mark-read/`,
+      upTo ? { up_to: upTo } : {}
+    );
   }
 
   // ===== Stats API =====

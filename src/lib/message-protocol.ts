@@ -11,8 +11,11 @@ export function channelIdFromMessage(message: TextMessage): number {
   return Number(ch);
 }
 
-/** Normalize API/WS protocol field (string or legacy numeric MeshProtocol). */
-export function messageProtocol(msg: TextMessage): MessageProtocolSlug {
+/**
+ * Protocol of a message, or null when it cannot be determined. Unread counting uses this so an unclassifiable frame
+ * counts toward neither protocol (meshflow-ui#422).
+ */
+export function messageProtocolOrNull(msg: TextMessage): MessageProtocolSlug | null {
   const p = msg.protocol;
   if (p != null && p !== '') {
     if (p === 2 || p === '2') {
@@ -41,7 +44,12 @@ export function messageProtocol(msg: TextMessage): MessageProtocolSlug {
     return 'meshcore';
   }
 
-  return 'meshtastic';
+  return null;
+}
+
+/** Normalize API/WS protocol field for display and grouping; unknown defaults to Meshtastic. */
+export function messageProtocol(msg: TextMessage): MessageProtocolSlug {
+  return messageProtocolOrNull(msg) ?? 'meshtastic';
 }
 
 export function messagesRouteForProtocol(protocol: MessageProtocolSlug): string {
