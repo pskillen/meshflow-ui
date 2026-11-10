@@ -103,16 +103,15 @@ See **[docs/features/messages/unread-count.md](../features/messages/unread-count
 
 ### Implemented today
 
-- **Protocol-scoped** nav badges (`unreadCountForProtocol`); requires API WS `protocol` field.
+- **Protocol-scoped** nav badges (`unreadCountForProtocol`): total unread for that protocol minus the channel being viewed; MT and MC independent. Seeded from the API so they survive reload.
 - **Per-channel** badges on channel button row; active channel suppressed via `setActiveMessagesView`.
 - Channel picker: **button row** (not dropdown).
-- Clearing: nav link → `markAsReadForProtocol`; channel click → `markAsReadForChannel`.
+- Clearing: only the viewed channel is marked read (initial channel on mount, or an explicit channel click). The nav link does not clear anything; a channel auto-selected on constellation switch stays unread.
 - Toast: protocol-level only (not per channel).
 
 ### Deferred / not implemented
 
 - Constellation-level unread rollup — [meshflow-api#396](https://github.com/pskillen/meshflow-api/issues/396).
-- `localStorage` persistence across reload.
 
 ## Default selection UX
 
@@ -137,10 +136,10 @@ See **[docs/features/messages/unread-count.md](../features/messages/unread-count
 
 Matches the earlier product doc:
 
-| Priority  | Content                           |
+| Priority | Content |
 | --------- | --------------------------------- | ------------------- |
-| Essential | Sender, body, timestamp           |
+| Essential | Sender, body, timestamp |
 | Secondary | Emoji reactions, replies (inline) |
-| Tertiary  | long_name, hop/direct detail      | Inside heard dialog |
+| Tertiary | long_name, hop/direct detail | Inside heard dialog |
 
 `long_name` is not shown in the message header (only in heard dialog for MT observers).

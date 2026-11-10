@@ -88,10 +88,10 @@ Canonical detail: [docs/features/messages/unread-count.md](../features/messages/
 
 ### `WebSocketProvider`
 
-- Maintains `unreadMessages: TextMessage[]` (session-scoped, in-memory).
-- On `MESSAGE_RECEIVED`: if **not** on that protocol’s messages route, append to unread + toast.
-- `markAsReadForProtocol(protocol)` — filter out messages for that protocol.
-- Visiting `/messages` or `/meshcore/messages` clears unread for that protocol only (`useEffect` on `location.pathname`).
+- Unread = react-query snapshot of `GET /api/messages/unread-counts/` (`useUnreadCountsQuery`) plus WS frames received since that snapshot (deduped by id). Refetched on WS reconnect and window focus.
+- On `MESSAGE_RECEIVED`: frames with unknown protocol count nowhere; frames for the viewed channel never count; anything else adds to its (protocol, channel). Toast when **not** on that protocol’s messages route.
+- `setActiveMessagesView` / `reportShownMessage`: the viewed channel is zeroed locally and `POST /api/messages/channels/{id}/mark-read/` is sent with `up_to` = newest message shown.
+- Visiting a messages page clears nothing by itself.
 
 ### `useMessagesWithWebSocket` (in-view realtime)
 
@@ -102,8 +102,7 @@ Canonical detail: [docs/features/messages/unread-count.md](../features/messages/
 
 ### Navigation badges
 
-- `nav-main.tsx`: Meshtastic and MeshCore **Messages** links show red count badge (`unreadCountForProtocol`, cap `9+`).
-- Click handler: `markAsReadForProtocol` then `navigate` (clears badge when opening that protocol’s page).
+- `nav-main.tsx`: Meshtastic and MeshCore **Messages** links show red count badge (`unreadCountForProtocol`, shown as `9+` / `99+`). The link is a plain navigation; it clears nothing.
 
 ## TypeScript models (gaps vs API)
 

@@ -44,7 +44,7 @@ Likely layout: **constellation tabs** (row 1) + **channel sidebar or chip list**
 
 - **Shipped ([#279](https://github.com/pskillen/meshflow-ui/issues/279)):** protocol nav badges, per-channel badges on messages page, channel button row — [docs/features/messages/unread-count.md](../features/messages/unread-count.md).
 - **Deferred ([meshflow-api#396](https://github.com/pskillen/meshflow-api/issues/396)):** constellation-level unread rollup; per-channel badges across constellations; auto-select mark-as-read nuance.
-- **Future:** persist or rehydrate unread across reload.
+- **Shipped ([#422](https://github.com/pskillen/meshflow-ui/issues/422), supersedes #324):** server-side read cursors (meshflow-api#527), counts survive reload, only the viewed channel is read, unknown-protocol frames count nowhere.
 
 ### Layout
 

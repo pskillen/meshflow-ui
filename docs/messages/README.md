@@ -19,7 +19,7 @@ Documentation for the Meshflow UI **text message history** experience (Meshtasti
 - **Two protocol-scoped pages** share one implementation: `ProtocolMessageHistoryPage` with `MESHTASTIC_CONFIG` or `MESHCORE_CONFIG`.
 - **Single active channel** at a time: constellation + channel `<select>` dropdowns, then `MessageList` for that channel.
 - **Meshtastic** typically has 1–2 channels per constellation; **MeshCore** often has ~10+ (public + hashtag channels per region).
-- **Unread** is tracked per protocol in the sidebar (not per channel). Realtime prepend applies only to the **currently selected** channel.
+- **Unread** is tracked per protocol in the sidebar and per channel on the page, persisted server-side (#422). Realtime prepend applies only to the **currently selected** channel.
 
 ## Source map (quick)
 
