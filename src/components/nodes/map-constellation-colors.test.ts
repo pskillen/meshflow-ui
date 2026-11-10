@@ -1,6 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import * as d3 from 'd3';
-import { computeManagedConstellationGroups, constellationLegendItems } from './map-constellation-colors';
+import {
+  computeManagedConstellationGroups,
+  constellationLegendItems,
+  drawnConstellationLegendItems,
+} from './map-constellation-colors';
 import type { ManagedNode } from '@/lib/models';
 
 function makeManaged(
@@ -57,5 +61,33 @@ describe('constellationLegendItems', () => {
     );
     const items = constellationLegendItems(groups);
     expect(items.map((i) => i.id)).toEqual([2, 5]);
+  });
+});
+
+describe('drawnConstellationLegendItems', () => {
+  const unpositioned = (nodeId: number, constellation: { id: number; name?: string; map_color?: string }) =>
+    ({ ...makeManaged(nodeId, constellation), position: { latitude: null, longitude: null } }) as ManagedNode;
+
+  // Protocol filtering is the pages' job (see ProtocolNodesPage.test.tsx); this only follows positions.
+  it('lists only constellations with at least one positioned node', () => {
+    const nodes: ManagedNode[] = [
+      makeManaged(1, { id: 1, name: 'Drawn', map_color: '#111111' }),
+      unpositioned(2, { id: 2, name: 'No position', map_color: '#222222' }),
+      makeManaged(3, { id: 3, name: 'Drawn by one of two', map_color: '#333333' }),
+      unpositioned(4, { id: 3, name: 'Drawn by one of two', map_color: '#333333' }),
+    ];
+    const items = drawnConstellationLegendItems(computeManagedConstellationGroups(nodes, null));
+    expect(items.map((i) => i.name)).toEqual(['Drawn', 'Drawn by one of two']);
+  });
+
+  it('does not recolour pins: fallback colours stay indexed over the full group set', () => {
+    const nodes: ManagedNode[] = [
+      unpositioned(1, { id: 1, name: 'Hidden' }),
+      makeManaged(2, { id: 2, name: 'Shown' }),
+    ];
+    const groups = computeManagedConstellationGroups(nodes, null);
+    const items = drawnConstellationLegendItems(groups);
+    expect(items).toEqual([{ id: 2, name: 'Shown', color: d3.schemeCategory10[1] }]);
+    expect(items[0].color).toBe(groups[2].color);
   });
 });

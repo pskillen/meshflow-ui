@@ -25,7 +25,7 @@ import { Switch } from '@/components/ui/switch';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useManagedNodesSuspense } from '@/hooks/api/useNodes';
 import { useMeshCoreManagedNodesSuspense } from '@/hooks/api/useMeshCore';
-import type { ProtocolPageConfig } from '@/lib/mesh-protocol';
+import { filterManagedNodesByProtocol, type ProtocolPageConfig } from '@/lib/mesh-protocol';
 import { nodeDetailPath } from '@/lib/node-detail-routes';
 import { MESHTASTIC_CONFIG, MESHCORE_CONFIG } from '@/lib/mesh-protocol';
 import {
@@ -506,7 +506,7 @@ function ProtocolManagedNodesPageContent({
 
 function MeshtasticManagedNodesLoader({ config }: { config: ProtocolPageConfig }) {
   const { managedNodes: all } = useManagedNodesSuspense({ pageSize: 500, includeStatus: true });
-  const managedNodes = useMemo(() => all.filter((n) => n.protocol === 1 || n.protocol == null), [all]);
+  const managedNodes = useMemo(() => filterManagedNodesByProtocol(all, 1), [all]);
   return <ProtocolManagedNodesPageContent config={config} managedNodes={managedNodes} />;
 }
 

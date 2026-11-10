@@ -22,9 +22,17 @@ export function meshProtocolFromManagedNode(node: Pick<ManagedNode, 'protocol' |
   return normalizeMeshProtocol(node.protocol);
 }
 
+/**
+ * Feeders of one protocol. Uses `meshProtocolFromManagedNode`, so an `mc:` id counts as MeshCore even when the API
+ * omits `protocol`, and a missing `protocol` otherwise counts as Meshtastic.
+ */
+export function filterManagedNodesByProtocol(nodes: ManagedNode[], protocol: MeshProtocol): ManagedNode[] {
+  return nodes.filter((n) => meshProtocolFromManagedNode(n) === protocol);
+}
+
 /** Feeders eligible to receive a claim proof for the given observed node protocol. */
 export function filterManagedNodesForClaim(nodes: ManagedNode[], claimProtocol: MeshProtocol): ManagedNode[] {
-  return nodes.filter((n) => meshProtocolFromManagedNode(n) === claimProtocol);
+  return filterManagedNodesByProtocol(nodes, claimProtocol);
 }
 
 export type ProtocolPageConfig = {

@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import type { ManagedNode } from '@/lib/models';
 import {
+  filterManagedNodesByProtocol,
   filterManagedNodesForClaim,
   meshProtocolFromManagedNode,
   meshProtocolFromObservedNode,
@@ -44,6 +45,13 @@ describe('claim feeder protocol filter', () => {
     const all = [mt, mc, legacyMt];
     expect(filterManagedNodesForClaim(all, 1).map((n) => n.node_id_str)).toEqual(['!12345678', '!abcdef01']);
     expect(filterManagedNodesForClaim(all, 2).map((n) => n.node_id_str)).toEqual(['mc:aabbccddeeff']);
+  });
+
+  it('filterManagedNodesByProtocol treats a missing protocol with an mc: id as MeshCore', () => {
+    const mcNoProtocol = { ...mc, protocol: undefined } as ManagedNode;
+    const all = [mt, mcNoProtocol, legacyMt];
+    expect(filterManagedNodesByProtocol(all, 1).map((n) => n.node_id_str)).toEqual(['!12345678', '!abcdef01']);
+    expect(filterManagedNodesByProtocol(all, 2).map((n) => n.node_id_str)).toEqual(['mc:aabbccddeeff']);
   });
 
   it('meshProtocolFromManagedNode uses node_id_str when protocol missing', () => {

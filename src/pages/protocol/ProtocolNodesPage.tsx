@@ -15,7 +15,7 @@ import { Button } from '@/components/ui/button';
 import type { ObservedNode } from '@/lib/models';
 import { filterManagedNodesForMapDisplay } from '@/lib/managed-node-status';
 import { buildMeshCoreMapNodes } from '@/lib/meshcore-map-nodes';
-import type { ProtocolPageConfig } from '@/lib/mesh-protocol';
+import { filterManagedNodesByProtocol, type ProtocolPageConfig } from '@/lib/mesh-protocol';
 
 /** Node lists offer Online (2h) on top of the shared presets. Module-level so the hook sees a stable array. */
 const NODE_LIST_RANGE_OPTIONS = [STATS_ONLINE_KEY, ...STATS_PRESET_KEYS] as const;
@@ -171,7 +171,7 @@ function ProtocolNodesPageContent({
 function MeshtasticProtocolNodesPage({ config }: ProtocolNodesPageProps) {
   const { managedNodes } = useManagedNodesSuspense({ pageSize: 500, includeStatus: true });
   const managedNodesForMap = useMemo(
-    () => filterManagedNodesForMapDisplay(managedNodes.filter((n) => n.protocol === 1 || n.protocol == null)),
+    () => filterManagedNodesForMapDisplay(filterManagedNodesByProtocol(managedNodes, 1)),
     [managedNodes]
   );
   return <ProtocolNodesPageContent config={config} managedNodesForMap={managedNodesForMap} />;

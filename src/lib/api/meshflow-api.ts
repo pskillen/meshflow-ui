@@ -1,4 +1,5 @@
 import { BaseApi } from './base';
+import { filterManagedNodesByProtocol } from '@/lib/mesh-protocol';
 import type { ObservedNodeLookupAmbiguous, ResolveObservedNodeResult } from '@/lib/observed-node-lookup';
 import {
   ObservedNode,
@@ -518,7 +519,7 @@ export class MeshflowApi extends BaseApi {
     const response = await this.getManagedNodes(params);
     return {
       ...response,
-      results: response.results.filter((n) => n.protocol === 2),
+      results: filterManagedNodesByProtocol(response.results, 2),
     };
   }
 
