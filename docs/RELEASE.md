@@ -64,6 +64,8 @@ Docker layer cache lives in the GitHub Actions cache under the `meshflow-ui` sco
 
 The `warm-caches` job in [main.yaml](../.github/workflows/main.yaml) also saves the npm cache and the Playwright browsers cache on every push to `main`; pull requests only read them (the Playwright step uses `actions/cache/restore`), so a new PR hits both on its first run.
 
+Stacked PRs (base is another PR's branch) run the same pull request workflow and read the caches `main` writes.
+
 ---
 
 ## Registry cleanup
