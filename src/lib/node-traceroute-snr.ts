@@ -18,17 +18,18 @@ export function peerLabel(link: Pick<NodeTracerouteLinkSnrHistory, 'peer_node_id
 
 /**
  * Mean SNR per UTC bucket, for one link: traceroutes are sparse and irregular, so each bucket on the shared grid
- * shows the mean of the samples in it (a bucket with none is a gap). Samples before the window or after the bucket in progress are ignored.
+ * shows the mean of the samples in it (a bucket with none is a gap). Samples before the window or after the end of the last drawn bucket are ignored.
  */
 export function bucketLinkSnr(
   link: Pick<NodeTracerouteLinkSnrHistory, 'inbound' | 'outbound'>,
-  window: Pick<StatsRangeWindow, 'start' | 'end' | 'lastBucketStart'>,
+  window: Pick<StatsRangeWindow, 'start' | 'end' | 'lastBucketStart' | 'partialEnd'>,
   bucket: StatsBucket
 ): TrendInputRow[] {
   const step = TREND_BUCKET_MS[bucket];
   const startMs = window.start.getTime();
-  // `end` is the top of the current hour, but the bucket in progress runs on past it and traceroutes keep arriving.
-  const endMs = Math.max(window.end.getTime(), window.lastBucketStart.getTime() + step);
+  // `end` is the top of the current hour. When a 6h or daily bucket is in progress it runs on past it and is drawn
+  // (dashed), so samples count up to its end; otherwise anything at or after `end` is off the chart's grid.
+  const endMs = window.partialEnd ? window.lastBucketStart.getTime() + step : window.end.getTime();
   const acc = new Map<number, Record<string, { sum: number; n: number }>>();
   const add = (points: SnrPoint[], key: string) => {
     for (const p of points) {
@@ -74,4 +75,17 @@ export function sortLinksByActivity(history: NodeTracerouteLinkSnrHistory[]): No
     .map((h) => ({ h, total: h.inbound.length + h.outbound.length, latest: latest(h) }))
     .sort((a, b) => b.total - a.total || b.latest - a.latest)
     .map(({ h }) => h);
+}
+
+/** How many drawn values (either direction) lie outside `[min, max]`, so the card can say they are off the scale. */
+export function countOffScale(
+  rows: Array<Record<string, unknown>>,
+  keys: string[],
+  [min, max]: [number, number]
+): number {
+  return rows.reduce(
+    (n, r) =>
+      n + keys.filter((k) => typeof r[k] === 'number' && ((r[k] as number) < min || (r[k] as number) > max)).length,
+    0
+  );
 }

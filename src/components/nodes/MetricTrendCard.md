@@ -6,7 +6,7 @@ A node metric chart in one piece: a [`ChartCard`](../stats/ChartCard.md) around 
 
 ## Props
 
-`title`, `headline?` (the latest value: "3.87 V", "Powered"), `measure` (what a point is: unit and bucket), `range: StatsRange`, `rows`, `series`, `yRange?`, `formatValue?`, `legend?`, `dots?` (a dot on every point, for sparse data), `note?`, `actions?`, `empty?`, `keepHeadline?`, `data-testid?`. `rows` and `series` are the `TrendChart` ones.
+`title`, `headline?` (the latest value: "3.87 V", "Powered"), `measure` (what a point is: unit and bucket), `range: StatsRange`, `rows`, `series`, `yRange?`, `yTickStep?`, `formatValue?`, `legend?`, `dots?` (a dot on every point, for sparse data), `note?`, `actions?`, `empty?`, `keepHeadline?`, `data-testid?`. `rows` and `series` are the `TrendChart` ones.
 
 ## Behaviour
 

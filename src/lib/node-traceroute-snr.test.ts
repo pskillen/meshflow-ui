@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { STATS_RANGES, statsRangeWindow } from '@/lib/stats-range';
-import { bestEdgeSnr, bucketLinkSnr, meanOfDrawn, peerLabel, sortLinksByActivity } from './node-traceroute-snr';
+import { bestEdgeSnr, bucketLinkSnr, countOffScale, meanOfDrawn, peerLabel, sortLinksByActivity } from './node-traceroute-snr';
 
 const NOW = new Date('2026-11-10T09:37:00Z');
 const window7d = statsRangeWindow('7d', NOW);
@@ -41,6 +41,50 @@ describe('bucketLinkSnr', () => {
       bucket
     );
     expect(rows).toEqual([{ timestamp: Date.parse('2026-11-10T06:00:00Z'), inbound: 1 }]);
+  });
+
+  it('counts a sample in the bucket in progress when one is drawn (7d, mid-bucket)', () => {
+    const rows = bucketLinkSnr(
+      { inbound: [{ triggered_at: '2026-11-10T09:20:00Z', snr: 1 }], outbound: [] },
+      window7d,
+      bucket
+    );
+    expect(rows).toEqual([{ timestamp: Date.parse('2026-11-10T06:00:00Z'), inbound: 1 }]);
+  });
+
+  it('drops a sample after the top of the hour on 24h, which is off the chart grid', () => {
+    const w24 = statsRangeWindow('24h', NOW);
+    expect(w24.partialEnd).toBe(false);
+    const rows = bucketLinkSnr(
+      {
+        inbound: [
+          { triggered_at: '2026-11-10T08:30:00Z', snr: -3 },
+          { triggered_at: '2026-11-10T09:20:00Z', snr: 9 },
+        ],
+        outbound: [],
+      },
+      w24,
+      STATS_RANGES['24h'].bucket
+    );
+    expect(rows).toEqual([{ timestamp: Date.parse('2026-11-10T08:00:00Z'), inbound: -3 }]);
+  });
+
+  it('drops samples in the first hour of a 6h bucket (12:20 UTC, 7d), which are off the grid', () => {
+    const w = statsRangeWindow('7d', new Date('2026-11-10T12:20:00Z'));
+    expect(w.partialEnd).toBe(false);
+    const rows = bucketLinkSnr(
+      { inbound: [{ triggered_at: '2026-11-10T12:10:00Z', snr: 2 }], outbound: [] },
+      w,
+      bucket
+    );
+    expect(rows).toEqual([]);
+  });
+});
+
+describe('countOffScale', () => {
+  it('counts drawn values outside the range, in either direction', () => {
+    const rows = [{ a: 15, b: -30 }, { a: 0 }, { a: 10, b: -20 }, {}];
+    expect(countOffScale(rows, ['a', 'b'], [-20, 10])).toBe(2);
   });
 });
 
