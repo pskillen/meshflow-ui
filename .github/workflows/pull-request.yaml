@@ -111,8 +111,7 @@ jobs:
           push: false
           tags: ghcr.io/${{ github.repository }}:pr-${{ github.event.pull_request.number }}
           load: true
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=meshflow-ui
           build-args: |
             VERSION=pr-${{ github.event.pull_request.number }}
 

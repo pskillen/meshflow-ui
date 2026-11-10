@@ -58,6 +58,12 @@ Use this to build and push from the current `main` branch without merging new co
 
 ---
 
+## Build cache
+
+Docker layer cache lives in the GitHub Actions cache under the `meshflow-ui` scope. Only builds on `main` write it (`mode=max`); pull request builds read it but never write, because each PR ref writing ~1.8 GB pushed the repo over the 10 GB Actions cache limit and evicted the layers.
+
+---
+
 ## Registry cleanup
 
 **Workflow:** [ghcr-cleanup.yaml](../.github/workflows/ghcr-cleanup.yaml)
