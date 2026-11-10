@@ -79,21 +79,13 @@ export function NodeStatsSection({ internalId, node, isManagedNode, range }: Nod
           </div>
 
           <Suspense fallback={chartFallback}>
-            <PacketTypeChart
-              nodeId={meshtasticNodeId}
-              defaultTimeRange="48h"
-              controlledDateRange={controlledDateRange}
-            />
+            <PacketTypeChart nodeId={meshtasticNodeId} range={range} />
           </Suspense>
 
           {isManagedNode && (
             <>
               <Suspense fallback={chartFallback}>
-                <ReceivedPacketTypeChart
-                  nodeId={meshtasticNodeId}
-                  defaultTimeRange="48h"
-                  controlledDateRange={controlledDateRange}
-                />
+                <ReceivedPacketTypeChart nodeId={meshtasticNodeId} range={range} />
               </Suspense>
               <NeighbourStatsWithLoad nodeId={meshtasticNodeId} controlledDateRange={controlledDateRange} />
             </>
