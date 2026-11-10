@@ -81,8 +81,8 @@ export function useStatsSnapshotsForTypesSuspense(
 }
 
 /**
- * Non-Suspense twin of `useStatsSnapshotsForTypesSuspense`, with the same query keys (so it shares the cache) and
- * refetch. For secondary data such as the previous-period comparison: a slow or failed request never blanks the
+ * Non-Suspense twin of `useStatsSnapshotsForTypesSuspense`, with the same query keys (so it shares the cache) but no
+ * refetch: the previous window is history. For secondary data such as the previous-period comparison: a slow or failed request never blanks the
  * chart. `pages` is undefined until every stat type has loaded.
  */
 export function useStatsSnapshotsForTypes(
@@ -98,7 +98,6 @@ export function useStatsSnapshotsForTypes(
       return {
         queryKey: ['stats-snapshots', getStatsSnapshotsKey(fullParams)],
         queryFn: () => api.getStatsSnapshots(fullParams),
-        refetchInterval: 5 * 1000 * 60,
       };
     }),
   });
