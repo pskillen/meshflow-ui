@@ -28,6 +28,8 @@ vi.mock('@/components/nodes/MeshWatchControls', () => ({ MeshWatchControls: () =
 
 const NEW_ID = '22222222-2222-4222-8222-222222222222';
 
+const claimStatus = vi.hoisted(() => ({ value: 201 }));
+
 const handlers = {
   claim: vi.fn<(url: string) => unknown>(),
   getNode: vi.fn<() => unknown>(),
@@ -59,7 +61,8 @@ const api = new MeshflowApi({ baseUrl: 'http://localhost:8000', basePath: '/api'
   } else {
     failWith(404, { code: 'not_found', detail: 'Not found.' })();
   }
-  return { data, status: 200, statusText: 'OK', headers: {}, config };
+  const status = config.method === 'post' ? claimStatus.value : 200;
+  return { data, status, statusText: 'OK', headers: {}, config };
 };
 
 vi.mock('@/hooks/api/useApi', () => ({ useMeshflowApi: () => api, useMeshtasticApi: () => api }));
@@ -111,11 +114,15 @@ const card = (node: ObservedNode, owned: string[] | undefined) => (
   />
 );
 
-const tap = () => screen.queryByRole('button', { name: 'This is mine too' });
+/** Longer than the adapter's latency: any fetch the component was going to make has been sent by now. */
+const settle = () => new Promise((r) => setTimeout(r, 150));
+
+const tap = () => screen.queryByRole('button', { name: /^This is mine too/ });
 
 beforeEach(() => {
   vi.clearAllMocks();
   currentUser.value = { id: 7 };
+  claimStatus.value = 201;
   handlers.claim.mockReturnValue({ node: {}, accepted_at: '2026-11-11T10:00:00Z' });
   handlers.getNode.mockReturnValue({ ...newer, owner: null });
 });
@@ -123,7 +130,7 @@ beforeEach(() => {
 describe('ClaimFromPreviousButton', () => {
   it('posts to the NEW node and shows success, refreshing the lists', async () => {
     const { invalidate } = wrap(<ClaimFromPreviousButton newer={newer} />);
-    await userEvent.click(screen.getByRole('button', { name: 'This is mine too' }));
+    await userEvent.click(screen.getByRole('button', { name: /^This is mine too/ }));
     expect(await screen.findByTestId('claim-from-previous-done')).toHaveTextContent('!5678ef01');
     expect(handlers.claim).toHaveBeenCalledTimes(1);
     expect(handlers.claim.mock.calls[0][0]).toContain(`/observed-nodes/${NEW_ID}/claim-from-previous/`);
@@ -131,9 +138,45 @@ describe('ClaimFromPreviousButton', () => {
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ['observed-nodes', 'mine'] });
   });
 
+  it('treats a 200 (already yours) as success too', async () => {
+    claimStatus.value = 200;
+    wrap(<ClaimFromPreviousButton newer={newer} />);
+    await userEvent.click(screen.getByRole('button', { name: /^This is mine too/ }));
+    expect(await screen.findByTestId('claim-from-previous-done')).toBeInTheDocument();
+  });
+
+  it('gives each button a name that includes its node', () => {
+    wrap(<ClaimFromPreviousButton newer={newer} />);
+    expect(screen.getByRole('button', { name: 'This is mine too, node !5678ef01' })).toBeInTheDocument();
+  });
+
+  it('announces the outcome in a status region that was already mounted', async () => {
+    wrap(<ClaimFromPreviousButton newer={newer} />);
+    const region = screen.getByTestId('claim-from-previous-outcome');
+    expect(region).toHaveAttribute('role', 'status');
+    expect(region).toBeEmptyDOMElement();
+    await userEvent.click(screen.getByRole('button', { name: /^This is mine too/ }));
+    await screen.findByTestId('claim-from-previous-done');
+    expect(screen.getByTestId('claim-from-previous-outcome')).toBe(region);
+  });
+
+  it('moves focus to the outcome when the button is swapped out', async () => {
+    wrap(<ClaimFromPreviousButton newer={newer} />);
+    await userEvent.click(screen.getByRole('button', { name: /^This is mine too/ }));
+    await screen.findByTestId('claim-from-previous-done');
+    expect(screen.getByTestId('claim-from-previous-outcome')).toHaveFocus();
+  });
+
+  it('says it could not claim when the error has no body', async () => {
+    handlers.claim.mockImplementation(failWith(500, undefined));
+    wrap(<ClaimFromPreviousButton newer={newer} />);
+    await userEvent.click(screen.getByRole('button', { name: /^This is mine too/ }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Could not claim it. Try again.');
+  });
+
   it('sends once on a double click', async () => {
     wrap(<ClaimFromPreviousButton newer={newer} />);
-    await userEvent.dblClick(screen.getByRole('button', { name: 'This is mine too' }));
+    await userEvent.dblClick(screen.getByRole('button', { name: /^This is mine too/ }));
     await screen.findByTestId('claim-from-previous-done');
     expect(handlers.claim).toHaveBeenCalledTimes(1);
   });
@@ -144,7 +187,7 @@ describe('ClaimFromPreviousButton', () => {
   ])('%s falls back to the normal claim page without an error', async (code, text) => {
     handlers.claim.mockImplementation(failWith(409, { code, detail: 'x' }));
     wrap(<ClaimFromPreviousButton newer={newer} />);
-    await userEvent.click(screen.getByRole('button', { name: 'This is mine too' }));
+    await userEvent.click(screen.getByRole('button', { name: /^This is mine too/ }));
     const box = await screen.findByTestId('claim-from-previous-fallback');
     expect(box).toHaveTextContent(text);
     expect(screen.queryByRole('alert')).toBeNull();
@@ -158,15 +201,15 @@ describe('ClaimFromPreviousButton', () => {
   ])('%s shows plain text and keeps the button', async (code, text) => {
     handlers.claim.mockImplementation(failWith(403, { code, detail: 'x' }));
     wrap(<ClaimFromPreviousButton newer={newer} />);
-    await userEvent.click(screen.getByRole('button', { name: 'This is mine too' }));
+    await userEvent.click(screen.getByRole('button', { name: /^This is mine too/ }));
     expect(await screen.findByRole('alert')).toHaveTextContent(text);
-    expect(screen.getByRole('button', { name: 'This is mine too' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: /^This is mine too/ })).toBeEnabled();
   });
 
   it('shows the api detail for an unknown code', async () => {
     handlers.claim.mockImplementation(failWith(400, { code: 'weird', detail: 'Something odd happened.' }));
     wrap(<ClaimFromPreviousButton newer={newer} />);
-    await userEvent.click(screen.getByRole('button', { name: 'This is mine too' }));
+    await userEvent.click(screen.getByRole('button', { name: /^This is mine too/ }));
     expect(await screen.findByRole('alert')).toHaveTextContent('Something odd happened.');
   });
 });
@@ -187,6 +230,21 @@ describe('MyNodeCard one-tap claim', () => {
     expect(tap()).toBeNull();
   });
 
+  it('keeps announcing "Done" after the newer node joins the owned set', async () => {
+    const node = oldNode();
+    const { rerender } = wrap(card(node, []));
+    await userEvent.click(screen.getByRole('button', { name: /^This is mine too/ }));
+    expect(await screen.findByTestId('claim-from-previous-done')).toBeInTheDocument();
+    // The refetch lands: the newer node is now owned, which used to unmount the whole button.
+    rerender(
+      <QueryClientProvider client={new QueryClient()}>
+        <MemoryRouter>{card(node, [NEW_ID])}</MemoryRouter>
+      </QueryClientProvider>
+    );
+    expect(screen.getByTestId('claim-from-previous-done')).toHaveTextContent('!5678ef01');
+    expect(tap()).toBeNull();
+  });
+
   it('hides without the owned set', () => {
     wrap(card(oldNode(), undefined));
     expect(tap()).toBeNull();
@@ -196,18 +254,20 @@ describe('MyNodeCard one-tap claim', () => {
 describe('NodeIdentityBanner one-tap claim', () => {
   it('shows for the old node owner when the newer node is not theirs', async () => {
     wrap(<NodeIdentityBanner node={oldNode()} />);
-    expect(await screen.findByRole('button', { name: 'This is mine too' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /^This is mine too/ })).toBeInTheDocument();
   });
 
-  it('hides for a viewer who is not the owner', () => {
+  it('hides for a viewer who is not the owner', async () => {
     wrap(<NodeIdentityBanner node={oldNode({ owner: { id: 99, username: 'other' } })} />);
+    await settle();
     expect(tap()).toBeNull();
     expect(handlers.getNode).not.toHaveBeenCalled();
   });
 
-  it('hides for guests and makes no request', () => {
+  it('hides for guests and makes no request', async () => {
     currentUser.value = null;
     wrap(<NodeIdentityBanner node={oldNode()} />);
+    await settle();
     expect(tap()).toBeNull();
     expect(handlers.getNode).not.toHaveBeenCalled();
   });
@@ -219,8 +279,35 @@ describe('NodeIdentityBanner one-tap claim', () => {
     expect(tap()).toBeNull();
   });
 
-  it('is not part of the compact view', () => {
+  it('hides when someone else holds the newer node', async () => {
+    handlers.getNode.mockReturnValue({ ...newer, owner: { id: 99, username: 'other' } });
+    wrap(<NodeIdentityBanner node={oldNode()} />);
+    await waitFor(() => expect(handlers.getNode).toHaveBeenCalled());
+    await settle();
+    expect(tap()).toBeNull();
+  });
+
+  it('keeps announcing "Done" after the refetch says the newer node is theirs', async () => {
+    let claimed = false;
+    handlers.claim.mockImplementation(() => {
+      claimed = true;
+      return { node: {}, accepted_at: '2026-11-11T10:00:00Z' };
+    });
+    handlers.getNode.mockImplementation(() => ({ ...newer, owner: claimed ? { id: 7, username: 'me' } : null }));
+    const { invalidate } = wrap(<NodeIdentityBanner node={oldNode()} />);
+    await userEvent.click(await screen.findByRole('button', { name: /^This is mine too/ }));
+    expect(await screen.findByTestId('claim-from-previous-done')).toBeInTheDocument();
+    // The claim invalidates ['nodes']; wait for the refetch to land with the viewer as owner.
+    await waitFor(() => expect(invalidate).toHaveBeenCalledWith({ queryKey: ['nodes'] }));
+    await waitFor(() => expect(handlers.getNode.mock.calls.length).toBeGreaterThan(1));
+    await settle();
+    expect(screen.getByTestId('claim-from-previous-done')).toHaveTextContent('!5678ef01');
+    expect(tap()).toBeNull();
+  });
+
+  it('is not part of the compact view', async () => {
     wrap(<NodeIdentityBanner node={oldNode()} compact />);
+    await settle();
     expect(tap()).toBeNull();
     expect(handlers.getNode).not.toHaveBeenCalled();
   });
