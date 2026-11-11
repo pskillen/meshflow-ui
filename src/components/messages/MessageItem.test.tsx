@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import type { PacketObservation, TextMessage } from '@/lib/models';
@@ -51,5 +51,30 @@ describe('MessageItem heard dialog hop labels', () => {
   it('makes the label keyboard focusable', async () => {
     await openDialog([obs({}, 4)]);
     expect(screen.getByText('Hops unknown')).toHaveAttribute('tabindex', '0');
+  });
+
+  it('gives the explanation to screen readers while the tooltip is closed', async () => {
+    await openDialog([obs({}, 5)]);
+    // The dialog moves focus to the badge, which opens the tooltip; blur to close it.
+    (document.activeElement as HTMLElement | null)?.blur();
+    await waitFor(() => expect(screen.queryByRole('tooltip')).not.toBeInTheDocument());
+    const badge = screen.getByText('Hops unknown').closest('[tabindex="0"]') as HTMLElement;
+    expect(badge).toHaveTextContent(/did not say how far it travelled/);
+    expect(badge.querySelector('.sr-only')).not.toBeNull();
+  });
+
+  it('shows the replayed label', async () => {
+    await openDialog([obs({ replayed: true }, 6)]);
+    expect(screen.getByText('Replayed by the feeder')).toBeInTheDocument();
+  });
+
+  it('shows the tooltip on keyboard focus', async () => {
+    await openDialog([obs({}, 7)]);
+    const badge = screen.getByText('Hops unknown').closest('[tabindex="0"]') as HTMLElement;
+    badge.blur();
+    await waitFor(() => expect(screen.queryByRole('tooltip')).not.toBeInTheDocument());
+    await userEvent.tab();
+    badge.focus();
+    expect(await screen.findByRole('tooltip')).toHaveTextContent(/did not say how far it travelled/);
   });
 });

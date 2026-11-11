@@ -35,8 +35,9 @@ function HopBadge({ observation }: { observation: PacketObservation }) {
     <TooltipProvider delayDuration={100}>
       <Tooltip>
         <TooltipTrigger asChild>
-          <Badge variant="outline" tabIndex={0} className="cursor-help" aria-label={`${label}. ${explanation}`}>
+          <Badge variant="outline" tabIndex={0} className="cursor-help">
             {label}
+            <span className="sr-only">. {explanation}</span>
           </Badge>
         </TooltipTrigger>
         <TooltipContent className="max-w-xs">{explanation}</TooltipContent>

@@ -14,13 +14,13 @@ Opened from the `{count} heard` button. For Meshtastic it shows the path map and
 
 The hop label comes from `describeHops` in `src/lib/hop-display.ts`. The label is a focusable badge; its explanation shows as a tooltip on hover or keyboard focus.
 
-| Observation                                                | Label                  | Explanation                                                  |
-| ---------------------------------------------------------- | ---------------------- | ------------------------------------------------------------ |
-| Heard straight from the sender                             | Direct (with RSSI/SNR) | no relay in between                                          |
-| Connect-time replay by the feeder                          | Replayed by the feeder | not heard over the air just now                              |
-| Known hop count                                            | Hops: N                | how many relays it passed through                            |
-| No hop count, MQTT flag set or a transport other than LoRa | Via internet           | reached the feeder over MQTT or the network, so no hop count |
-| No hop count otherwise                                     | Hops unknown           | the packet did not say how far it travelled                  |
+| Observation                                              | Label                  | Explanation                                                  |
+| -------------------------------------------------------- | ---------------------- | ------------------------------------------------------------ |
+| Heard straight from the sender                           | Direct (with RSSI/SNR) | no relay in between (shown as a plain badge, no tooltip)     |
+| Connect-time replay by the feeder                        | Replayed by the feeder | not heard over the air just now                              |
+| Known hop count                                          | Hops: N                | how many relays it passed through                            |
+| No hop count, MQTT flag set or an MQTT/UDP/API transport | Via internet           | reached the feeder over MQTT or the network, so no hop count |
+| No hop count otherwise                                   | Hops unknown           | the packet did not say how far it travelled                  |
 
 Older APIs omit `replayed`, `via_mqtt` and `transport_mechanism`; the helper then falls back to "Hops: N" or "Hops unknown".
 
