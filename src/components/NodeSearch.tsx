@@ -143,7 +143,13 @@ export function NodeSearch({ onNodeSelect, displayValue, onClearSelection, lastH
                   {node.replaced_by ? (
                     // Sibling of the row link (no nested anchors); selecting the row still picks the old node.
                     <div className="px-4 pb-2">
-                      <ReplacedTag replacedBy={node.replaced_by} />
+                      <ReplacedTag
+                        replacedBy={node.replaced_by}
+                        onNavigate={() => {
+                          setIsOpen(false);
+                          setQuery('');
+                        }}
+                      />
                     </div>
                   ) : null}
                 </li>

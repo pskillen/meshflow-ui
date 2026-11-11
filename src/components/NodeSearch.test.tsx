@@ -98,6 +98,33 @@ describe('NodeSearch', () => {
     expect(onSelect).not.toHaveBeenCalled();
   });
 
+  it('clicking the tag link closes the dropdown and clears the query', async () => {
+    api.searchNodes.mockResolvedValue([
+      {
+        internal_id: 'n1',
+        node_id_str: '!433b82f0',
+        meshtastic_node_id: 1127973616,
+        short_name: 'DEAD',
+        long_name: 'Dead Beef',
+        replaced_by: NEW_REF,
+      },
+    ]);
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <MemoryRouter>
+          <NodeSearch />
+        </MemoryRouter>
+      </QueryClientProvider>
+    );
+    const input = screen.getByPlaceholderText('Search nodes...');
+    await userEvent.type(input, 'dead');
+    await screen.findByText('Dead Beef');
+    await userEvent.click(screen.getByRole('link', { name: /Open !8959691b/ }));
+    expect(screen.queryByText('Dead Beef')).not.toBeInTheDocument();
+    expect(input).toHaveValue('');
+  });
+
   it('selecting a replaced row still selects the old node', async () => {
     api.searchNodes.mockResolvedValue([
       {
