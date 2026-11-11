@@ -30,6 +30,9 @@ const node = (over: Partial<ObservedNode> = {}): ObservedNode =>
     ...over,
   }) as ObservedNode;
 
+const local = (iso: string) =>
+  new Date(iso).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+
 const renderBanner = (n: ObservedNode, compact = false) =>
   render(
     <MemoryRouter>
@@ -82,7 +85,7 @@ describe('NodeIdentityBanner', () => {
     renderBanner(replacedNode());
     const box = screen.getByTestId('node-identity-replaced');
     expect(box).toHaveTextContent('This radio now uses node !8959691b (PDYt Paper). Heard 5 minutes ago.');
-    expect(box).toHaveTextContent('History up to 10 Nov 2026 is on this page; newer history is on the new one.');
+    expect(box).toHaveTextContent(`History up to ${local('2026-11-10T22:50:08Z')} is on this page; newer history is on the new one.`);
     expect(screen.getByRole('link', { name: 'Go to !8959691b' })).toHaveAttribute('href', '/nodes/!8959691b');
   });
 
@@ -98,7 +101,7 @@ describe('NodeIdentityBanner', () => {
     );
     expect(screen.queryByTestId('node-identity-replaced')).not.toBeInTheDocument();
     expect(screen.getByTestId('node-identity-successor')).toHaveTextContent(
-      'This radio also used node !8959691b from 10 Nov 2026 to 10 Nov 2026.'
+      `This radio also used node !8959691b from ${local('2026-11-10T22:50:08Z')} to ${local('2026-11-10T23:00:00Z')}.`
     );
   });
 
@@ -139,6 +142,14 @@ describe('NodeIdentityBanner', () => {
       'href',
       '/nodes/mc%3Aaabbccddeeff'
     );
+  });
+
+  it('compact shows nothing when the node is not replaced', () => {
+    const { container } = renderBanner(
+      node({ identity_chain: { previous: [entry({ internal_id: 'p' })], next: [] } }),
+      true
+    );
+    expect(container).toBeEmptyDOMElement();
   });
 
   it('compact shows one line with no disclosure', () => {
