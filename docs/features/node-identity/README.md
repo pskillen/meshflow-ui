@@ -5,7 +5,7 @@ old one's history stays where it was. This feature links a radio's numbers both 
 story. History is never moved or merged.
 
 **Status:** shipped: node page banners, owner review of links and declaring a replacement, the Monitoring note, "Replaced" tags in search, node lists and My nodes, and
-replaced nodes hidden on maps. They need an API that sends `replaced_by` and `identity_chain`; on an older API nothing
+replaced nodes hidden on maps, and a one-tap "This is mine too" claim of the new number. They need an API that sends `replaced_by` and `identity_chain`; on an older API nothing
 new shows.
 
 ## What people see
@@ -42,15 +42,18 @@ number)" (a rejected link reads "Not the same radio as node !x") with its state:
   nodes is already linked to another radio, or when the link would make two nodes replace each other.
 - After any change the page, the banner, tags and lists refresh.
 
+The wording avoids "identity link", "key" and "evidence" on purpose.
+
 ## Claiming the new number in one tap
 
 When you own the old node of a replaced radio and not the new one, **This is mine too** claims the new node for you. It
 shows on the old node's card in My nodes and on the old page's banner. Meshflow only allows this when it is confident
-the two are the same radio (for example the feeder reported the change, or the owner or staff confirmed it), which is
-often not so. When it is not, the button explains that and links to the normal claim page, so the next step is always
-obvious. Also falls back there when the new node already has an owner. See `ClaimFromPreviousButton.md`.
-
-The wording avoids "identity link", "key" and "evidence" on purpose.
+the two are the same radio: the feeder reported the change, the owner declared the link, staff confirmed it, or the
+new number appeared holding the old number's key. A link you confirmed yourself is not enough (the API answers
+`evidence_too_weak`), so that case is common. When it is not enough, the button explains that and links to the normal
+claim page, so the next step is always obvious. The banner does not offer the button when someone else already owns the
+new node; the card cannot know that and falls back after the tap. The confirmation stays on screen after the lists
+refresh. See `ClaimFromPreviousButton.md`.
 
 ## When a node counts as replaced
 
