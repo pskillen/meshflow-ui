@@ -28,6 +28,7 @@ import {
 import { NodeOutgoingTraceroutesSection } from '@/components/nodes/NodeOutgoingTraceroutesSection';
 import { RfPropagationSection } from '@/components/nodes/RfPropagationSection';
 import { NodeRightNow } from '@/components/nodes/NodeRightNow';
+import { NodeIdentityBanner } from '@/components/nodes/NodeIdentityBanner';
 import { NodeShell, type NodeShellTab } from '@/components/nodes/NodeShell';
 import { StatTile } from '@/components/stats/StatTile';
 import { bestEdgeSnr } from '@/lib/node-traceroute-snr';
@@ -641,6 +642,7 @@ export function NodeDetailContent({ internalId, compact = false, activeTab, onTa
           onTabChange={onTabChange}
           range={isRangedNodeDetailTab(effectiveTab) ? range : null}
         >
+          <NodeIdentityBanner node={node} />
           {effectiveTab === 'overview' && (
             <div data-testid="node-detail-panel-overview">
               <NodeRightNow node={node} note="Latest reports. Charts live under Statistics." />
@@ -703,6 +705,7 @@ export function NodeDetailContent({ internalId, compact = false, activeTab, onTa
         <div className="flex shrink-0 items-start gap-2">{claimLink}</div>
       </div>
 
+      <NodeIdentityBanner node={node} compact={compact} />
       {renderMetricsGrid()}
       <div className="mb-6">
         <NodeLocationCard node={node} internalId={internalId} compact />

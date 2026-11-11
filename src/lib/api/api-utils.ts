@@ -1,11 +1,27 @@
-import { NodeWatch, ObservedNode } from '../models';
+import { NodeIdentityChain, NodeIdentityChainEntry, NodeWatch, ObservedNode } from '../models';
 
 // Helper method to convert ObservedNode to NodeData for backward compatibility
+function parseIdentityEntry(entry: NodeIdentityChainEntry): NodeIdentityChainEntry {
+  return {
+    ...entry,
+    last_heard: entry.last_heard ? new Date(entry.last_heard) : null,
+    linked_at: entry.linked_at ? new Date(entry.linked_at) : null,
+  };
+}
+
+function parseIdentityChain(chain: NodeIdentityChain): NodeIdentityChain {
+  return {
+    previous: (chain.previous ?? []).map(parseIdentityEntry),
+    next: (chain.next ?? []).map(parseIdentityEntry),
+  };
+}
+
 export function parseObservedNodeFromAPI(node: ObservedNode): ObservedNode {
   return {
     ...node,
     meshtastic_node_id: node.meshtastic_node_id ?? 0,
     last_heard: node.last_heard ? new Date(node.last_heard) : null,
+    ...(node.identity_chain ? { identity_chain: parseIdentityChain(node.identity_chain) } : {}),
     latest_position: node.latest_position
       ? {
           ...node.latest_position,
