@@ -22,7 +22,7 @@ interface Picked {
 
 /**
  * "Declare a replacement": the owner (or staff) says this node now uses a different node number, picked from a
- * search. Posts `{new_node: "!hex"}` to the old node's identity-links endpoint. See DeclareReplacementDialog.md.
+ * search. Posts `{new_node: "!hex"}` to the old node's identity-links endpoint. See NodeIdentityLinksSection.md.
  */
 export function DeclareReplacementDialog({
   internalId,
