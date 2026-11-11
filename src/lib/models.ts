@@ -675,6 +675,8 @@ export interface NodeSearchResult {
   /** ISO string from API when present; used for recency filters in search UI. */
   last_heard?: string | null;
   owner?: NodeOwnerInfo | null;
+  /** The direct successor when this radio now uses another number; absent on older APIs. */
+  replaced_by?: NodeIdentityRef | null;
 }
 
 // Global Stats types from Meshflow API v2

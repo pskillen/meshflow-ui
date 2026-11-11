@@ -27,6 +27,8 @@ function renderSearch() {
   );
 }
 
+const NEW_REF = { internal_id: 'n2', protocol: 1, meshtastic_node_id: 2304338203, node_id_str: '!8959691b' };
+
 describe('NodeSearch', () => {
   beforeEach(() => {
     Object.values(api).forEach((fn) => fn.mockReset());
@@ -58,5 +60,75 @@ describe('NodeSearch', () => {
     await waitFor(() => expect(api.searchNodes).toHaveBeenCalledWith('dead'));
     expect(await screen.findByText('Dead Beef')).toBeInTheDocument();
     expect(api.getNodes).not.toHaveBeenCalled();
+  });
+
+  async function search() {
+    renderSearch();
+    await userEvent.type(screen.getByPlaceholderText('Search nodes...'), 'dead');
+    await screen.findByText('Dead Beef');
+  }
+
+  it('tags a replaced result and links the new node without selecting the old one', async () => {
+    api.searchNodes.mockResolvedValue([
+      {
+        internal_id: 'n1',
+        node_id_str: '!433b82f0',
+        meshtastic_node_id: 1127973616,
+        short_name: 'DEAD',
+        long_name: 'Dead Beef',
+        replaced_by: NEW_REF,
+      },
+    ]);
+    const onSelect = vi.fn();
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <MemoryRouter>
+          <NodeSearch onNodeSelect={onSelect} />
+        </MemoryRouter>
+      </QueryClientProvider>
+    );
+    await userEvent.type(screen.getByPlaceholderText('Search nodes...'), 'dead');
+    await screen.findByText('Dead Beef');
+    expect(screen.getByTestId('replaced-tag')).toHaveTextContent('Replaced → !8959691b');
+    const link = screen.getByRole('link', { name: /Open !8959691b/ });
+    expect(link).toHaveAttribute('href', '/nodes/!8959691b');
+    link.focus();
+    expect(link).toHaveFocus();
+    expect(onSelect).not.toHaveBeenCalled();
+  });
+
+  it('selecting a replaced row still selects the old node', async () => {
+    api.searchNodes.mockResolvedValue([
+      {
+        internal_id: 'n1',
+        node_id_str: '!433b82f0',
+        meshtastic_node_id: 1127973616,
+        short_name: 'DEAD',
+        long_name: 'Dead Beef',
+        replaced_by: NEW_REF,
+      },
+    ]);
+    const onSelect = vi.fn();
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <MemoryRouter>
+          <NodeSearch onNodeSelect={onSelect} />
+        </MemoryRouter>
+      </QueryClientProvider>
+    );
+    await userEvent.type(screen.getByPlaceholderText('Search nodes...'), 'dead');
+    await userEvent.click(await screen.findByText('Dead Beef'));
+    expect(onSelect).toHaveBeenCalledWith(1127973616, expect.objectContaining({ node_id_str: '!433b82f0' }));
+  });
+
+  it('shows no tag when replaced_by is null or the field is missing', async () => {
+    api.searchNodes.mockResolvedValue([
+      { internal_id: 'n1', node_id_str: '!deadbeef', meshtastic_node_id: 1, short_name: 'A', long_name: 'Dead Beef', replaced_by: null },
+      { internal_id: 'n2', node_id_str: '!deadbee0', meshtastic_node_id: 2, short_name: 'B', long_name: 'Dead Two' },
+    ]);
+    await search();
+    expect(screen.queryByTestId('replaced-tag')).not.toBeInTheDocument();
   });
 });
