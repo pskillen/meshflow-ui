@@ -9,6 +9,8 @@ import { Button } from '@/components/ui/button';
 import { Loader2, Settings } from 'lucide-react';
 import { formatUptimeSeconds } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
+import { Link } from 'react-router-dom';
+import { nodeDetailPath } from '@/lib/node-detail-routes';
 
 export function NodeMeshMonitoringSection({ node }: { node: ObservedNode }) {
   const currentUser = authService.getCurrentUser();
@@ -28,6 +30,18 @@ export function NodeMeshMonitoringSection({ node }: { node: ObservedNode }) {
 
   return (
     <div className="mb-6">
+      {node.replaced_by ? (
+        <p
+          className="mb-3 rounded-md border border-sky-300 bg-sky-50 p-3 text-sm text-sky-950 dark:border-sky-800 dark:bg-sky-950/40 dark:text-sky-100"
+          data-testid="monitoring-replaced-note"
+        >
+          Paused: this radio now uses node{' '}
+          <Link to={nodeDetailPath(node.replaced_by) ?? '#'} className="font-mono underline underline-offset-4">
+            {node.replaced_by.node_id_str}
+          </Link>
+          . Offline alerts for this number are paused.
+        </p>
+      ) : null}
       <Card>
         <CardHeader className="space-y-0">
           <div className="flex flex-row items-start justify-between gap-2">
