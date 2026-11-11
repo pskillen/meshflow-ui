@@ -55,3 +55,13 @@ export function useDeclareNodeReplacement(internalId: string) {
     onSuccess: invalidate,
   });
 }
+
+/** One-tap claim of the newer node (`newInternalId`) by the owner of the older one. */
+export function useClaimFromPrevious(newInternalId: string) {
+  const api = useMeshflowApi();
+  const invalidate = useInvalidateAfterLinkChange();
+  return useMutation({
+    mutationFn: () => api.claimFromPrevious(newInternalId),
+    onSuccess: invalidate,
+  });
+}

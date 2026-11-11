@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   MoreVertical,
@@ -11,6 +12,7 @@ import {
   Unplug,
 } from 'lucide-react';
 import { ReplacedTag } from '@/components/nodes/ReplacedTag';
+import { ClaimFromPreviousButton } from '@/components/nodes/ClaimFromPreviousButton';
 import { StaleReportedTime } from '@/components/nodes/StaleReportedTime';
 import { observedNodeDetailPath } from '@/lib/node-detail-routes';
 import type { UseQueryResult } from '@tanstack/react-query';
@@ -60,6 +62,11 @@ export interface MyNodeCardProps {
   onRequestUnclaim?: () => void;
   /** When set, shows “Unmanage node” (managed rows). */
   onRequestUnmanage?: () => void;
+  /**
+   * Internal ids of the nodes the user owns. With it, a replaced node whose newer node is not in the set offers
+   * "This is mine too". Leave unset to never offer it.
+   */
+  ownedNodeIds?: ReadonlySet<string>;
 }
 
 export function MyNodeCard({
@@ -74,7 +81,10 @@ export function MyNodeCard({
   onShowSetupInstructions,
   onRequestUnclaim,
   onRequestUnmanage,
+  ownedNodeIds,
 }: MyNodeCardProps) {
+  // Keep the one-tap claim (and its outcome) on screen after it succeeds, when the refetch adds the new node to the owned set.
+  const [claimedNewer, setClaimedNewer] = useState(false);
   const metrics = node.latest_device_metrics;
   const batteryLevel = metrics?.battery_level != null ? metrics.battery_level : null;
   const voltage = metrics?.voltage != null ? metrics.voltage : null;
@@ -199,6 +209,10 @@ export function MyNodeCard({
             </Tooltip>
           </TooltipProvider>
         </div>
+        {node.replaced_by &&
+        (claimedNewer || (isClaimed && ownedNodeIds && !ownedNodeIds.has(node.replaced_by.internal_id))) ? (
+          <ClaimFromPreviousButton newer={node.replaced_by} onDone={() => setClaimedNewer(true)} />
+        ) : null}
         <p className="text-sm text-muted-foreground">
           Last heard{' '}
           <StaleReportedTime at={node.last_heard ?? null} fallback="never" className="text-foreground tabular-nums" />

@@ -609,6 +609,14 @@ export class MeshflowApi extends BaseApi {
     return this.post<NodeIdentityLink>(`/nodes/observed-nodes/${internalId}/identity-links/`, { new_node: newNode });
   }
 
+  /**
+   * Claim the NEW node in one tap by owning the old one it replaced. 201 with the accepted claim, 200 when it is
+   * already yours. Errors are `{code, detail}`: `no_previous`, `not_owner`, `already_claimed`, `evidence_too_weak`.
+   */
+  async claimFromPrevious(newInternalId: string): Promise<NodeClaim> {
+    return this.post<NodeClaim>(`/nodes/observed-nodes/${newInternalId}/claim-from-previous/`);
+  }
+
   async confirmNodeIdentityLink(linkId: number): Promise<NodeIdentityLink> {
     return this.post<NodeIdentityLink>(`/nodes/identity-links/${linkId}/confirm/`);
   }

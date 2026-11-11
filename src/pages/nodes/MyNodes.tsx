@@ -75,6 +75,8 @@ function MyNodesContent() {
     [myClaimedNodes, myManagedNodes]
   );
 
+  const ownedNodeIds = useMemo(() => new Set(myClaimedNodes.map((n) => n.internal_id)), [myClaimedNodes]);
+
   const connectivityBuckets = useMemo(() => groupClaimedNodes(claimedOnlyNodes), [claimedOnlyNodes]);
 
   const mapNodes = useMemo(() => buildNodesForMap(myClaimedNodes, myManagedNodes), [myClaimedNodes, myManagedNodes]);
@@ -289,6 +291,7 @@ function MyNodesContent() {
                     const liveness = getManagedLiveness(managed);
                     return (
                       <MyNodeCard
+                        ownedNodeIds={ownedNodeIds}
                         key={`managed-${managedNodeStableKey(managed)}`}
                         node={node}
                         isManaged
@@ -337,6 +340,7 @@ function MyNodesContent() {
                         const watch = watchesByNodeIdStr.get(node.node_id_str);
                         return (
                           <MyNodeCard
+                            ownedNodeIds={ownedNodeIds}
                             key={node.meshtastic_node_id}
                             node={node}
                             isManaged={false}
@@ -371,6 +375,7 @@ function MyNodesContent() {
                         const watch = watchesByNodeIdStr.get(node.node_id_str);
                         return (
                           <MyNodeCard
+                            ownedNodeIds={ownedNodeIds}
                             key={node.meshtastic_node_id}
                             node={node}
                             isManaged={false}
@@ -401,6 +406,7 @@ function MyNodesContent() {
                         const watch = watchesByNodeIdStr.get(node.node_id_str);
                         return (
                           <MyNodeCard
+                            ownedNodeIds={ownedNodeIds}
                             key={node.meshtastic_node_id}
                             node={node}
                             isManaged={false}
