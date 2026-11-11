@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   MoreVertical,
@@ -82,6 +83,8 @@ export function MyNodeCard({
   onRequestUnmanage,
   ownedNodeIds,
 }: MyNodeCardProps) {
+  // Keep the one-tap claim (and its outcome) on screen after it succeeds, when the refetch adds the new node to the owned set.
+  const [claimedNewer, setClaimedNewer] = useState(false);
   const metrics = node.latest_device_metrics;
   const batteryLevel = metrics?.battery_level != null ? metrics.battery_level : null;
   const voltage = metrics?.voltage != null ? metrics.voltage : null;
@@ -206,8 +209,9 @@ export function MyNodeCard({
             </Tooltip>
           </TooltipProvider>
         </div>
-        {isClaimed && node.replaced_by && ownedNodeIds && !ownedNodeIds.has(node.replaced_by.internal_id) ? (
-          <ClaimFromPreviousButton newer={node.replaced_by} />
+        {node.replaced_by &&
+        (claimedNewer || (isClaimed && ownedNodeIds && !ownedNodeIds.has(node.replaced_by.internal_id))) ? (
+          <ClaimFromPreviousButton newer={node.replaced_by} onDone={() => setClaimedNewer(true)} />
         ) : null}
         <p className="text-sm text-muted-foreground">
           Last heard{' '}

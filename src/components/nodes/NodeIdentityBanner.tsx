@@ -59,11 +59,13 @@ function ClaimNewer({ target }: { target: NodeIdentityRef }) {
     queryFn: () => api.getObservedNode(target.internal_id),
     retry: false,
   });
-  const me = authService.getCurrentUser();
-  if (!newer.data || (me && newer.data.owner?.id === me.id)) return null;
+  // Once the claim succeeds the refetched node is the viewer's own; keep showing the outcome instead of vanishing.
+  const [claimedHere, setClaimedHere] = useState(false);
+  // Offer it only while nobody holds the newer node: another owner (public) means it can only end in "already claimed".
+  if (!claimedHere && (!newer.data || newer.data.owner)) return null;
   return (
     <div className="mt-2">
-      <ClaimFromPreviousButton newer={target} />
+      <ClaimFromPreviousButton newer={target} onDone={() => setClaimedHere(true)} />
     </div>
   );
 }
