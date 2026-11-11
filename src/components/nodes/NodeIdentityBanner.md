@@ -30,6 +30,12 @@ was predicted from this node's public key", "Same hardware address", "The owner 
 ", confirmed by staff"; anything else reads "Linked by Meshflow". Ids are links to the other page (MeshCore ids use the
 `mc:` form).
 
+## One-tap claim
+
+On the replaced panel, the **owner of the old node** also sees "This is mine too" (see
+[`ClaimFromPreviousButton.md`](ClaimFromPreviousButton.md)) while the newer node is not already theirs. It claims the
+newer node; when Meshflow is not sure enough it points to the normal claim page instead. Not shown in the compact form.
+
 ## Compact
 
 In the slide-over only the prominent replaced line shows, with no "Why?", no "Go to" link and no "History up to" line.

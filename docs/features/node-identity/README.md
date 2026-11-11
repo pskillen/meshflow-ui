@@ -42,6 +42,14 @@ number)" (a rejected link reads "Not the same radio as node !x") with its state:
   nodes is already linked to another radio, or when the link would make two nodes replace each other.
 - After any change the page, the banner, tags and lists refresh.
 
+## Claiming the new number in one tap
+
+When you own the old node of a replaced radio and not the new one, **This is mine too** claims the new node for you. It
+shows on the old node's card in My nodes and on the old page's banner. Meshflow only allows this when it is confident
+the two are the same radio (for example the feeder reported the change, or the owner or staff confirmed it), which is
+often not so. When it is not, the button explains that and links to the normal claim page, so the next step is always
+obvious. Also falls back there when the new node already has an owner. See `ClaimFromPreviousButton.md`.
+
 The wording avoids "identity link", "key" and "evidence" on purpose.
 
 ## When a node counts as replaced
@@ -65,5 +73,6 @@ this number are paused." The settings underneath are left as they are.
 | [`NodesTable.md`](../../../src/components/nodes/NodesTable.md)                               | Tag in node lists                                     |
 | [`NodesAndConstellationsMap.md`](../../../src/components/nodes/NodesAndConstellationsMap.md) | Replaced nodes hidden on maps                         |
 | [`NodeIdentityLinksSection.md`](../../../src/components/nodes/NodeIdentityLinksSection.md)   | Reviewing links and declaring a replacement           |
+| [`ClaimFromPreviousButton.md`](../../../src/components/nodes/ClaimFromPreviousButton.md)     | The one-tap "This is mine too" claim                  |
 | [`NodeDetailContent.md`](../../../src/components/nodes/NodeDetailContent.md)                 | Where the banner sits on the node page                |
 | [`FeederIdentityNotices.md`](../../../src/components/nodes/FeederIdentityNotices.md)         | Owner-facing notices when a feeder's number changed   |
