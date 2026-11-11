@@ -24,7 +24,7 @@ new shows.
   selects) the old node, since that is what was searched for; the tag's own link opens the new one. Nothing redirects.
 - **In node lists** (the protocol Nodes page): the same tag sits beside the ID, and under the name on narrow screens.
 - **On My nodes**: the card says "Replaced by !new" with a link to the new node.
-- **On maps**: replaced nodes are not drawn (the dashboard and protocol maps). The filter is applied in the browser
+- **On maps**: replaced nodes are not drawn (the overview maps only: the dashboard and protocol `NodesAndConstellationsMap`, and the protocol nodes page `NodesMap`, which sets `hideReplaced`; a node's own page, the traceroute target and the monitor map still draw it). The filter is applied in the browser
   to the same node list the tables use, so there is no extra request. Nodes that went back to an old number, and nodes
   from an older API, are drawn as before. The infrastructure and weather maps are unchanged.
 

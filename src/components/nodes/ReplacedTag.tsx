@@ -11,11 +11,14 @@ export function ReplacedTag({
   replacedBy,
   label = 'Replaced',
   className,
+  onNavigate,
 }: {
   replacedBy: NodeIdentityRef | null | undefined;
   /** Text before the id. Lists use "Replaced" (with an arrow); the My nodes card says "Replaced by". */
   label?: string;
   className?: string;
+  /** Called when the id link is clicked (e.g. to close a dropdown). */
+  onNavigate?: () => void;
 }) {
   if (!replacedBy) return null;
   const to = nodeDetailPath(replacedBy);
@@ -34,7 +37,10 @@ export function ReplacedTag({
         <Link
           to={to}
           className="font-mono underline underline-offset-2"
-          onClick={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.stopPropagation();
+            onNavigate?.();
+          }}
           aria-label={`Open ${replacedBy.node_id_str}, the node that replaced this one`}
         >
           {replacedBy.node_id_str}

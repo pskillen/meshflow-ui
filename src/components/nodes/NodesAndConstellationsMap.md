@@ -33,7 +33,7 @@ Pages that pass feeders of every protocol (never-fed dropped), so their key list
 
 ## Replaced nodes
 
-Observed nodes with `replaced_by` (the radio now uses another number) are not drawn, in either mode. The filter runs in the component on the `observedNodes` prop, so the shared cached node list and its query key are untouched and no `?replaced=false` is sent. Nodes without the field, or with `replaced_by: null` (a radio that went back to this number), draw as before. `NodesMap` applies the same rule.
+Observed nodes with `replaced_by` (the radio now uses another number) are not drawn, in either mode. The filter runs in the component on the `observedNodes` prop, so the shared cached node list and its query key are untouched and no `?replaced=false` is sent. Nodes without the field, or with `replaced_by: null` (a radio that went back to this number), draw as before. `NodesMap` applies the same rule only when its `hideReplaced` prop is set (default off), which the protocol nodes page does.
 
 ## Related
 
