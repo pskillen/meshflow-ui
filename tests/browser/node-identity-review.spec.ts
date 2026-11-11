@@ -54,7 +54,7 @@ function makeLink(state: string, canConfirm: boolean) {
     },
     new: { ...NEW_REF, long_name: 'Roof radio' },
     evidence: 'public_key',
-    confidence: 'high',
+    confidence: 'strong',
     state,
     created_at: new Date(Date.now() - 86400_000).toISOString(),
     reviewed_at: null,
@@ -65,26 +65,44 @@ function makeLink(state: string, canConfirm: boolean) {
 
 let linkState = 'suggested';
 const confirmRequests: string[] = [];
+const declareBodies: unknown[] = [];
 
 const test = base.extend({
   context: async ({ context }, useFixture) => {
     linkState = 'suggested';
     confirmRequests.length = 0;
+    declareBodies.length = 0;
     await context.addInitScript(() => {
       localStorage.setItem('meshflow_access_token', 'test-token');
       localStorage.setItem('meshflow_user_details', JSON.stringify({ id: 1, username: 'testuser' }));
     });
     await installApiMocks(context, {
-      // The app refreshes the stored user from here; the default fixture has `pk` but no `id`.
-      '**/api/auth/user/**': createJsonHandler({ id: 1, pk: 1, username: 'testuser', email: 'test@example.com' }),
       '**/api/nodes/observed-nodes/*/**': createJsonHandler([]),
       [`**/api/nodes/observed-nodes/${OLD_ID}/`]: createJsonHandler(OLD_NODE),
-      [`**/api/nodes/observed-nodes/${OLD_ID}/identity-links/`]: (route: Route) =>
-        route.fulfill({
+      '**/api/nodes/observed-nodes/search/**': createJsonHandler([
+        {
+          internal_id: NEW_ID,
+          node_id_str: '!5678ef01',
+          meshtastic_node_id: 0x5678ef01,
+          short_name: 'NEW1',
+          long_name: 'New roof radio',
+        },
+      ]),
+      [`**/api/nodes/observed-nodes/${OLD_ID}/identity-links/`]: (route: Route) => {
+        if (route.request().method() === 'POST') {
+          declareBodies.push(route.request().postDataJSON());
+          return route.fulfill({
+            status: 201,
+            contentType: 'application/json',
+            body: JSON.stringify(makeLink('confirmed', false)),
+          });
+        }
+        return route.fulfill({
           status: 200,
           contentType: 'application/json',
           body: JSON.stringify([makeLink(linkState, linkState === 'suggested')]),
-        }),
+        });
+      },
       '**/api/nodes/identity-links/5/confirm/': (route: Route) => {
         confirmRequests.push(route.request().method());
         linkState = 'confirmed';
@@ -122,6 +140,18 @@ test.describe('Node identity review', () => {
     await expect(row.getByText('confirmed', { exact: true })).toBeVisible();
     await expect(row.getByRole('button', { name: 'Confirm' })).toHaveCount(0);
     expect(confirmRequests).toEqual(['POST']);
+  });
+
+  test('the owner can declare a replacement by picking a node from the real search', async ({ page }) => {
+    await page.goto(`/nodes/${OLD_ID}`);
+    await page.getByRole('button', { name: 'Declare a replacement' }).click();
+    const dialog = page.getByRole('dialog');
+    await dialog.getByPlaceholder('Search nodes...').fill('5678');
+    await dialog.getByText('New roof radio').click();
+    await expect(dialog.getByRole('textbox')).toHaveValue('!5678ef01 (New roof radio)');
+    await dialog.getByRole('button', { name: 'Declare replacement' }).click();
+    await expect(dialog).toHaveCount(0);
+    expect(declareBodies).toEqual([{ new_node: '!5678ef01' }]);
   });
 
   test('a guest sees the banner but not the review section', async ({ context, page }) => {

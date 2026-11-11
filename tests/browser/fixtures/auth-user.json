@@ -1,5 +1,6 @@
 {
-  "pk": 1,
+  "id": 1,
   "username": "testuser",
-  "email": "test@example.com"
+  "email": "test@example.com",
+  "display_name": "Test User"
 }
