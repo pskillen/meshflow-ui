@@ -475,6 +475,12 @@ export interface PacketObservation {
   direct_from_sender: boolean;
   hop_count: number | null;
   path_known?: boolean;
+  /** True for a connect-time replay by the feeder (not a radio reception). Absent on older APIs. */
+  replayed?: boolean;
+  /** True when the packet reached the feeder over MQTT. Null or absent on older rows. */
+  via_mqtt?: boolean | null;
+  /** e.g. TRANSPORT_LORA, TRANSPORT_MQTT. Null or absent on older rows and own packets. */
+  transport_mechanism?: string | null;
 }
 
 export interface ResolvedHop {

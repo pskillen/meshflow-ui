@@ -69,7 +69,13 @@ MeshCore may not use MT reply/emoji semantics; UI still runs the same grouping l
 ### Heard count (feeders / observers)
 
 - Button: **`{count} heard`** opens dialog **“Message Heard By”**.
-- **MT:** `PacketObservation` — observer short/long name, `node_id_str`, rx time, **Direct** vs **Hop: N**, RSSI/SNR.
+- **MT:** `PacketObservation` — observer short/long name, `node_id_str`, rx time, a hop label (see below), RSSI/SNR when direct.
+  - **Direct**: heard straight from the sender; shows RSSI/SNR and has no tooltip.
+  - **Hops: N**: the packet said how many relays it passed through.
+  - **Hops unknown**: the packet did not say how far it travelled (newer firmware leaves this out on some packets).
+  - **Via internet**: reached the feeder over MQTT or the network, not by radio, so there is no hop count.
+  - **Replayed by the feeder**: passed on by the feeder when it connected, not heard over the air.
+  - Every label except Direct has a tooltip with the explanation, shown on hover or keyboard focus; the badge is focusable, and screen readers get the explanation too.
 - **MC:** `MeshCoreHeardObservation` — observer string (`node_id_str`), rx time, RSSI/SNR (no hop/direct badge).
 - Shown on main messages, continuations, and inline replies (smaller button variant).
 
