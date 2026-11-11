@@ -10,6 +10,7 @@ import {
   UserX,
   Unplug,
 } from 'lucide-react';
+import { ReplacedTag } from '@/components/nodes/ReplacedTag';
 import { StaleReportedTime } from '@/components/nodes/StaleReportedTime';
 import { observedNodeDetailPath } from '@/lib/node-detail-routes';
 import type { UseQueryResult } from '@tanstack/react-query';
@@ -167,6 +168,7 @@ export function MyNodeCard({
           </Alert>
         ) : null}
         <div className="flex flex-wrap gap-1.5">
+          <ReplacedTag replacedBy={node.replaced_by} label="Replaced by" />
           {isManaged ? (
             <Badge variant="outline" className="text-xs">
               Managed

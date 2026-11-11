@@ -258,5 +258,17 @@ describe('NodesTable', () => {
     renderTable([]);
     expect(screen.getByText('No nodes in this range.')).toBeInTheDocument();
   });
-});
 
+  it('tags only replaced nodes, beside the id, linking the new node', () => {
+    const ref = { internal_id: 'n2', protocol: 1, meshtastic_node_id: 2304338203, node_id_str: '!8959691b' };
+    renderTable([node(1, 'Old', { replaced_by: ref }), node(2, 'Null', { replaced_by: null }), node(3, 'Missing')]);
+    const rows = screen.getAllByTestId('node-row');
+    expect(within(rows[0]!).getAllByTestId('replaced-tag')[0]).toHaveTextContent('Replaced → !8959691b');
+    expect(within(rows[0]!).getAllByRole('link', { name: /Open !8959691b/ })[0]).toHaveAttribute(
+      'href',
+      '/nodes/!8959691b'
+    );
+    expect(within(rows[1]!).queryByTestId('replaced-tag')).not.toBeInTheDocument();
+    expect(within(rows[2]!).queryByTestId('replaced-tag')).not.toBeInTheDocument();
+  });
+});

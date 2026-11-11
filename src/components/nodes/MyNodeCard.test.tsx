@@ -165,4 +165,17 @@ describe('MyNodeCard position hint styling (fixed clock)', () => {
     const badge = screen.getByText('GPS position stale (>7d)');
     expect(badge.className).toMatch(/border-amber/);
   });
+
+  it('shows "Replaced by" with a link to the new node only when replaced_by is set', () => {
+    const { unmount } = renderCard({
+      node: makeNode({
+        replaced_by: { internal_id: 'n2', protocol: 1, meshtastic_node_id: 2304338203, node_id_str: '!8959691b' },
+      }),
+    });
+    expect(screen.getByTestId('replaced-tag')).toHaveTextContent('Replaced by !8959691b');
+    expect(screen.getByRole('link', { name: /Open !8959691b/ })).toHaveAttribute('href', '/nodes/!8959691b');
+    unmount();
+    renderCard({ node: makeNode() });
+    expect(screen.queryByTestId('replaced-tag')).not.toBeInTheDocument();
+  });
 });
