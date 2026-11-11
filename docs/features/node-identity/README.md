@@ -4,7 +4,7 @@ On Meshtastic 2.8 a firmware upgrade or re-key can give a radio a new node numbe
 old one's history stays where it was. This feature links a radio's numbers both ways so people can find the rest of the
 story. History is never moved or merged.
 
-**Status:** shipped: node page banners, the Monitoring note, "Replaced" tags in search, node lists and My nodes, and
+**Status:** shipped: node page banners, owner review of links and declaring a replacement, the Monitoring note, "Replaced" tags in search, node lists and My nodes, and
 replaced nodes hidden on maps. They need an API that sends `replaced_by` and `identity_chain`; on an older API nothing
 new shows.
 
@@ -28,6 +28,22 @@ new shows.
   to the same node list the tables use, so there is no extra request. Nodes that went back to an old number, and nodes
   from an older API, are drawn as before. The infrastructure and weather maps are unchanged.
 
+## Reviewing links
+
+Owners (of the node) and staff can act on links from the node's Overview tab, in "Other numbers for this radio"
+(guests and other users do not see it). Each link reads "Same radio as node !x (name) (reason; the newer / older
+number)" with its state: "suggested by Meshflow", "linked by Meshflow", "confirmed", "marked not the same radio" or
+"held for staff to review". Suggested links come first, rejected last.
+
+- **Confirm** turns a suggestion into a confirmed link. **Not the same radio** (after a short "are you sure") rejects it.
+  The buttons show only when the API says the user may (`can_confirm`, `can_reject`).
+- **Declare a replacement** (the dialog): pick the newer node by search to say this radio now uses it. Both nodes must
+  be the owner's (staff may link any two). Errors are shown in plain words in the dialog, for example when one of the
+  nodes is already linked to another radio, or when the link would make two nodes replace each other.
+- After any change the page, the banner, tags and lists refresh.
+
+The wording avoids "identity link", "key" and "evidence" on purpose.
+
 ## When a node counts as replaced
 
 A node is replaced when a newer number of the same radio has been heard at least as recently as it was. If the radio
@@ -48,5 +64,6 @@ this number are paused." The settings underneath are left as they are.
 | [`NodeSearch.md`](../../../src/components/NodeSearch.md)                                     | Tag in search results                                 |
 | [`NodesTable.md`](../../../src/components/nodes/NodesTable.md)                               | Tag in node lists                                     |
 | [`NodesAndConstellationsMap.md`](../../../src/components/nodes/NodesAndConstellationsMap.md) | Replaced nodes hidden on maps                         |
+| [`NodeIdentityLinksSection.md`](../../../src/components/nodes/NodeIdentityLinksSection.md)   | Reviewing links and declaring a replacement           |
 | [`NodeDetailContent.md`](../../../src/components/nodes/NodeDetailContent.md)                 | Where the banner sits on the node page                |
 | [`FeederIdentityNotices.md`](../../../src/components/nodes/FeederIdentityNotices.md)         | Owner-facing notices when a feeder's number changed   |
