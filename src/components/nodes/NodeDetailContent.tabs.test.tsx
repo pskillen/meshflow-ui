@@ -35,6 +35,11 @@ vi.mock('@/components/nodes/LinkSNRCharts', () => ({
   LinkSNRCharts: () => <div data-testid="link-snr-charts" />,
 }));
 
+// Has its own tests; it needs the API provider, which this layout test does not set up.
+vi.mock('@/components/nodes/NodeIdentityLinksSection', () => ({
+  NodeIdentityLinksSection: () => null,
+}));
+
 vi.mock('@/hooks/api/useTraceroutes', () => ({
   useTraceroutes: vi.fn(() => ({ data: undefined, isLoading: false })),
 }));

@@ -6,6 +6,7 @@ import {
   ManagedNode,
   OwnedManagedNode,
   FeederIdentityEvent,
+  NodeIdentityLink,
   DeviceMetrics,
   DeviceMetricBucket,
   EnvironmentMetrics,
@@ -593,6 +594,27 @@ export class MeshflowApi extends BaseApi {
     if (params?.page) searchParams.append('page', params.page.toString());
     if (params?.page_size) searchParams.append('page_size', params.page_size.toString());
     return this.get<PaginatedResponse<OwnedManagedNode>>('/nodes/managed-nodes/mine/', searchParams);
+  }
+
+  /** Links between this node's number and others. Non-owners only get live links. 404 unknown node, 300 ambiguous. */
+  async getNodeIdentityLinks(internalId: string): Promise<NodeIdentityLink[]> {
+    return this.get<NodeIdentityLink[]>(`/nodes/observed-nodes/${internalId}/identity-links/`);
+  }
+
+  /**
+   * Say this node was replaced by `newNode` (a uuid or `!hex`). 201 for a new or promoted link, 200 when nothing
+   * changed. Errors are `{code, detail}`.
+   */
+  async declareNodeReplacement(internalId: string, newNode: string): Promise<NodeIdentityLink> {
+    return this.post<NodeIdentityLink>(`/nodes/observed-nodes/${internalId}/identity-links/`, { new_node: newNode });
+  }
+
+  async confirmNodeIdentityLink(linkId: number): Promise<NodeIdentityLink> {
+    return this.post<NodeIdentityLink>(`/nodes/identity-links/${linkId}/confirm/`);
+  }
+
+  async rejectNodeIdentityLink(linkId: number): Promise<NodeIdentityLink> {
+    return this.post<NodeIdentityLink>(`/nodes/identity-links/${linkId}/reject/`);
   }
 
   /** Unacknowledged feeder number-change events for the current user's feeders. */

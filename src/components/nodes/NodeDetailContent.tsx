@@ -29,6 +29,7 @@ import { NodeOutgoingTraceroutesSection } from '@/components/nodes/NodeOutgoingT
 import { RfPropagationSection } from '@/components/nodes/RfPropagationSection';
 import { NodeRightNow } from '@/components/nodes/NodeRightNow';
 import { NodeIdentityBanner } from '@/components/nodes/NodeIdentityBanner';
+import { NodeIdentityLinksSection } from '@/components/nodes/NodeIdentityLinksSection';
 import { NodeShell, type NodeShellTab } from '@/components/nodes/NodeShell';
 import { StatTile } from '@/components/stats/StatTile';
 import { bestEdgeSnr } from '@/lib/node-traceroute-snr';
@@ -646,6 +647,7 @@ export function NodeDetailContent({ internalId, compact = false, activeTab, onTa
           <NodeIdentityBanner node={node} />
           {effectiveTab === 'overview' && (
             <div data-testid="node-detail-panel-overview">
+              <NodeIdentityLinksSection node={node} internalId={internalId} />
               <NodeRightNow node={node} note="Latest reports. Charts live under Statistics." />
               {renderMetricsGrid()}
               <div className="mb-6">
