@@ -2,6 +2,10 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
 import { Info } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { ClaimFromPreviousButton } from '@/components/nodes/ClaimFromPreviousButton';
+import { useMeshflowApi } from '@/hooks/api/useApi';
+import { authService } from '@/lib/auth/authService';
 import { nodeDetailPath } from '@/lib/node-detail-routes';
 import type { NodeIdentityChainEntry, NodeIdentityRef, ObservedNode } from '@/lib/models';
 
@@ -47,10 +51,29 @@ function Why({ entry }: { entry: NodeIdentityChainEntry }) {
   );
 }
 
+/** For the old node's owner: offers the one-tap claim while the newer node is not already theirs. */
+function ClaimNewer({ target }: { target: NodeIdentityRef }) {
+  const api = useMeshflowApi();
+  const newer = useQuery({
+    queryKey: ['nodes', target.internal_id],
+    queryFn: () => api.getObservedNode(target.internal_id),
+    retry: false,
+  });
+  const me = authService.getCurrentUser();
+  if (!newer.data || (me && newer.data.owner?.id === me.id)) return null;
+  return (
+    <div className="mt-2">
+      <ClaimFromPreviousButton newer={target} />
+    </div>
+  );
+}
+
 function ReplacedLine({ node, compact }: { node: ObservedNode; compact: boolean }) {
   const next = node.identity_chain?.next ?? [];
   const newest = next[next.length - 1];
   const target = node.replaced_by!;
+  const me = authService.getCurrentUser();
+  const ownedByViewer = !!me && node.owner?.id === me.id;
   const name = newest?.long_name || newest?.short_name;
   const heard = newest?.last_heard;
   const upTo = dayText(next[0]?.linked_at);
@@ -87,6 +110,7 @@ function ReplacedLine({ node, compact }: { node: ObservedNode; compact: boolean 
             <p className="mt-1">{`History up to ${upTo} is on this page; newer history is on the new one.`}</p>
           ) : null}
           {next[0] ? <Why entry={next[0]} /> : null}
+          {ownedByViewer ? <ClaimNewer target={target} /> : null}
         </>
       )}
     </div>
