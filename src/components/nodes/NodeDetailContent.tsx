@@ -472,7 +472,8 @@ export function NodeDetailContent({ internalId, compact = false, activeTab, onTa
               <p>
                 <span className="font-medium">Inferred Max Hops:</span> {node.meshtastic_inferred_max_hops}
                 <span className="mt-0.5 block text-xs text-muted-foreground">
-                  Inferred from packets; recommended is 7
+                  A best guess from recent packets. Meshtastic 2.8 nodes can vary their hop limit, so this may change.
+                  Recommended: 7.
                 </span>
               </p>
             )}

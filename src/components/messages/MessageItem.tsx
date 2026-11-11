@@ -26,6 +26,24 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { ExternalLink } from 'lucide-react';
 import { messageSenderDisplay } from '@/lib/message-display-sender';
 import { nodeDetailPath } from '@/lib/node-detail-routes';
+import { describeHops } from '@/lib/hop-display';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+
+function HopBadge({ observation }: { observation: PacketObservation }) {
+  const { label, explanation } = describeHops(observation);
+  return (
+    <TooltipProvider delayDuration={100}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Badge variant="outline" tabIndex={0} className="cursor-help" aria-label={`${label}. ${explanation}`}>
+            {label}
+          </Badge>
+        </TooltipTrigger>
+        <TooltipContent className="max-w-xs">{explanation}</TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+}
 
 function MeshCoreHeardDialogBody({ message }: { message: TextMessage }) {
   const { sender, senderDisplayLabel, legs } = useMemo(() => meshCoreHeardLegs(message), [message]);
@@ -189,7 +207,7 @@ function HeardDialog({
                             {mt.rx_snr != null && <div className="text-xs">SNR: {mt.rx_snr.toFixed(1)}</div>}
                           </div>
                         ) : (
-                          <Badge variant="outline">Hop: {mt.hop_count}</Badge>
+                          <HopBadge observation={mt} />
                         )}
                       </div>
                     </div>

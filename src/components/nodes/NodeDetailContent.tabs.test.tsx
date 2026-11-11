@@ -151,6 +151,18 @@ describe('NodeDetailContent tabbed layout', () => {
     expect(screen.getByTestId('node-identity-replaced')).toHaveTextContent('This radio now uses node !00000002');
   });
 
+  it('explains that inferred max hops is a best guess', () => {
+    mockedUseNodeSuspense.mockReturnValue({ ...minimalNode, meshtastic_inferred_max_hops: 5 });
+    render(
+      <MemoryRouter initialEntries={[`/nodes/${TEST_OBSERVED_INTERNAL_ID}`]}>
+        <Routes>
+          <Route path="/nodes/:id" element={<NodeDetailTabbedPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+    expect(screen.getByText(/A best guess from recent packets/)).toBeInTheDocument();
+  });
+
   it('shows statistics panel when URL has tab=statistics', () => {
     render(
       <MemoryRouter initialEntries={[`/nodes/${TEST_OBSERVED_INTERNAL_ID}?tab=statistics`]}>
