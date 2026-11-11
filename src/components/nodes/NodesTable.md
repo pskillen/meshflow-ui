@@ -17,6 +17,7 @@ The "Recent Nodes" table on the node list pages. One component for both protocol
 - **Node** is the primary label (short name, with the long name beneath); the ID is supporting detail. The Node cell links to the node page.
 - **Phones** show Node, Battery (Meshtastic) or Position (MeshCore), and Last heard. ID, Role, Hardware (and MeshCore Prefix) show from `lg`, so the table fits at 768px with the sidebar open. The Node column takes the remaining width and truncates (desktop names cap at 320px). Last heard uses the compact form ("14m ago", "5h ago", "3d ago"); the tooltip has the full date.
 - **Sorting**: every header is a button; the active one has `aria-sort` and an arrow. Default Last heard, newest first. A first click starts A to Z on text columns and largest or latest first on Battery, Position and Last heard; a second click reverses. Sorting is client side over the loaded pages. A missing value (no battery reading, no last heard, no name, role or hardware, and Position "None") sorts after every present value in either direction.
+- **Replaced tag**: a node with `replaced_by` gets a "Replaced → !new" tag (`ReplacedTag`) beside its ID, linking the new node. The ID column is hidden below `lg`, so the tag also shows under the name there. No field or null means no tag.
 - **Battery** uses `describeBattery`: raw 101 shows "Powered" (ranks above 100%), 0 is a real "0%" (red), no reading is a dash.
 
 ## Wiring

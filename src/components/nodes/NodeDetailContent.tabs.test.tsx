@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Suspense } from 'react';
 import { MemoryRouter, Route, Routes, useLocation, useParams } from 'react-router-dom';
-import type { ObservedNode } from '@/lib/models';
+import type { NodeIdentityRef, ObservedNode } from '@/lib/models';
 import { useNodeDetailPageTabs } from '@/pages/nodes/useNodeDetailPageTabs';
 import { NodeDetailContent } from './NodeDetailContent';
 
@@ -132,6 +132,23 @@ describe('NodeDetailContent tabbed layout', () => {
       fetchNextPage: vi.fn(),
       hasNextPage: false,
     });
+  });
+
+  it('renders the identity banner above the tab content when the node is replaced', () => {
+    const target: NodeIdentityRef = { internal_id: 'n2', protocol: 1, meshtastic_node_id: 2, node_id_str: '!00000002' };
+    mockedUseNodeSuspense.mockReturnValue({
+      ...minimalNode,
+      replaced_by: target,
+      identity_chain: { previous: [], next: [] },
+    });
+    render(
+      <MemoryRouter initialEntries={[`/nodes/${TEST_OBSERVED_INTERNAL_ID}`]}>
+        <Routes>
+          <Route path="/nodes/:id" element={<NodeDetailTabbedPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+    expect(screen.getByTestId('node-identity-replaced')).toHaveTextContent('This radio now uses node !00000002');
   });
 
   it('shows statistics panel when URL has tab=statistics', () => {

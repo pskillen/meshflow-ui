@@ -23,6 +23,8 @@ interface NodesMapProps {
   mapLegendStatusTitle?: string;
   /** Tailwind min-height class for the map (outer box and map pane). Default `min-h-[400px]`. */
   minHeightClassName?: string;
+  /** Overview maps set this to leave out replaced nodes. Default false: a node's own page, a fixed target and a watched node still draw. */
+  hideReplaced?: boolean;
 }
 
 // Default center only used if no nodes are present
@@ -38,14 +40,20 @@ function colorMapFromProp(
 }
 
 export function NodesMap({
-  nodes,
+  nodes: allNodes,
   showMapLegend = true,
   roleLegend = 'meshtastic',
   markerColorsByNodeId,
   mapLegendStatusSwatches,
   mapLegendStatusTitle,
   minHeightClassName = 'min-h-[400px]',
+  hideReplaced = false,
 }: NodesMapProps) {
+  // Overview maps (hideReplaced) leave out replaced nodes (their radio now uses another number).
+  const nodes = useMemo(
+    () => (hideReplaced ? allNodes.filter((n) => !n.replaced_by) : allNodes),
+    [allNodes, hideReplaced]
+  );
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const tileLayerRef = useRef<L.TileLayer | null>(null);

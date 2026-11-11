@@ -22,7 +22,8 @@ Nothing, when both fields are missing (an older API) or both lists are empty.
 | Has previous numbers                                   | Quiet line                 | "Previously node !old (and N more). Older history is on those pages." "and N more" opens a list of the rest as links.                                    |
 
 A middle node (replaced and with a previous number) shows the panel and the previous line together. The name and heard
-time come from the newest successor (the last of `next`); "History up to" uses the first successor's link date.
+time come from the newest successor (the last of `next`); "History up to" and "Why?" both refer to the nearest change
+(the first of `next`), and dates show in the viewer's locale with the time.
 
 Each state has a "Why?" disclosure in plain words: "Same public key", "The feeder reported the change", "The new number
 was predicted from this node's public key", "Same hardware address", "The owner said so"; a staff-confirmed link adds
@@ -31,8 +32,8 @@ was predicted from this node's public key", "Same hardware address", "The owner 
 
 ## Compact
 
-In the slide-over only one line shows, the most important applicable one (replaced, else successor, else previous), with
-no "Why?", no "Go to" link and no "History up to" line.
+In the slide-over only the prominent replaced line shows, with no "Why?", no "Go to" link and no "History up to" line.
+The quiet successor and previous lines are left to the full page.
 
 ## Where it sits
 

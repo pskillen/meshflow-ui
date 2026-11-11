@@ -4,9 +4,9 @@ On Meshtastic 2.8 a firmware upgrade or re-key can give a radio a new node numbe
 old one's history stays where it was. This feature links a radio's numbers both ways so people can find the rest of the
 story. History is never moved or merged.
 
-**Status:** node page banners and the Monitoring note are shipped (they need an API that sends `replaced_by` and
-`identity_chain`; on an older API nothing new shows). Tags in lists and search, and hiding replaced nodes on maps, are
-not covered here yet.
+**Status:** shipped: node page banners, the Monitoring note, "Replaced" tags in search, node lists and My nodes, and
+replaced nodes hidden on maps. They need an API that sends `replaced_by` and `identity_chain`; on an older API nothing
+new shows.
 
 ## What people see
 
@@ -19,7 +19,14 @@ not covered here yet.
   used node !other from (date) to (date)."
 - **A "Why?" disclosure** on each line gives the reason in plain words (same public key, the feeder reported the
   change, and so on).
-- **In the slide-over** only one line shows.
+- **In the slide-over** only the prominent replaced line shows (the quiet lines stay on the full page).
+- **In search**: a result for a replaced node carries a small "Replaced → !new" tag. Picking the row still opens (or
+  selects) the old node, since that is what was searched for; the tag's own link opens the new one. Nothing redirects.
+- **In node lists** (the protocol Nodes page): the same tag sits beside the ID, and under the name on narrow screens.
+- **On My nodes**: the card says "Replaced by !new" with a link to the new node.
+- **On maps**: replaced nodes are not drawn (the overview maps only: the dashboard and protocol `NodesAndConstellationsMap`, and the protocol nodes page `NodesMap`, which sets `hideReplaced`; a node's own page, the traceroute target and the monitor map still draw it). The filter is applied in the browser
+  to the same node list the tables use, so there is no extra request. Nodes that went back to an old number, and nodes
+  from an older API, are drawn as before. The infrastructure and weather maps are unchanged.
 
 ## When a node counts as replaced
 
@@ -34,8 +41,12 @@ this number are paused." The settings underneath are left as they are.
 
 ## Documentation map
 
-| Doc                                                                                  | Purpose                                             |
-| ------------------------------------------------------------------------------------ | --------------------------------------------------- |
-| [`NodeIdentityBanner.md`](../../../src/components/nodes/NodeIdentityBanner.md)       | The banner's states, wording and compact form       |
-| [`NodeDetailContent.md`](../../../src/components/nodes/NodeDetailContent.md)         | Where the banner sits on the node page              |
-| [`FeederIdentityNotices.md`](../../../src/components/nodes/FeederIdentityNotices.md) | Owner-facing notices when a feeder's number changed |
+| Doc                                                                                          | Purpose                                               |
+| -------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
+| [`NodeIdentityBanner.md`](../../../src/components/nodes/NodeIdentityBanner.md)               | The banner's states, wording and compact form         |
+| [`ReplacedTag.md`](../../../src/components/nodes/ReplacedTag.md)                             | The "Replaced" tag used in search, lists and My nodes |
+| [`NodeSearch.md`](../../../src/components/NodeSearch.md)                                     | Tag in search results                                 |
+| [`NodesTable.md`](../../../src/components/nodes/NodesTable.md)                               | Tag in node lists                                     |
+| [`NodesAndConstellationsMap.md`](../../../src/components/nodes/NodesAndConstellationsMap.md) | Replaced nodes hidden on maps                         |
+| [`NodeDetailContent.md`](../../../src/components/nodes/NodeDetailContent.md)                 | Where the banner sits on the node page                |
+| [`FeederIdentityNotices.md`](../../../src/components/nodes/FeederIdentityNotices.md)         | Owner-facing notices when a feeder's number changed   |

@@ -152,6 +152,7 @@ function ProtocolNodesPageContent({
                 nodes={mapNodesWithPosition}
                 roleLegend={config.features.roleLegend}
                 minHeightClassName={MAP_MIN_HEIGHT}
+                hideReplaced
               />
             )}
           </div>

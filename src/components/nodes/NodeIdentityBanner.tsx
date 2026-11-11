@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { format, formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow } from 'date-fns';
 import { Info } from 'lucide-react';
 import { nodeDetailPath } from '@/lib/node-detail-routes';
 import type { NodeIdentityChainEntry, NodeIdentityRef, ObservedNode } from '@/lib/models';
@@ -22,7 +22,9 @@ function identityWhy(entry: Pick<NodeIdentityChainEntry, 'evidence' | 'state'>):
 }
 
 function dayText(date: Date | null | undefined): string | null {
-  return date && !Number.isNaN(date.getTime()) ? format(date, 'd MMM yyyy') : null;
+  return date && !Number.isNaN(date.getTime())
+    ? date.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })
+    : null;
 }
 
 function IdLink({ target }: { target: NodeIdentityRef }) {
@@ -84,7 +86,7 @@ function ReplacedLine({ node, compact }: { node: ObservedNode; compact: boolean 
           {upTo ? (
             <p className="mt-1">{`History up to ${upTo} is on this page; newer history is on the new one.`}</p>
           ) : null}
-          {newest ? <Why entry={newest} /> : null}
+          {next[0] ? <Why entry={next[0]} /> : null}
         </>
       )}
     </div>
@@ -162,15 +164,11 @@ export function NodeIdentityBanner({ node, compact = false }: { node: ObservedNo
   if (!replaced && next.length === 0 && previous.length === 0) return null;
 
   if (compact) {
+    // Compact (sheet) shows only the prominent banner; the quiet lines stay on the full page.
+    if (!replaced) return null;
     return (
       <div className="mb-3" data-testid="node-identity-banner">
-        {replaced ? (
-          <ReplacedLine node={node} compact />
-        ) : next.length > 0 ? (
-          <SuccessorLine node={node} compact />
-        ) : (
-          <PreviousLine node={node} compact />
-        )}
+        <ReplacedLine node={node} compact />
       </div>
     );
   }

@@ -4,6 +4,7 @@ import { useNodeSearch } from '@/hooks/api/useNodes';
 import { SearchIcon, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { ReplacedTag } from '@/components/nodes/ReplacedTag';
 import { nodeDetailPath } from '@/lib/node-detail-routes';
 
 interface NodeSearchProps {
@@ -113,7 +114,7 @@ export function NodeSearch({ onNodeSelect, displayValue, onClearSelection, lastH
           ) : (
             <ul className="py-1">
               {filteredSearchResults.map((node) => (
-                <li key={node.internal_id}>
+                <li key={node.internal_id} className="hover:bg-accent">
                   <Link
                     to={
                       onNodeSelect
@@ -124,7 +125,7 @@ export function NodeSearch({ onNodeSelect, displayValue, onClearSelection, lastH
                             meshtastic_node_id: node.meshtastic_node_id,
                           }) ?? '#')
                     }
-                    className="block px-4 py-2 hover:bg-accent"
+                    className="block px-4 py-2"
                     onClick={() => {
                       setIsOpen(false);
                       setQuery('');
@@ -139,6 +140,18 @@ export function NodeSearch({ onNodeSelect, displayValue, onClearSelection, lastH
                       <span className="text-sm text-muted-foreground">{node.node_id_str}</span>
                     </div>
                   </Link>
+                  {node.replaced_by ? (
+                    // Sibling of the row link (no nested anchors); selecting the row still picks the old node.
+                    <div className="px-4 pb-2">
+                      <ReplacedTag
+                        replacedBy={node.replaced_by}
+                        onNavigate={() => {
+                          setIsOpen(false);
+                          setQuery('');
+                        }}
+                      />
+                    </div>
+                  ) : null}
                 </li>
               ))}
             </ul>

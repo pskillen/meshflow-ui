@@ -1,6 +1,7 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowDown, ArrowUp } from 'lucide-react';
+import { ReplacedTag } from '@/components/nodes/ReplacedTag';
 import { StaleReportedTime } from '@/components/nodes/StaleReportedTime';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import type { ObservedNode } from '@/lib/models';
@@ -177,9 +178,12 @@ function NodeRow({ node, config }: { node: ObservedNode; config: ProtocolPageCon
             <div className="truncate text-xs text-muted-foreground md:max-w-[320px]">{node.long_name}</div>
           )}
         </Link>
+        {/* The ID column is hidden below lg, so repeat the tag under the name there. */}
+        <ReplacedTag replacedBy={node.replaced_by} className="mt-0.5 lg:hidden" />
       </TableCell>
       <TableCell className="hidden whitespace-nowrap py-1.5 font-mono text-xs lg:table-cell">
         {node.node_id_str}
+        <ReplacedTag replacedBy={node.replaced_by} className="ml-2" />
       </TableCell>
       {isMeshtastic ? (
         <>
