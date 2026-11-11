@@ -10,6 +10,14 @@ type HopFields = Pick<
   'direct_from_sender' | 'hop_count' | 'replayed' | 'via_mqtt' | 'transport_mechanism'
 >;
 
+/** Transports that are not the feeder's radio; matches NON_RF_TRANSPORTS in meshflow-api packets/hops.py. */
+const NON_RF_TRANSPORTS = new Set([
+  'TRANSPORT_MQTT',
+  'TRANSPORT_MULTICAST_UDP',
+  'TRANSPORT_UNICAST_UDP',
+  'TRANSPORT_API',
+]);
+
 /** Label and plain-words explanation for how far a Meshtastic observation travelled. */
 export function describeHops(obs: HopFields): HopDescription {
   if (obs.direct_from_sender) {
@@ -24,7 +32,7 @@ export function describeHops(obs: HopFields): HopDescription {
   if (typeof obs.hop_count === 'number') {
     return { label: `Hops: ${obs.hop_count}`, explanation: 'How many relays the packet passed through.' };
   }
-  if (obs.via_mqtt === true || (obs.transport_mechanism && obs.transport_mechanism !== 'TRANSPORT_LORA')) {
+  if (obs.via_mqtt === true || (obs.transport_mechanism != null && NON_RF_TRANSPORTS.has(obs.transport_mechanism))) {
     return {
       label: 'Via internet',
       explanation: 'Reached this feeder over MQTT or the network, not by radio, so there is no hop count.',

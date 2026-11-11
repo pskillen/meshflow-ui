@@ -26,4 +26,25 @@ describe('describeHops', () => {
     expect(d.label).toBe('Replayed by the feeder');
     expect(d.explanation).not.toBe('');
   });
+  it.each(['TRANSPORT_LORA', 'TRANSPORT_LORA_ALT1', 'TRANSPORT_LORA_ALT2', 'TRANSPORT_LORA_ALT3', 'TRANSPORT_INTERNAL'])(
+    'radio transport %s with no hop count is "Hops unknown"',
+    (t) => {
+      expect(describeHops({ direct_from_sender: false, hop_count: null, transport_mechanism: t }).label).toBe(
+        'Hops unknown'
+      );
+    }
+  );
+  it.each(['TRANSPORT_MQTT', 'TRANSPORT_MULTICAST_UDP', 'TRANSPORT_UNICAST_UDP', 'TRANSPORT_API'])(
+    'non-RF transport %s is "Via internet"',
+    (t) => {
+      expect(describeHops({ direct_from_sender: false, hop_count: null, transport_mechanism: t }).label).toBe(
+        'Via internet'
+      );
+    }
+  );
+  it('unknown transport value is not stated, not internet', () => {
+    expect(
+      describeHops({ direct_from_sender: false, hop_count: null, transport_mechanism: 'TRANSPORT_FUTURE' }).label
+    ).toBe('Hops unknown');
+  });
 });
