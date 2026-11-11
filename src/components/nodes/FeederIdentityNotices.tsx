@@ -90,8 +90,8 @@ function FeederIdentityNotice({ event }: { event: FeederIdentityEvent }) {
   const needsReview = flagged && event.needs_action;
   const resolvedFlag = flagged && !event.needs_action;
   const canRepoint = needsReview && !(event.reason && REPOINT_UNAVAILABLE_REASONS.has(event.reason));
-  // A flagged feeder is still stored under the old number; the new one only exists once applied.
-  const linkNumber = flagged
+  // An unresolved flagged feeder is still stored under the old number; once resolved (or applied) the new one is it.
+  const linkNumber = needsReview
     ? { meshtastic_node_id: event.old_meshtastic_node_id, node_id_str: event.old_node_id_str }
     : { meshtastic_node_id: event.new_meshtastic_node_id, node_id_str: event.new_node_id_str };
   const detailPath = nodeDetailPath({ ...linkNumber, protocol: 1 });

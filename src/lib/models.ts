@@ -82,6 +82,34 @@ export function isRfPropagationNone(r: RfPropagationPollResult): r is { status: 
   return r.status === 'none';
 }
 
+/** Another number a radio has used: the minimal reference carried by `replaced_by` on lists and detail. */
+export interface NodeIdentityRef {
+  internal_id: string;
+  protocol?: MeshProtocol;
+  /** Null for MeshCore. */
+  meshtastic_node_id: number | null;
+  node_id_str: string;
+}
+
+/** One live identity link in a node's chain. `evidence` is an open set; show unknown values generically. */
+export interface NodeIdentityChainEntry extends NodeIdentityRef {
+  long_name?: string | null;
+  short_name?: string | null;
+  last_heard?: Date | null;
+  /** `public_key`, `feeder_rekey`, `mac`, `predicted_number`, `declared`, or something newer. */
+  evidence: string;
+  confidence?: string;
+  /** `auto` or `confirmed` (staff). */
+  state: string;
+  linked_at: Date | null;
+}
+
+/** Other numbers this radio has used. Both lists are nearest first, live links only, at most 10 each. */
+export interface NodeIdentityChain {
+  previous: NodeIdentityChainEntry[];
+  next: NodeIdentityChainEntry[];
+}
+
 /**
  * Observed node from Meshflow API (Meshtastic and MeshCore in one list resource).
  * Use `protocol` on list queries to filter; detail by numeric `meshtastic_node_id` is Meshtastic-only today.
@@ -130,6 +158,13 @@ export interface ObservedNode {
   battery_alert_active?: boolean;
   battery_alert_confirmed_at?: Date | string | null;
   last_heard?: Date | null;
+  /**
+   * Set only when this number is really replaced (its newest successor was heard at least as recently).
+   * Absent on an older API.
+   */
+  replaced_by?: NodeIdentityRef | null;
+  /** Other numbers this radio has used (detail only). Absent on an older API. */
+  identity_chain?: NodeIdentityChain;
   /** Meshtastic protobuf-shaped telemetry; typically null for MeshCore nodes. */
   latest_device_metrics?: DeviceMetrics | null;
   /** Meshtastic environment telemetry from NodeLatestStatus. */

@@ -161,7 +161,7 @@ describe('FeederIdentityNotices', () => {
     expect(screen.getByRole('status')).toHaveTextContent(/was flagged for review and has since been resolved/);
     expect(screen.queryByText(/changed from/)).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Re-point/ })).not.toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /View feeder/ })).toHaveAttribute('href', '/nodes/!1234abcd');
+    expect(screen.getByRole('link', { name: /View feeder/ })).toHaveAttribute('href', '/nodes/!5678ef01');
   });
 
   it('renders a manual change as neutral with Dismiss only', async () => {
