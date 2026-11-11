@@ -17,6 +17,7 @@ The body of a node page. It is used in two ways:
 - **Shared range.** One `useStatsRange` per page (no `area`, so a different node never inherits it; presets only). It lives in `?range=` on the full page, and in component state when compact so the host page's URL is never touched. The bar shows on Statistics and Traceroutes only; switching between them keeps the range.
 - Statistics: `NodeStatsSection` gets the range; the battery, channel and air, environment and power charts take `range` directly and ask the API for the bucket that matches it. The packet charts ([`NodePacketTypeCard`](./NodePacketTypeCard.md)) and "Heard most from" ([`NeighbourSourceBars`](./NeighbourSourceBars.md)) take `range` too. Traceroutes: tiles (Links, Traceroutes, Best SNR; Traceroutes is the count of traceroutes to this node in the range, the same request and `count` as the history table), the links map and the per-link SNR cards ([`LinkSNRCharts`](./LinkSNRCharts.md)) use `range` (`window.start` is the API's `triggered_at_after`); the history table (`NodeTracerouteHistorySection`) sends `triggered_after` from the same window start. The map's contents and the outgoing-traceroutes section are unchanged.
 - **Right now** ([`NodeRightNow`](./NodeRightNow.md)) tops Overview and Statistics.
+- **Identity banner** ([`NodeIdentityBanner`](./NodeIdentityBanner.md)) sits above the tab content on the full page (every tab), and at the top of the non-tab/slide-over layout, where it is one line. It renders nothing when the API sends no `replaced_by` / `identity_chain`.
 - Recently viewed chips sit at the bottom of the page; the back link is the arrow in the header.
 - The Device Metrics card is gone from Overview: [`NodeRightNow`](./NodeRightNow.md) carries the latest battery, channel use, air time and uptime, and the history is under Statistics.
 
@@ -26,4 +27,4 @@ The body of a node page. It is used in two ways:
 
 ## Related
 
-[`NodeShell.md`](./NodeShell.md), [`NodeRightNow.md`](./NodeRightNow.md), [`../../hooks/useStatsRange.md`](../../hooks/useStatsRange.md), `src/pages/nodes/useNodeDetailPageTabs.ts`.
+[`NodeShell.md`](./NodeShell.md), [`NodeIdentityBanner.md`](./NodeIdentityBanner.md), [`NodeRightNow.md`](./NodeRightNow.md), [`../../hooks/useStatsRange.md`](../../hooks/useStatsRange.md), `src/pages/nodes/useNodeDetailPageTabs.ts`.
