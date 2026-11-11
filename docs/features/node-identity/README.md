@@ -32,13 +32,13 @@ new shows.
 
 Owners (of the node) and staff can act on links from the node's Overview tab, in "Other numbers for this radio"
 (guests and other users do not see it). Each link reads "Same radio as node !x (name) (reason; the newer / older
-number)" with its state: "suggested by Meshflow", "linked by Meshflow", "confirmed", "marked not the same radio" or
+number)" (a rejected link reads "Not the same radio as node !x") with its state: "suggested by Meshflow", "linked by Meshflow", "confirmed", "marked not the same radio" or
 "held for staff to review". Suggested links come first, rejected last.
 
 - **Confirm** turns a suggestion into a confirmed link. **Not the same radio** (after a short "are you sure") rejects it.
   The buttons show only when the API says the user may (`can_confirm`, `can_reject`).
 - **Declare a replacement** (the dialog): pick the newer node by search to say this radio now uses it. Both nodes must
-  be the owner's (staff may link any two). Errors are shown in plain words in the dialog, for example when one of the
+  be the owner's (staff may link any two). A failed reject also shows its error inside the confirm dialog. Errors are shown in plain words in the dialog, for example when one of the
   nodes is already linked to another radio, or when the link would make two nodes replace each other.
 - After any change the page, the banner, tags and lists refresh.
 

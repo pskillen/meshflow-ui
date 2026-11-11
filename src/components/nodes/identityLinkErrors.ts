@@ -1,7 +1,8 @@
 const CODE_MESSAGES: Record<string, string> = {
-  link_conflict: 'One of these nodes is already linked to a different radio, so nothing was changed.',
+  link_conflict:
+    "These two nodes can't be linked: one of them is already linked to another radio, or this pair was marked not the same radio before. Nothing was changed.",
   link_cycle: 'That would make two nodes replace each other, so nothing was changed.',
-  not_owner: 'You can only do this for nodes you own.',
+  not_owner: 'You can only do this when you own the nodes involved, or the other node has no owner yet.',
   cross_protocol:
     "Those nodes are different kinds of radio (Meshtastic and MeshCore), so they can't be the same radio.",
   same_node: "A node can't replace itself. Pick a different node.",

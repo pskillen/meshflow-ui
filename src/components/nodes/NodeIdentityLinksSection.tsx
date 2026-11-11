@@ -98,7 +98,8 @@ function LinkRow({ link, internalId }: { link: NodeIdentityLink; internalId: str
   return (
     <li className="py-3" data-testid="node-identity-link" data-state={link.state}>
       <p className="text-sm">
-        Same radio as node <OtherNode node={other} />
+        {link.state === 'rejected' ? 'Not the same radio as node ' : 'Same radio as node '}
+        <OtherNode node={other} />
         <span className="text-muted-foreground">
           {' '}
           ({reason}; {isOld ? 'the newer number' : 'the older number'})
@@ -126,7 +127,7 @@ function LinkRow({ link, internalId }: { link: NodeIdentityLink; internalId: str
           </Button>
         ) : null}
       </div>
-      {error ? (
+      {error && !rejectOpen ? (
         <Alert variant="destructive" className="mt-2 text-foreground" role="alert">
           <AlertDescription>{error}</AlertDescription>
         </Alert>
@@ -141,6 +142,11 @@ function LinkRow({ link, internalId }: { link: NodeIdentityLink; internalId: str
                 {isOld ? link.old.node_id_str : link.new.node_id_str}.
               </DialogDescription>
             </DialogHeader>
+            {error ? (
+              <Alert variant="destructive" className="text-foreground" role="alert">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            ) : null}
             <DialogFooter>
               <Button type="button" variant="outline" disabled={reject.isPending} onClick={() => setRejectOpen(false)}>
                 Cancel

@@ -170,6 +170,13 @@ describe('NodeIdentityLinksSection', () => {
     expect(handlers.list).not.toHaveBeenCalled();
   });
 
+  it('renders nothing and sends no request for a MeshCore node, even for its owner', async () => {
+    renderSection(node({ protocol: 2 }));
+    await new Promise((r) => setTimeout(r, 100));
+    expect(screen.queryByTestId('node-identity-links')).toBeNull();
+    expect(handlers.list).not.toHaveBeenCalled();
+  });
+
   it('shows the section to staff on a node they do not own', async () => {
     currentUser.value = { id: 99, is_staff: true };
     renderSection(node({ owner: null }));
@@ -260,6 +267,44 @@ describe('NodeIdentityLinksSection', () => {
       expect(alert.textContent).not.toContain(code);
       expect(alert.textContent!.length).toBeGreaterThan(10);
     });
+  });
+
+  describe('a failed reject shows its error inside the open dialog', () => {
+    it.each(IDENTITY_LINK_ERROR_CODES)('reject: %s', async (code) => {
+      handlers.reject.mockImplementation(failWith(409, { code, detail: 'RAW SERVER TEXT' }));
+      renderSection();
+      const user = userEvent.setup();
+      await user.click(await screen.findByRole('button', { name: 'Not the same radio' }));
+      await user.click(await screen.findByRole('button', { name: 'Yes, not the same radio' }));
+      const dialog = screen.getByRole('dialog');
+      const alert = await within(dialog).findByRole('alert');
+      expect(alert.textContent).not.toContain('RAW SERVER TEXT');
+      expect(alert.textContent).not.toContain(code);
+      expect(alert.textContent!.length).toBeGreaterThan(10);
+      // The dialog stays open and the error is the only alert a screen reader can reach.
+      expect(screen.getAllByRole('alert')).toHaveLength(1);
+      expect(within(dialog).getByRole('button', { name: 'Yes, not the same radio' })).toBeTruthy();
+    });
+
+    it('shows the error in the row once the dialog is closed', async () => {
+      handlers.reject.mockImplementation(failWith(409, { code: 'invalid_state', detail: 'x' }));
+      renderSection();
+      const user = userEvent.setup();
+      await user.click(await screen.findByRole('button', { name: 'Not the same radio' }));
+      await user.click(await screen.findByRole('button', { name: 'Yes, not the same radio' }));
+      await within(screen.getByRole('dialog')).findByRole('alert');
+      await user.click(screen.getByRole('button', { name: 'Cancel' }));
+      await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+      expect((await screen.findByRole('alert')).textContent).toContain('already reviewed');
+    });
+  });
+
+  it('a rejected row does not read "Same radio as"', async () => {
+    handlers.list.mockReturnValue([makeLink({ state: 'rejected', can_confirm: false, can_reject: false })]);
+    renderSection();
+    const row = await screen.findByTestId('node-identity-link');
+    expect(row.textContent).toContain('Not the same radio as node');
+    expect(row.textContent).not.toContain('Same radio as');
   });
 
   it('shows the server detail for an unknown code', async () => {

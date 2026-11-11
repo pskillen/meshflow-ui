@@ -17,7 +17,7 @@ else is [`NodeIdentityBanner`](./NodeIdentityBanner.md).
   page makes **no request** for them (the query is disabled). An older API (404) or a failed load also shows nothing.
 - Titled "Other numbers for this radio", on the Overview tab above "Right now". With no links it says "Nothing linked"
   and still offers the Declare button.
-- **Each link:** "Same radio as node [!id] (name) (reason; the newer/older number)", with the other node's id linking to
+- **Each link:** "Same radio as node [!id] (name) (reason; the newer/older number)" ("Not the same radio as node" when rejected), with the other node's id linking to
   its page, and a badge for its state: "suggested by Meshflow", "linked by Meshflow", "confirmed", "marked not the same
   radio", "held for staff to review". Reasons use the same plain words as the banner's "Why?".
 - **Order:** suggested first (they need a decision), then live links, rejected last.
