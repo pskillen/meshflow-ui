@@ -110,6 +110,36 @@ export interface NodeIdentityChain {
   next: NodeIdentityChainEntry[];
 }
 
+/** One end of an identity link as the review endpoints return it. */
+export interface NodeIdentityLinkNode extends NodeIdentityRef {
+  long_name?: string | null;
+  short_name?: string | null;
+  last_heard?: string | null;
+}
+
+/**
+ * Lifecycle of a link between two node numbers: `suggested` (Meshflow's guess), `auto` / `confirmed` (live),
+ * `rejected` (not the same radio), `flagged` (held for staff). Open set; show an unknown value generically.
+ */
+export type NodeIdentityLinkState = 'suggested' | 'auto' | 'confirmed' | 'rejected' | 'flagged' | (string & {});
+
+/** A link between an old and a new node number, from `GET /nodes/observed-nodes/{id}/identity-links/`. */
+export interface NodeIdentityLink {
+  id: number;
+  old: NodeIdentityLinkNode;
+  new: NodeIdentityLinkNode;
+  /** Open set; see `NodeIdentityChainEntry.evidence`. */
+  evidence: string;
+  confidence?: string;
+  state: NodeIdentityLinkState;
+  created_at: string;
+  reviewed_at: string | null;
+  /** The current user may confirm this link (owner of a side, or staff; only from `suggested`). */
+  can_confirm: boolean;
+  /** The current user may mark this link "not the same radio". */
+  can_reject: boolean;
+}
+
 /**
  * Observed node from Meshflow API (Meshtastic and MeshCore in one list resource).
  * Use `protocol` on list queries to filter; detail by numeric `meshtastic_node_id` is Meshtastic-only today.
