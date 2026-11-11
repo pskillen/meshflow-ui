@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import L from 'leaflet';
-import type { ManagedNode } from '@/lib/models';
+import type { ManagedNode, ObservedNode } from '@/lib/models';
 import { NodesAndConstellationsMap } from './NodesAndConstellationsMap';
 
 vi.mock('@/hooks/useMapTileUrl', () => ({
@@ -147,5 +147,31 @@ describe('NodesAndConstellationsMap', () => {
     const legend = await screen.findByRole('region', { name: /Map key/i });
     expect(legend).toHaveTextContent('Node role');
     expect(legend).not.toHaveTextContent('Monitoring node');
+  });
+
+  it('draws observed nodes without replaced_by and skips replaced ones', async () => {
+    const observed = (id: number, extra: Partial<ObservedNode> = {}) =>
+      ({
+        internal_id: `n${id}`,
+        meshtastic_node_id: id,
+        node_id_str: `!0000000${id}`,
+        long_name: 'O',
+        short_name: 'O',
+        meshtastic_role: 2,
+        last_heard: new Date(),
+        latest_position: { latitude: 55 + id / 10, longitude: -4, altitude: 0, logged_time: null, reported_time: null },
+        ...extra,
+      }) as unknown as ObservedNode;
+    const ref = { internal_id: 'n9', protocol: 1 as const, meshtastic_node_id: 9, node_id_str: '!00000009' };
+    render(
+      <div style={{ height: 500 }}>
+        <NodesAndConstellationsMap
+          managedNodes={[]}
+          observedNodes={[observed(1, { replaced_by: ref }), observed(2, { replaced_by: null }), observed(3)]}
+          showConstellation={false}
+        />
+      </div>
+    );
+    await waitFor(() => expect(vi.mocked(L.marker)).toHaveBeenCalledTimes(2));
   });
 });

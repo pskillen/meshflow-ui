@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import type { ObservedNode } from '@/lib/models';
+import L from 'leaflet';
 import { NodesMap } from './NodesMap';
 import { watchMonitoringStatusLegendSwatches } from '@/lib/watch-monitoring-status';
 
@@ -123,5 +124,20 @@ describe('NodesMap', () => {
     expect(legend).toHaveTextContent('Watch status');
     expect(legend).toHaveTextContent('Offline');
     expect(screen.queryByText('Node role')).not.toBeInTheDocument();
+  });
+
+  it('does not draw replaced nodes but keeps a field-less or T7 (null) one', async () => {
+    vi.mocked(L.marker).mockClear();
+    const ref = { internal_id: 'n9', protocol: 1 as const, meshtastic_node_id: 9, node_id_str: '!00000009' };
+    render(
+      <NodesMap
+        nodes={[
+          nodeWithPosition(1, 55.1, -4.2, { replaced_by: ref }),
+          nodeWithPosition(2, 55.2, -4.3, { replaced_by: null }),
+          nodeWithPosition(3, 55.3, -4.4),
+        ]}
+      />
+    );
+    await waitFor(() => expect(vi.mocked(L.marker)).toHaveBeenCalledTimes(2));
   });
 });

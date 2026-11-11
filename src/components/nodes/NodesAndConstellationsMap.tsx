@@ -99,7 +99,7 @@ const MONITORING_SWATCH = 'conic-gradient(#ef4444, #eab308, #22c55e, #3b82f6, #a
 
 export function NodesAndConstellationsMap({
   managedNodes = [],
-  observedNodes = [],
+  observedNodes: allObservedNodes,
   showConstellation = true,
   legendLayout = 'constellation',
   showUnmanagedNodes = true,
@@ -123,6 +123,8 @@ export function NodesAndConstellationsMap({
   getNodeAlertRing,
   minHeightClassName = 'min-h-[400px]',
 }: NodesAndConstellationsMapProps) {
+  // Replaced nodes (their radio now uses another number) stay on lists but are not drawn on maps.
+  const observedNodes = useMemo(() => (allObservedNodes ?? []).filter((n) => !n.replaced_by), [allObservedNodes]);
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const tileLayerRef = useRef<L.TileLayer | null>(null);

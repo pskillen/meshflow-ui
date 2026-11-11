@@ -38,7 +38,7 @@ function colorMapFromProp(
 }
 
 export function NodesMap({
-  nodes,
+  nodes: allNodes,
   showMapLegend = true,
   roleLegend = 'meshtastic',
   markerColorsByNodeId,
@@ -46,6 +46,8 @@ export function NodesMap({
   mapLegendStatusTitle,
   minHeightClassName = 'min-h-[400px]',
 }: NodesMapProps) {
+  // Replaced nodes (their radio now uses another number) stay on lists but are not drawn on maps.
+  const nodes = useMemo(() => allNodes.filter((n) => !n.replaced_by), [allNodes]);
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const tileLayerRef = useRef<L.TileLayer | null>(null);
